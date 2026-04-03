@@ -1,0 +1,65 @@
+.card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
+  box-shadow: var(--shadow);
+}
+
+.card:not(.disabled) {
+  cursor: pointer;
+}
+
+.card:not(.disabled):hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.card.disabled {
+  opacity: 0.6;
+}
+
+.icon {
+  font-size: 2rem;
+}
+
+.body {
+  flex: 1;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 0.25rem;
+}
+
+.desc {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  line-height: 1.4;
+}
+
+.comingSoon {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  align-self: flex-start;
+}
+
+.arrow {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  color: var(--primary);
+  font-size: 1.1rem;
+}

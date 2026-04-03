@@ -1,0 +1,171 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.panelTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.addBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.addBtn:hover {
+  background: var(--primary-dark);
+}
+
+.createForm {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--gray-100);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1.5px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--primary);
+}
+
+.formBtns {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cancelBtn, .saveBtn {
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid var(--gray-300);
+  color: var(--gray-600);
+}
+
+.saveBtn {
+  background: var(--primary);
+  border: none;
+  color: white;
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+}
+
+.hint {
+  padding: 1rem;
+  color: var(--gray-400);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--gray-50);
+}
+
+.listItem.selected {
+  background: #ede9fe;
+}
+
+.listBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--gray-800);
+  cursor: pointer;
+}
+
+.listItem.selected .listBtn {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.listBtn:hover {
+  background: var(--gray-50);
+}
+
+.listItem.selected .listBtn:hover {
+  background: #ddd6fe;
+}
+
+.listIcon {
+  font-size: 1rem;
+}
+
+.listName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deleteListBtn {
+  padding: 0.25rem 0.5rem;
+  margin-right: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--gray-400);
+  font-size: 1rem;
+  border-radius: var(--radius);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.listItem:hover .deleteListBtn {
+  opacity: 1;
+}
+
+.deleteListBtn:hover {
+  color: var(--danger);
+  background: #fee2e2;
+}
