@@ -55,7 +55,7 @@ button {
   font-size: 1rem;
 }
 
-input, textarea {
+input, select, textarea {
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 16px; /* iOS Safari は 16px 未満でズームするため下限を固定 */
 }

@@ -80,6 +80,15 @@ export default function PricePage() {
     return error
   }
 
+  async function handleDeleteProduct(productName) {
+    setItems(prev => prev.filter(i => i.product_name !== productName))
+    await supabase
+      .from('price_items')
+      .delete()
+      .eq('product_name', productName)
+      .eq('family_id', familyMember.family_id)
+  }
+
   async function handleDeleteStore(id, name) {
     setStores(prev => prev.filter(s => s.id !== id))
     setItems(prev => prev.filter(i => i.store_name !== name))
@@ -163,7 +172,16 @@ export default function PricePage() {
               <tbody>
                 {products.map(product => (
                   <tr key={product}>
-                    <td className={styles.productCell}>{product}</td>
+                    <td className={styles.productCell}>
+                      <div className={styles.productCellInner}>
+                        <span className={styles.productName}>{product}</span>
+                        <button
+                          className={styles.deleteProductBtn}
+                          onClick={() => handleDeleteProduct(product)}
+                          aria-label={`${product}を削除`}
+                        >×</button>
+                      </div>
+                    </td>
                     {storeNames.map(store => {
                       const item = lookup[product]?.[store]
                       const isCheapest = item && item.price === cheapest[product]

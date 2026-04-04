@@ -165,7 +165,7 @@
 }
 
 .productCell {
-  padding: 0.625rem 0.875rem;
+  padding: 0;
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--gray-800);
@@ -173,10 +173,49 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  max-width: 160px;
+  max-width: 180px;
+  white-space: nowrap;
+}
+
+.productCellInner {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.875rem;
+}
+
+.productName {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.deleteProductBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--gray-300);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.productCell:hover .deleteProductBtn {
+  opacity: 1;
+}
+
+.deleteProductBtn:hover {
+  color: var(--danger);
+  background: #fee2e2;
 }
 
 /* ── 価格セル ── */
@@ -285,7 +324,6 @@
   padding: 0.3rem 0.4rem;
   border: 1.5px solid var(--primary);
   border-radius: calc(var(--radius) / 2);
-  font-size: 0.875rem;
   font-weight: 600;
   text-align: center;
   outline: none;
@@ -296,7 +334,6 @@
   padding: 0.25rem 0.4rem;
   border: 1.5px solid var(--gray-300);
   border-radius: calc(var(--radius) / 2);
-  font-size: 0.75rem;
   outline: none;
 }
 
@@ -409,7 +446,6 @@
   padding: 0.625rem 0.875rem;
   border: 1.5px solid var(--gray-300);
   border-radius: var(--radius);
-  font-size: 0.95rem;
   outline: none;
   transition: border-color 0.15s;
   touch-action: manipulation;
@@ -515,4 +551,5 @@
 /* ── モバイル：削除ボタン常時表示 ── */
 @media (max-width: 600px) {
   .deleteCell { opacity: 1; }
+  .deleteProductBtn { opacity: 1; }
 }
