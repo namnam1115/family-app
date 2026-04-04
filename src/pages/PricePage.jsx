@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './PricePage.module.css'
@@ -10,6 +11,8 @@ export default function PricePage() {
   const [stores, setStores] = useState([])
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState('list') // 'list' | 'grid'
+  const [selectedProduct, setSelectedProduct] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showStoreModal, setShowStoreModal] = useState(false)
 
@@ -56,7 +59,7 @@ export default function PricePage() {
         store_name: storeName,
         product_name: productName,
         price: Number(price),
-        note: note.trim() || null,
+        note: note?.trim() || null,
         updated_by: familyMember.name,
         updated_at: new Date().toISOString(),
       },
@@ -93,13 +96,11 @@ export default function PricePage() {
     setStores(prev => prev.filter(s => s.id !== id))
     setItems(prev => prev.filter(i => i.store_name !== name))
     await supabase.from('price_items')
-      .delete()
-      .eq('store_name', name)
-      .eq('family_id', familyMember.family_id)
+      .delete().eq('store_name', name).eq('family_id', familyMember.family_id)
     await supabase.from('price_stores').delete().eq('id', id)
   }
 
-  // マトリックス生成
+  // ── Data processing ──
   const storeNames = stores.map(s => s.name)
   const products = [...new Set(items.map(i => i.product_name))].sort()
 
@@ -109,31 +110,45 @@ export default function PricePage() {
     lookup[item.product_name][item.store_name] = item
   }
 
-  const cheapest = {}
+  // cheapestInfo[product] = { price: number, store: string }
+  const cheapestInfo = {}
   for (const product of products) {
-    let min = Infinity
+    let min = Infinity, minStore = null
     for (const store of storeNames) {
       const item = lookup[product]?.[store]
-      if (item && item.price < min) min = item.price
+      if (item && item.price < min) { min = item.price; minStore = store }
     }
-    cheapest[product] = min
+    if (minStore) cheapestInfo[product] = { price: min, store: minStore }
   }
 
-  const productNames = [...new Set(items.map(i => i.product_name))].sort()
+  const isEmpty = !loading && stores.length > 0 && products.length === 0
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => navigate('/')}>← ホーム</button>
-        <span className={styles.headerTitle}>価格比較</span>
+        <div className={styles.headerTop}>
+          <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
+          <span className={styles.headerTitle}>💰 価格比較</span>
+        </div>
         <div className={styles.headerActions}>
-          <button className={styles.storeBtn} onClick={() => setShowStoreModal(true)}>🏪 店舗</button>
+          {products.length > 0 && (
+            <button
+              className={`${styles.viewToggleBtn} ${view === 'grid' ? styles.viewToggleActive : ''}`}
+              onClick={() => setView(v => v === 'list' ? 'grid' : 'list')}
+              title={view === 'list' ? '一覧表で見る' : 'リストで見る'}
+            >
+              {view === 'list' ? '📊 一覧' : '📋 リスト'}
+            </button>
+          )}
+          <button className={styles.storeBtn} onClick={() => setShowStoreModal(true)} title="店舗管理">
+            🏪 <span className={styles.storeBtnLabel}>店舗</span>
+          </button>
           <button
             className={styles.addBtn}
             onClick={() => setShowAddModal(true)}
             disabled={stores.length === 0}
           >
-            + 追加
+            ＋ 追加
           </button>
         </div>
       </header>
@@ -149,67 +164,52 @@ export default function PricePage() {
               店舗を追加する
             </button>
           </div>
-        ) : products.length === 0 ? (
+        ) : isEmpty ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>💰</span>
             <p>価格データがありません</p>
-            <p className={styles.emptyDesc}>「+ 追加」から商品と価格を登録しましょう</p>
+            <p className={styles.emptyDesc}>「＋ 追加」から商品と価格を登録しましょう</p>
             <button className={styles.emptyBtn} onClick={() => setShowAddModal(true)}>
               価格を追加する
             </button>
           </div>
+        ) : view === 'list' ? (
+          <ProductListView
+            products={products}
+            cheapestInfo={cheapestInfo}
+            onSelect={setSelectedProduct}
+          />
         ) : (
-          <div className={styles.tableWrapper}>
-            <table className={styles.matrix}>
-              <thead>
-                <tr>
-                  <th className={styles.productHeader}>商品</th>
-                  {storeNames.map(store => (
-                    <th key={store} className={styles.storeHeader}>{store}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(product => (
-                  <tr key={product}>
-                    <td className={styles.productCell}>
-                      <div className={styles.productCellInner}>
-                        <span className={styles.productName}>{product}</span>
-                        <button
-                          className={styles.deleteProductBtn}
-                          onClick={() => handleDeleteProduct(product)}
-                          aria-label={`${product}を削除`}
-                        >×</button>
-                      </div>
-                    </td>
-                    {storeNames.map(store => {
-                      const item = lookup[product]?.[store]
-                      const isCheapest = item && item.price === cheapest[product]
-                      return (
-                        <PriceCell
-                          key={store}
-                          item={item}
-                          product={product}
-                          store={store}
-                          isCheapest={isCheapest}
-                          onSave={handleUpsert}
-                          onDelete={handleDeleteItem}
-                        />
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <GridView
+            products={products}
+            storeNames={storeNames}
+            lookup={lookup}
+            cheapestInfo={cheapestInfo}
+            onUpsert={handleUpsert}
+            onDeleteItem={handleDeleteItem}
+            onDeleteProduct={handleDeleteProduct}
+          />
         )}
       </main>
+
+      {selectedProduct && (
+        <CompareSheet
+          product={selectedProduct}
+          storeNames={storeNames}
+          lookup={lookup}
+          cheapestInfo={cheapestInfo}
+          onUpsert={handleUpsert}
+          onDeleteItem={handleDeleteItem}
+          onDeleteProduct={name => { handleDeleteProduct(name); setSelectedProduct(null) }}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
 
       {showAddModal && (
         <AddModal
           stores={storeNames}
-          productNames={productNames}
-          onSubmit={async (data) => {
+          productNames={products}
+          onSubmit={async data => {
             const err = await handleUpsert(data)
             if (!err) setShowAddModal(false)
             return err
@@ -230,7 +230,227 @@ export default function PricePage() {
   )
 }
 
-// ── セルのインライン編集 ──
+// ── リストビュー ──────────────────────────────────────────
+function ProductListView({ products, cheapestInfo, onSelect }) {
+  return (
+    <ul className={styles.productList}>
+      {products.map(product => {
+        const best = cheapestInfo[product]
+        return (
+          <li key={product} className={styles.productListItem} onClick={() => onSelect(product)}>
+            <span className={styles.productListName}>{product}</span>
+            <div className={styles.productListRight}>
+              {best ? (
+                <div className={styles.bestInfo}>
+                  <span className={styles.bestPrice}>¥{best.price.toLocaleString()}</span>
+                  <span className={styles.bestStore}>{best.store}</span>
+                </div>
+              ) : (
+                <span className={styles.noPrice}>未登録</span>
+              )}
+              <span className={styles.chevron}>›</span>
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+// ── 店舗別比較シート ──────────────────────────────────────
+function CompareSheet({ product, storeNames, lookup, cheapestInfo, onUpsert, onDeleteItem, onDeleteProduct, onClose }) {
+  const best = cheapestInfo[product]
+  const registeredCount = storeNames.filter(s => lookup[product]?.[s]).length
+
+  return (
+    <div className={styles.sheetOverlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.sheet}>
+        <div className={styles.sheetHandle} />
+        <div className={styles.sheetHeader}>
+          <div>
+            <h2 className={styles.sheetTitle}>{product}</h2>
+            <p className={styles.sheetMeta}>{registeredCount} / {storeNames.length} 店舗に価格登録済み</p>
+          </div>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+        </div>
+
+        <ul className={styles.compareList}>
+          {storeNames.map(store => {
+            const item = lookup[product]?.[store]
+            const isBest = !!(item && best && item.price === best.price)
+            return (
+              <CompareRow
+                key={store}
+                store={store}
+                item={item}
+                isBest={isBest}
+                product={product}
+                onUpsert={onUpsert}
+                onDeleteItem={onDeleteItem}
+              />
+            )
+          })}
+        </ul>
+
+        <button
+          className={styles.deleteProductSheetBtn}
+          onClick={() => onDeleteProduct(product)}
+        >
+          この商品をリストから削除
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── 比較シートの各行 ──────────────────────────────────────
+function CompareRow({ store, item, isBest, product, onUpsert, onDeleteItem }) {
+  const [editing, setEditing] = useState(false)
+  const [price, setPrice] = useState('')
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+  const priceRef = useRef()
+
+  function startEdit() {
+    setPrice(item?.price ?? '')
+    setNote(item?.note ?? '')
+    setEditing(true)
+    setTimeout(() => priceRef.current?.select?.() || priceRef.current?.focus(), 0)
+  }
+
+  async function save() {
+    if (price === '' || price === null) { cancel(); return }
+    setSaving(true)
+    await onUpsert({ storeName: store, productName: product, price, note })
+    setSaving(false)
+    setEditing(false)
+  }
+
+  function cancel() { setEditing(false) }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') { e.preventDefault(); save() }
+    if (e.key === 'Escape') cancel()
+  }
+
+  if (editing) {
+    return (
+      <li className={`${styles.compareRow} ${styles.compareRowEditing}`}>
+        <span className={styles.compareStoreName}>{store}</span>
+        <div className={styles.compareEditArea}>
+          <input
+            ref={priceRef}
+            className={styles.compareInput}
+            type="number"
+            value={price}
+            onChange={e => setPrice(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="価格（円）"
+            min={0}
+          />
+          <input
+            className={styles.compareNoteInput}
+            type="text"
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="メモ（任意）"
+            maxLength={50}
+          />
+          <div className={styles.compareEditBtns}>
+            <button className={styles.compareEditSave} onClick={save} disabled={saving}>保存</button>
+            <button className={styles.compareEditCancel} onClick={cancel}>キャンセル</button>
+          </div>
+        </div>
+      </li>
+    )
+  }
+
+  return (
+    <li
+      className={`${styles.compareRow} ${isBest ? styles.compareRowBest : ''} ${!item ? styles.compareRowEmpty : ''}`}
+      onClick={startEdit}
+    >
+      <div className={styles.compareLeft}>
+        {isBest && <span className={styles.bestBadge}>最安</span>}
+        <div className={styles.compareStoreInfo}>
+          <span className={styles.compareStoreName}>{store}</span>
+          {item?.note && <span className={styles.compareNote}>{item.note}</span>}
+        </div>
+      </div>
+      <div className={styles.compareRight}>
+        {item ? (
+          <>
+            <span className={`${styles.comparePrice} ${isBest ? styles.comparePriceBest : ''}`}>
+              ¥{item.price.toLocaleString()}
+            </span>
+            <button
+              className={styles.compareDelBtn}
+              onClick={e => { e.stopPropagation(); onDeleteItem(item.id) }}
+              aria-label="削除"
+            >×</button>
+          </>
+        ) : (
+          <span className={styles.compareAddHint}>＋ 価格を入力</span>
+        )}
+      </div>
+    </li>
+  )
+}
+
+// ── 一覧グリッドビュー ────────────────────────────────────
+function GridView({ products, storeNames, lookup, cheapestInfo, onUpsert, onDeleteItem, onDeleteProduct }) {
+  return (
+    <div className={styles.tableWrapper}>
+      <table className={styles.matrix}>
+        <thead>
+          <tr>
+            <th className={styles.productHeader}>商品</th>
+            {storeNames.map(store => (
+              <th key={store} className={styles.storeHeader}>{store}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {products.map(product => {
+            const minPrice = cheapestInfo[product]?.price ?? Infinity
+            return (
+              <tr key={product}>
+                <td className={styles.productCell}>
+                  <div className={styles.productCellInner}>
+                    <span className={styles.productName}>{product}</span>
+                    <button
+                      className={styles.deleteProductBtn}
+                      onClick={() => onDeleteProduct(product)}
+                      aria-label={`${product}を削除`}
+                    >×</button>
+                  </div>
+                </td>
+                {storeNames.map(store => {
+                  const item = lookup[product]?.[store]
+                  const isCheapest = item && item.price === minPrice
+                  return (
+                    <PriceCell
+                      key={store}
+                      item={item}
+                      product={product}
+                      store={store}
+                      isCheapest={isCheapest}
+                      onSave={onUpsert}
+                      onDelete={onDeleteItem}
+                    />
+                  )
+                })}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── グリッドの価格セル ────────────────────────────────────
 function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
   const [editing, setEditing] = useState(false)
   const [price, setPrice] = useState('')
@@ -253,9 +473,7 @@ function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
     setEditing(false)
   }
 
-  function cancel() {
-    setEditing(false)
-  }
+  function cancel() { setEditing(false) }
 
   function handleKeyDown(e) {
     if (e.key === 'Enter') { e.preventDefault(); save() }
@@ -310,13 +528,13 @@ function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
           >×</button>
         </div>
       ) : (
-        <span className={styles.noData}>+</span>
+        <span className={styles.noData}>＋</span>
       )}
     </td>
   )
 }
 
-// ── 価格追加モーダル ──
+// ── 価格追加モーダル ──────────────────────────────────────
 function AddModal({ stores, productNames, onSubmit, onClose }) {
   const [storeName, setStoreName] = useState(stores[0] || '')
   const [productName, setProductName] = useState('')
@@ -405,7 +623,7 @@ function AddModal({ stores, productNames, onSubmit, onClose }) {
   )
 }
 
-// ── 店舗管理モーダル ──
+// ── 店舗管理モーダル ──────────────────────────────────────
 function StoreModal({ stores, onAdd, onDelete, onClose }) {
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
@@ -429,7 +647,6 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
           <h2 className={styles.modalTitle}>店舗管理</h2>
           <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
         </div>
-
         <ul className={styles.storeList}>
           {stores.length === 0 && (
             <li className={styles.storeEmpty}>店舗が登録されていません</li>
@@ -441,13 +658,10 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
                 className={styles.storeDeleteBtn}
                 onClick={() => onDelete(s.id, s.name)}
                 aria-label={`${s.name}を削除`}
-              >
-                削除
-              </button>
+              >削除</button>
             </li>
           ))}
         </ul>
-
         <form onSubmit={handleAdd} className={styles.storeAddForm}>
           <input
             className={styles.input}

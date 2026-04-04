@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BsHouseFill } from 'react-icons/bs'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ShoppingItemList from '../components/ShoppingItemList'
@@ -67,7 +68,7 @@ export default function ShoppingPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => navigate('/')}>← ホーム</button>
+        <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
         <h1 className={styles.headerTitle}>🛒 買い物リスト</h1>
         <button
           className={styles.notifBtn}
