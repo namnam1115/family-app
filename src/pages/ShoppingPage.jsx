@@ -22,12 +22,16 @@ export default function ShoppingPage() {
       .order('created_at', { ascending: false })
     if (!error && data) {
       setLists(data)
-      if (data.length > 0 && !selectedListId) {
-        setSelectedListId(data[0].id)
-      }
     }
     setLoadingLists(false)
-  }, [familyMember?.family_id, selectedListId])
+  }, [familyMember?.family_id])
+
+  // 初回ロード時に最初のリストを自動選択
+  useEffect(() => {
+    if (lists.length > 0 && !selectedListId) {
+      setSelectedListId(lists[0].id)
+    }
+  }, [lists, selectedListId])
 
   useEffect(() => {
     fetchLists()
