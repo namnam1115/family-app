@@ -23,13 +23,27 @@ export default function ShoppingPage() {
       .select('id, name, created_at, created_by')
       .eq('family_id', familyMember.family_id)
       .order('created_at', { ascending: false })
-    if (!error && data) setLists(data)
+    if (!error && data) {
+      const { data: uncheckedItems } = await supabase
+        .from('shopping_items')
+        .select('list_id')
+        .in('list_id', data.map(l => l.id))
+        .eq('checked', false)
+      const countMap = {}
+      if (uncheckedItems) {
+        uncheckedItems.forEach(item => {
+          countMap[item.list_id] = (countMap[item.list_id] || 0) + 1
+        })
+      }
+      setLists(data.map(l => ({ ...l, uncheckedCount: countMap[l.id] || 0 })))
+    }
     setLoadingLists(false)
   }, [familyMember?.family_id])
 
   useEffect(() => {
     if (lists.length > 0 && !selectedListId) {
-      setSelectedListId(lists[0].id)
+      const listWithMost = lists.reduce((max, l) => l.uncheckedCount > max.uncheckedCount ? l : max, lists[0])
+      setSelectedListId(listWithMost.id)
     }
   }, [lists, selectedListId])
 
