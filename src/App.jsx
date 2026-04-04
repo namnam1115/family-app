@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import HomePage from './pages/HomePage'
 import ShoppingPage from './pages/ShoppingPage'
+import PricePage from './pages/PricePage'
 import JoinPage from './pages/JoinPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -17,6 +18,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ShoppingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/price"
+            element={
+              <ProtectedRoute>
+                <PricePage />
               </ProtectedRoute>
             }
           />

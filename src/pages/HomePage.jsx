@@ -76,6 +76,14 @@ export default function HomePage() {
       available: true,
     },
     {
+      id: 'price',
+      title: '価格比較',
+      description: '複数スーパーの商品価格を比較。最安値を一目で確認。',
+      icon: '💰',
+      path: '/price',
+      available: true,
+    },
+    {
       id: 'schedule',
       title: 'スケジュール',
       description: '家族の予定を共有しよう（近日公開）',
