@@ -25,13 +25,16 @@ export async function getPushStatus() {
 export async function subscribeToPush(familyId, userId) {
   if (!isPushSupported()) throw new Error('このブラウザはプッシュ通知に対応していません')
 
+  const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+  if (!vapidKey) throw new Error('VAPID公開鍵が設定されていません（VITE_VAPID_PUBLIC_KEY）')
+
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') throw new Error('通知の許可が得られませんでした')
 
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
+    applicationServerKey: urlBase64ToUint8Array(vapidKey),
   })
 
   const json = sub.toJSON()
