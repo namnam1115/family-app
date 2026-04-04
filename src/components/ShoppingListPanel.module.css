@@ -124,6 +124,8 @@
   font-size: 0.9rem;
   color: var(--gray-800);
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .listItem.selected .listBtn {

@@ -1,16 +1,27 @@
 .container {
   max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .listTitle {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--gray-900);
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
 }
 
+/* ── 入力フォーム（下部固定） ── */
 .addForm {
-  margin-bottom: 1.5rem;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--gray-200);
+  margin-top: auto;
 }
 
 .inputRow {
@@ -27,6 +38,7 @@
   font-size: 0.95rem;
   outline: none;
   transition: border-color 0.15s;
+  touch-action: manipulation;
 }
 
 .nameInput:focus {
@@ -41,6 +53,7 @@
   font-size: 0.875rem;
   outline: none;
   transition: border-color 0.15s;
+  touch-action: manipulation;
 }
 
 .memoInput:focus {
@@ -57,6 +70,7 @@
   font-weight: 500;
   white-space: nowrap;
   transition: background 0.15s;
+  touch-action: manipulation;
 }
 
 .addBtn:hover:not(:disabled) {
@@ -68,6 +82,7 @@
   cursor: not-allowed;
 }
 
+/* ── アイテムエリア ── */
 .hint {
   text-align: center;
   color: var(--gray-400);
@@ -79,6 +94,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+  padding-bottom: 0.5rem;
 }
 
 .itemList {
@@ -88,25 +106,54 @@
   gap: 0.5rem;
 }
 
+/* ── スワイプ削除 ── */
+.itemWrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.deleteBg {
+  position: absolute;
+  inset: 0;
+  background: #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 1.25rem;
+  color: var(--danger);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+
+.deleteBgActive {
+  background: var(--danger);
+  color: white;
+}
+
+/* ── アイテム行 ── */
 .item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   background: white;
   border: 1px solid var(--gray-200);
-  border-radius: var(--radius);
   padding: 0.75rem 1rem;
   transition: opacity 0.15s;
+  position: relative;
 }
 
 .item.itemChecked {
   background: var(--gray-50);
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .checkbox {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   border-radius: 50%;
   border: 2px solid var(--gray-300);
   background: white;
@@ -117,6 +164,7 @@
   color: white;
   flex-shrink: 0;
   transition: background 0.15s, border-color 0.15s;
+  touch-action: manipulation;
 }
 
 .itemChecked .checkbox {
@@ -158,6 +206,7 @@
   color: var(--gray-400);
 }
 
+/* デスクトップのみホバーで × 表示 */
 .deleteBtn {
   padding: 0.2rem 0.4rem;
   background: transparent;
@@ -168,6 +217,7 @@
   opacity: 0;
   transition: opacity 0.15s, color 0.15s;
   flex-shrink: 0;
+  touch-action: manipulation;
 }
 
 .item:hover .deleteBtn {
@@ -179,6 +229,7 @@
   background: #fee2e2;
 }
 
+/* ── 購入済みセクション ── */
 .checkedSection {
   margin-top: 1rem;
   display: flex;
@@ -195,7 +246,9 @@
   padding: 0.25rem 0;
 }
 
-@media (max-width: 480px) {
+/* ── モバイル ── */
+@media (max-width: 600px) {
+  /* 入力欄を2行に */
   .inputRow {
     flex-wrap: wrap;
   }
@@ -206,5 +259,18 @@
 
   .memoInput {
     flex: 1;
+  }
+
+  /* スワイプで削除するのでモバイルは × ボタン非表示 */
+  .deleteBtn {
+    display: none;
+  }
+
+  /* チェックボックスのタップ領域を広く */
+  .checkbox {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
   }
 }

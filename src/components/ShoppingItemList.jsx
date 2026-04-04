@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import styles from './ShoppingItemList.module.css'
 
@@ -24,20 +24,10 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
     fetchItems()
   }, [fetchItems])
 
-  // リアルタイム購読
   useEffect(() => {
     const channel = supabase
       .channel(`shopping_items_${listId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'shopping_items',
-          filter: `list_id=eq.${listId}`,
-        },
-        () => fetchItems()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter: `list_id=eq.${listId}` }, () => fetchItems())
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [listId, fetchItems])
@@ -59,16 +49,17 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
   }
 
   async function handleToggle(item) {
+    const checked = !item.checked
+    const checked_at = checked ? new Date().toISOString() : null
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, checked, checked_at } : i))
     await supabase
       .from('shopping_items')
-      .update({
-        checked: !item.checked,
-        checked_at: !item.checked ? new Date().toISOString() : null,
-      })
+      .update({ checked, checked_at })
       .eq('id', item.id)
   }
 
   async function handleDelete(id) {
+    setItems(prev => prev.filter(i => i.id !== id))
     await supabase.from('shopping_items').delete().eq('id', id)
   }
 
@@ -78,6 +69,32 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
   return (
     <div className={styles.container}>
       <h2 className={styles.listTitle}>{listName}</h2>
+
+      {loading ? (
+        <p className={styles.hint}>読み込み中...</p>
+      ) : items.length === 0 ? (
+        <p className={styles.hint}>アイテムがありません。最初の商品を追加してみましょう！</p>
+      ) : (
+        <div className={styles.itemsArea}>
+          {unchecked.length > 0 && (
+            <ul className={styles.itemList}>
+              {unchecked.map(item => (
+                <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} />
+              ))}
+            </ul>
+          )}
+          {checked.length > 0 && (
+            <div className={styles.checkedSection}>
+              <p className={styles.checkedSummary}>購入済み ({checked.length})</p>
+              <ul className={styles.itemList}>
+                {checked.map(item => (
+                  <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} />
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleAdd} className={styles.addForm}>
         <div className={styles.inputRow}>
@@ -97,52 +114,11 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
             placeholder="メモ（任意）"
             maxLength={200}
           />
-          <button
-            type="submit"
-            className={styles.addBtn}
-            disabled={submitting || !name.trim()}
-          >
+          <button type="submit" className={styles.addBtn} disabled={submitting || !name.trim()}>
             追加
           </button>
         </div>
       </form>
-
-      {loading ? (
-        <p className={styles.hint}>読み込み中...</p>
-      ) : items.length === 0 ? (
-        <p className={styles.hint}>アイテムがありません。最初の商品を追加してみましょう！</p>
-      ) : (
-        <div className={styles.itemsArea}>
-          {unchecked.length > 0 && (
-            <ul className={styles.itemList}>
-              {unchecked.map(item => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  onToggle={handleToggle}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </ul>
-          )}
-
-          {checked.length > 0 && (
-            <div className={styles.checkedSection}>
-              <p className={styles.checkedSummary}>購入済み ({checked.length})</p>
-              <ul className={styles.itemList}>
-                {checked.map(item => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    onToggle={handleToggle}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }
@@ -150,39 +126,74 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
 function formatDate(iso) {
   if (!iso) return null
   const d = new Date(iso)
-  const now = new Date()
-  const isToday = d.toDateString() === now.toDateString()
-  if (isToday) {
-    return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-  }
+  const isToday = d.toDateString() === new Date().toDateString()
+  if (isToday) return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
   return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function ItemRow({ item, onToggle, onDelete }) {
+  const [offsetX, setOffsetX] = useState(0)
+  const touch = useRef({ startX: 0, startY: 0, horizontal: null, active: false })
+  const DELETE_THRESHOLD = 80
+
+  function onTouchStart(e) {
+    touch.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, horizontal: null, active: true }
+  }
+
+  function onTouchMove(e) {
+    const t = touch.current
+    if (!t.active) return
+    const dx = e.touches[0].clientX - t.startX
+    const dy = e.touches[0].clientY - t.startY
+    if (t.horizontal === null) {
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) t.horizontal = Math.abs(dx) >= Math.abs(dy)
+      return
+    }
+    if (!t.horizontal || dx > 0) return
+    setOffsetX(Math.max(dx, -(DELETE_THRESHOLD + 24)))
+  }
+
+  function onTouchEnd() {
+    touch.current.active = false
+    if (offsetX <= -DELETE_THRESHOLD) {
+      onDelete(item.id)
+    } else {
+      setOffsetX(0)
+    }
+  }
+
   return (
-    <li className={`${styles.item} ${item.checked ? styles.itemChecked : ''}`}>
-      <button
-        className={styles.checkbox}
-        onClick={() => onToggle(item)}
-        aria-label={item.checked ? 'チェックを外す' : 'チェックする'}
-      >
-        {item.checked ? '✓' : ''}
-      </button>
-      <div className={styles.itemBody}>
-        <span className={styles.itemName}>{item.name}</span>
-        {item.memo && <span className={styles.itemMemo}>{item.memo}</span>}
-        <span className={styles.itemAdded}>
-          {item.added_by} が追加
-          {item.checked && item.checked_at && ` · ${formatDate(item.checked_at)} 購入`}
-        </span>
+    <li className={styles.itemWrapper}>
+      <div className={`${styles.deleteBg} ${offsetX < -(DELETE_THRESHOLD / 2) ? styles.deleteBgActive : ''}`}>
+        <span>削除</span>
       </div>
-      <button
-        className={styles.deleteBtn}
-        onClick={() => onDelete(item.id)}
-        aria-label="削除"
+      <div
+        className={`${styles.item} ${item.checked ? styles.itemChecked : ''}`}
+        style={{
+          transform: offsetX !== 0 ? `translateX(${offsetX}px)` : undefined,
+          transition: touch.current.active ? 'none' : 'transform 0.2s ease',
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
-        ×
-      </button>
+        <button
+          className={styles.checkbox}
+          onClick={() => onToggle(item)}
+          aria-label={item.checked ? 'チェックを外す' : 'チェックする'}
+        >
+          {item.checked ? '✓' : ''}
+        </button>
+        <div className={styles.itemBody}>
+          <span className={styles.itemName}>{item.name}</span>
+          {item.memo && <span className={styles.itemMemo}>{item.memo}</span>}
+          <span className={styles.itemAdded}>
+            {item.added_by} が追加
+            {item.checked && item.checked_at && ` · ${formatDate(item.checked_at)} 購入`}
+          </span>
+        </div>
+        <button className={styles.deleteBtn} onClick={() => onDelete(item.id)} aria-label="削除">×</button>
+      </div>
     </li>
   )
 }
