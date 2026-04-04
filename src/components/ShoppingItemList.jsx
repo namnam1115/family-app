@@ -61,7 +61,10 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
   async function handleToggle(item) {
     await supabase
       .from('shopping_items')
-      .update({ checked: !item.checked })
+      .update({
+        checked: !item.checked,
+        checked_at: !item.checked ? new Date().toISOString() : null,
+      })
       .eq('id', item.id)
   }
 
@@ -124,10 +127,8 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
           )}
 
           {checked.length > 0 && (
-            <details className={styles.checkedSection} open={unchecked.length === 0}>
-              <summary className={styles.checkedSummary}>
-                購入済み ({checked.length})
-              </summary>
+            <div className={styles.checkedSection}>
+              <p className={styles.checkedSummary}>購入済み ({checked.length})</p>
               <ul className={styles.itemList}>
                 {checked.map(item => (
                   <ItemRow
@@ -138,12 +139,23 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
                   />
                 ))}
               </ul>
-            </details>
+            </div>
           )}
         </div>
       )}
     </div>
   )
+}
+
+function formatDate(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  const now = new Date()
+  const isToday = d.toDateString() === now.toDateString()
+  if (isToday) {
+    return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+  }
+  return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function ItemRow({ item, onToggle, onDelete }) {
@@ -159,7 +171,10 @@ function ItemRow({ item, onToggle, onDelete }) {
       <div className={styles.itemBody}>
         <span className={styles.itemName}>{item.name}</span>
         {item.memo && <span className={styles.itemMemo}>{item.memo}</span>}
-        <span className={styles.itemAdded}>{item.added_by} が追加</span>
+        <span className={styles.itemAdded}>
+          {item.added_by} が追加
+          {item.checked && item.checked_at && ` · ${formatDate(item.checked_at)} 購入`}
+        </span>
       </div>
       <button
         className={styles.deleteBtn}

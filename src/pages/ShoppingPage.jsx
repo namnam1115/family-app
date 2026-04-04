@@ -67,6 +67,7 @@ export default function ShoppingPage() {
       .select()
       .single()
     if (!error && data) {
+      await fetchLists()
       setSelectedListId(data.id)
     }
   }

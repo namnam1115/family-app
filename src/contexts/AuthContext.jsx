@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
       .single()
     if (familyError) throw familyError
 
-    const { data: member, error: memberError } = await supabase
+    const { error: memberError } = await supabase
       .from('family_members')
       .insert({
         family_id: family.id,
@@ -78,12 +78,9 @@ export function AuthProvider({ children }) {
         name: user.user_metadata?.full_name || user.email,
         email: user.email,
       })
-      .select('*, families(id, name)')
-      .single()
     if (memberError) throw memberError
 
-    setFamilyMember(member)
-    return member
+    await fetchFamilyMember(user.id)
   }
 
   async function joinFamily(familyId) {
@@ -102,7 +99,7 @@ export function AuthProvider({ children }) {
       .maybeSingle()
     if (existing) throw new Error('すでに家族グループに参加しています')
 
-    const { data: member, error: memberError } = await supabase
+    const { error: memberError } = await supabase
       .from('family_members')
       .insert({
         family_id: familyId,
@@ -110,12 +107,9 @@ export function AuthProvider({ children }) {
         name: user.user_metadata?.full_name || user.email,
         email: user.email,
       })
-      .select('*, families(id, name)')
-      .single()
     if (memberError) throw memberError
 
-    setFamilyMember(member)
-    return member
+    await fetchFamilyMember(user.id)
   }
 
   const value = {
