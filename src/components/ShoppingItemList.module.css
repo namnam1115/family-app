@@ -204,6 +204,28 @@
   color: var(--gray-400);
 }
 
+/* 重要フラグ */
+.starBtn {
+  padding: 0.2rem 0.25rem;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--gray-300);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.starBtn.starOn {
+  color: #f59e0b;
+}
+
+.starBtn:hover {
+  transform: scale(1.2);
+}
+
 /* デスクトップのみホバーで × 表示 */
 .deleteBtn {
   padding: 0.2rem 0.4rem;

@@ -31,6 +31,20 @@
 
 .backBtn:hover { opacity: 0.7; }
 
+.notifBtn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.25rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s;
+}
+
+.notifBtn:hover { transform: scale(1.15); }
+
 .headerTitle {
   font-size: 1.05rem;
   font-weight: 700;

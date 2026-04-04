@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ShoppingItemList from '../components/ShoppingItemList'
+import NotificationSettings from '../components/NotificationSettings'
 import styles from './ShoppingPage.module.css'
 
 export default function ShoppingPage() {
@@ -12,6 +13,7 @@ export default function ShoppingPage() {
   const [selectedListId, setSelectedListId] = useState(null)
   const [loadingLists, setLoadingLists] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
+  const [showNotifSettings, setShowNotifSettings] = useState(false)
 
   const fetchLists = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -67,6 +69,12 @@ export default function ShoppingPage() {
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => navigate('/')}>← ホーム</button>
         <h1 className={styles.headerTitle}>🛒 買い物リスト</h1>
+        <button
+          className={styles.notifBtn}
+          onClick={() => setShowNotifSettings(true)}
+          aria-label="通知設定"
+          title="通知設定"
+        >🔔</button>
       </header>
 
       {/* リスト選択タブ */}
@@ -114,6 +122,13 @@ export default function ShoppingPage() {
           )
         )}
       </main>
+
+      {showNotifSettings && (
+        <NotificationSettings
+          familyMember={familyMember}
+          onClose={() => setShowNotifSettings(false)}
+        />
+      )}
 
       {showCreate && (
         <CreateListModal

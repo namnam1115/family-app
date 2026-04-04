@@ -1,0 +1,236 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 200;
+}
+
+@media (min-width: 480px) {
+  .overlay { align-items: center; padding: 1rem; }
+}
+
+.modal {
+  background: white;
+  border-radius: 1rem 1rem 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+@media (min-width: 480px) {
+  .modal { border-radius: 1rem; }
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  border: none;
+  color: var(--gray-600);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.loading {
+  color: var(--gray-400);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── セクション ── */
+.section {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--gray-100);
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.section:last-of-type { border-bottom: none; }
+
+.sectionTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── デバイス通知 ── */
+.note {
+  font-size: 0.875rem;
+  color: var(--gray-400);
+}
+
+.noteWarn {
+  font-size: 0.875rem;
+  color: var(--warning);
+  line-height: 1.6;
+}
+
+.pushRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pushInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.pushBadge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.badgeOn {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.badgeOff {
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+
+.pushDesc {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+}
+
+.toggleBtn {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  touch-action: manipulation;
+  transition: opacity 0.15s;
+}
+
+.toggleBtn:disabled { opacity: 0.5; }
+
+.toggleOn {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.toggleOff {
+  background: var(--primary);
+  color: white;
+}
+
+/* ── スケジュール設定 ── */
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--gray-700);
+  cursor: pointer;
+}
+
+.timeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: opacity 0.15s;
+}
+
+.timeRow.dimmed { opacity: 0.4; pointer-events: none; }
+
+.timeLabel {
+  font-size: 0.9rem;
+  color: var(--gray-700);
+}
+
+.select {
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 16px;
+  background: white;
+  color: var(--gray-800);
+  outline: none;
+  touch-action: manipulation;
+}
+
+.select:focus { border-color: var(--primary); }
+.select:disabled { opacity: 0.5; }
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--gray-400);
+}
+
+/* ── メッセージ ── */
+.msg {
+  margin-top: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.msg.success { background: #dcfce7; color: #16a34a; }
+.msg.error { background: #fee2e2; color: var(--danger); }
+.msg.info { background: var(--gray-100); color: var(--gray-600); }
+
+/* ── 保存ボタン ── */
+.saveBtn {
+  margin-top: 1.25rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  transition: background 0.15s;
+}
+
+.saveBtn:hover:not(:disabled) { background: var(--primary-dark); }
+.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }

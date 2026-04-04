@@ -63,6 +63,12 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
     await supabase.from('shopping_items').delete().eq('id', id)
   }
 
+  async function handleToggleImportant(item) {
+    const important = !item.important
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, important } : i))
+    await supabase.from('shopping_items').update({ important }).eq('id', item.id)
+  }
+
   const unchecked = items.filter(i => !i.checked)
   const checked = items.filter(i => i.checked)
 
@@ -79,7 +85,7 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
           {unchecked.length > 0 && (
             <ul className={styles.itemList}>
               {unchecked.map(item => (
-                <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} />
+                <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
               ))}
             </ul>
           )}
@@ -88,7 +94,7 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
               <p className={styles.checkedSummary}>購入済み ({checked.length})</p>
               <ul className={styles.itemList}>
                 {checked.map(item => (
-                  <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} />
+                  <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
                 ))}
               </ul>
             </div>
@@ -134,7 +140,7 @@ function formatDate(iso) {
 const REVEAL_WIDTH = 80
 const SWIPE_THRESHOLD = 40
 
-function ItemRow({ item, onToggle, onDelete }) {
+function ItemRow({ item, onToggle, onDelete, onToggleImportant }) {
   const [offsetX, setOffsetX] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const touch = useRef({ startX: 0, startY: 0, horizontal: null, active: false, startOffset: 0 })
@@ -226,6 +232,14 @@ function ItemRow({ item, onToggle, onDelete }) {
             {item.checked && item.checked_at && ` · ${formatDate(item.checked_at)} 購入`}
           </span>
         </div>
+        {/* 重要フラグ */}
+        <button
+          className={`${styles.starBtn} ${item.important ? styles.starOn : ''}`}
+          onClick={e => { e.stopPropagation(); onToggleImportant(item) }}
+          aria-label={item.important ? '重要フラグを外す' : '重要としてマーク'}
+        >
+          {item.important ? '⭐' : '☆'}
+        </button>
         {/* デスクトップのみ × ボタン表示 */}
         <button className={styles.deleteBtn} onClick={e => { e.stopPropagation(); onDelete(item.id) }} aria-label="削除">×</button>
       </div>
