@@ -131,55 +131,89 @@ function formatDate(iso) {
   return d.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+const REVEAL_WIDTH = 80
+const SWIPE_THRESHOLD = 40
+
 function ItemRow({ item, onToggle, onDelete }) {
   const [offsetX, setOffsetX] = useState(0)
-  const touch = useRef({ startX: 0, startY: 0, horizontal: null, active: false })
-  const DELETE_THRESHOLD = 80
+  const [revealed, setRevealed] = useState(false)
+  const touch = useRef({ startX: 0, startY: 0, horizontal: null, active: false, startOffset: 0 })
 
-  function onTouchStart(e) {
-    touch.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, horizontal: null, active: true }
+  function handleTouchStart(e) {
+    touch.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      horizontal: null,
+      active: true,
+      startOffset: revealed ? -REVEAL_WIDTH : 0,
+    }
   }
 
-  function onTouchMove(e) {
+  function handleTouchMove(e) {
     const t = touch.current
     if (!t.active) return
     const dx = e.touches[0].clientX - t.startX
     const dy = e.touches[0].clientY - t.startY
     if (t.horizontal === null) {
-      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) t.horizontal = Math.abs(dx) >= Math.abs(dy)
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) t.horizontal = Math.abs(dx) >= Math.abs(dy)
       return
     }
-    if (!t.horizontal || dx > 0) return
-    setOffsetX(Math.max(dx, -(DELETE_THRESHOLD + 24)))
+    if (!t.horizontal) return
+    const next = Math.max(Math.min(t.startOffset + dx, 0), -(REVEAL_WIDTH + 16))
+    setOffsetX(next)
   }
 
-  function onTouchEnd() {
+  function handleTouchEnd() {
     touch.current.active = false
-    if (offsetX <= -DELETE_THRESHOLD) {
-      onDelete(item.id)
+    if (offsetX <= -SWIPE_THRESHOLD) {
+      setOffsetX(-REVEAL_WIDTH)
+      setRevealed(true)
     } else {
       setOffsetX(0)
+      setRevealed(false)
     }
+  }
+
+  function handleCheckboxClick(e) {
+    e.stopPropagation()
+    if (revealed) { closeReveal(); return }
+    onToggle(item)
+  }
+
+  function handleItemClick() {
+    if (revealed) closeReveal()
+  }
+
+  function closeReveal() {
+    setOffsetX(0)
+    setRevealed(false)
   }
 
   return (
     <li className={styles.itemWrapper}>
-      <div className={`${styles.deleteBg} ${offsetX < -(DELETE_THRESHOLD / 2) ? styles.deleteBgActive : ''}`}>
-        <span>削除</span>
-      </div>
+      {/* 削除ボタン（スワイプで露出） */}
+      <button
+        className={styles.deleteBgBtn}
+        onClick={() => onDelete(item.id)}
+        aria-label="削除"
+      >
+        削除
+      </button>
+
       <div
         className={`${styles.item} ${item.checked ? styles.itemChecked : ''}`}
         style={{
           transform: offsetX !== 0 ? `translateX(${offsetX}px)` : undefined,
           transition: touch.current.active ? 'none' : 'transform 0.2s ease',
         }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleItemClick}
       >
         <button
           className={styles.checkbox}
-          onClick={() => onToggle(item)}
+          onClick={handleCheckboxClick}
           aria-label={item.checked ? 'チェックを外す' : 'チェックする'}
         >
           {item.checked ? '✓' : ''}
@@ -192,7 +226,8 @@ function ItemRow({ item, onToggle, onDelete }) {
             {item.checked && item.checked_at && ` · ${formatDate(item.checked_at)} 購入`}
           </span>
         </div>
-        <button className={styles.deleteBtn} onClick={() => onDelete(item.id)} aria-label="削除">×</button>
+        {/* デスクトップのみ × ボタン表示 */}
+        <button className={styles.deleteBtn} onClick={e => { e.stopPropagation(); onDelete(item.id) }} aria-label="削除">×</button>
       </div>
     </li>
   )
