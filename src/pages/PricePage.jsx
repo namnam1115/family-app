@@ -15,6 +15,8 @@ export default function PricePage() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showStoreModal, setShowStoreModal] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchStores = useCallback(async () => {
     const { data } = await supabase
@@ -52,7 +54,7 @@ export default function PricePage() {
     return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
   }, [fetchItems, fetchStores])
 
-  async function handleUpsert({ storeName, productName, price, note }) {
+  async function handleUpsert({ storeName, productName, price, note, category }) {
     const { error } = await supabase.from('price_items').upsert(
       {
         family_id: familyMember.family_id,
@@ -60,11 +62,19 @@ export default function PricePage() {
         product_name: productName,
         price: Number(price),
         note: note?.trim() || null,
+        category: category ?? 'food',
         updated_by: familyMember.name,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'family_id,store_name,product_name' }
     )
+    // 同一商品の全行にカテゴリを反映
+    if (!error && category) {
+      await supabase.from('price_items')
+        .update({ category })
+        .eq('family_id', familyMember.family_id)
+        .eq('product_name', productName)
+    }
     if (!error) await fetchItems()
     return error
   }
@@ -102,7 +112,22 @@ export default function PricePage() {
 
   // ── Data processing ──
   const storeNames = stores.map(s => s.name)
-  const products = [...new Set(items.map(i => i.product_name))].sort()
+  const allProducts = [...new Set(items.map(i => i.product_name))].sort()
+
+  // 商品ごとのカテゴリ（最初の行から取得）
+  const productCategory = {}
+  for (const item of items) {
+    if (!productCategory[item.product_name]) {
+      productCategory[item.product_name] = item.category ?? 'food'
+    }
+  }
+
+  // カテゴリ＋検索フィルター適用
+  const products = allProducts.filter(p => {
+    if (categoryFilter !== 'all' && productCategory[p] !== categoryFilter) return false
+    if (searchQuery.trim() && !p.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false
+    return true
+  })
 
   const lookup = {}
   for (const item of items) {
@@ -121,7 +146,7 @@ export default function PricePage() {
     if (minStore) cheapestInfo[product] = { price: min, store: minStore }
   }
 
-  const isEmpty = !loading && stores.length > 0 && products.length === 0
+  const isEmpty = !loading && stores.length > 0 && allProducts.length === 0
 
   return (
     <div className={styles.page}>
@@ -153,6 +178,34 @@ export default function PricePage() {
         </div>
       </header>
 
+      {/* 検索＋カテゴリフィルター */}
+      {!loading && allProducts.length > 0 && (
+        <div className={styles.filterBar}>
+          <div className={styles.searchWrapper}>
+            <span className={styles.searchIcon}>🔍</span>
+            <input
+              className={styles.searchInput}
+              type="search"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="商品名で検索..."
+            />
+            {searchQuery && (
+              <button className={styles.searchClear} onClick={() => setSearchQuery('')} aria-label="クリア">×</button>
+            )}
+          </div>
+          <div className={styles.categoryChips}>
+            {[['all', 'すべて'], ['food', '🥦 食材'], ['daily', '🧴 日用品'], ['other', '📦 その他']].map(([v, label]) => (
+              <button
+                key={v}
+                className={`${styles.chip} ${categoryFilter === v ? styles.chipActive : ''}`}
+                onClick={() => setCategoryFilter(v)}
+              >{label}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <main className={styles.main}>
         {loading ? (
           <p className={styles.hint}>読み込み中...</p>
@@ -172,6 +225,11 @@ export default function PricePage() {
             <button className={styles.emptyBtn} onClick={() => setShowAddModal(true)}>
               価格を追加する
             </button>
+          </div>
+        ) : products.length === 0 ? (
+          <div className={styles.empty}>
+            <span className={styles.emptyIcon}>🔍</span>
+            <p>{searchQuery ? `「${searchQuery}」は見つかりません` : 'このカテゴリの商品はありません'}</p>
           </div>
         ) : view === 'list' ? (
           <ProductListView
@@ -208,7 +266,8 @@ export default function PricePage() {
       {showAddModal && (
         <AddModal
           stores={storeNames}
-          productNames={products}
+          productNames={allProducts}
+          productCategory={productCategory}
           onSubmit={async data => {
             const err = await handleUpsert(data)
             if (!err) setShowAddModal(false)
@@ -534,21 +593,35 @@ function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
   )
 }
 
+const PRICE_CATEGORIES = [
+  { value: 'food',  label: '🥦 食材' },
+  { value: 'daily', label: '🧴 日用品' },
+  { value: 'other', label: '📦 その他' },
+]
+
 // ── 価格追加モーダル ──────────────────────────────────────
-function AddModal({ stores, productNames, onSubmit, onClose }) {
+function AddModal({ stores, productNames, productCategory, onSubmit, onClose }) {
   const [storeName, setStoreName] = useState(stores[0] || '')
   const [productName, setProductName] = useState('')
+  const [category, setCategory] = useState('food')
   const [price, setPrice] = useState('')
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  function handleProductChange(e) {
+    const val = e.target.value
+    setProductName(val)
+    // 既存商品ならカテゴリを自動セット
+    if (productCategory[val]) setCategory(productCategory[val])
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!storeName || !productName.trim() || price === '') return
     setSubmitting(true)
     setError('')
-    const err = await onSubmit({ storeName, productName: productName.trim(), price, note })
+    const err = await onSubmit({ storeName, productName: productName.trim(), price, note, category })
     if (err) setError('保存に失敗しました')
     setSubmitting(false)
   }
@@ -573,7 +646,7 @@ function AddModal({ stores, productNames, onSubmit, onClose }) {
               className={styles.input}
               list="product-list"
               value={productName}
-              onChange={e => setProductName(e.target.value)}
+              onChange={handleProductChange}
               placeholder="例: 牛乳 1L"
               maxLength={100}
               required
@@ -583,6 +656,19 @@ function AddModal({ stores, productNames, onSubmit, onClose }) {
               {productNames.map(p => <option key={p} value={p} />)}
             </datalist>
           </label>
+          <div className={styles.label}>
+            カテゴリ
+            <div className={styles.categoryBtns}>
+              {PRICE_CATEGORIES.map(c => (
+                <button
+                  key={c.value}
+                  type="button"
+                  className={`${styles.categoryBtn} ${category === c.value ? styles.categoryBtnActive : ''}`}
+                  onClick={() => setCategory(c.value)}
+                >{c.label}</button>
+              ))}
+            </div>
+          </div>
           <label className={styles.label}>
             価格（円）
             <input
