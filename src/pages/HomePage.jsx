@@ -84,6 +84,14 @@ export default function HomePage() {
       available: true,
     },
     {
+      id: 'budget',
+      title: '予算管理',
+      description: '月々の固定費を家族で管理。カテゴリ・メンバー別に把握。',
+      icon: '📊',
+      path: '/budget',
+      available: true,
+    },
+    {
       id: 'schedule',
       title: 'スケジュール',
       description: '家族の予定を共有しよう（近日公開）',
