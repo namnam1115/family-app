@@ -244,4 +244,25 @@ sequenceDiagram
 - **認証**: Supabase Auth セッションによる JWT 検証
 - **招待リンク**: `families` テーブルの SELECT を認証済みユーザー全体に許可（参加フローのため）
 - **Push通知**: VAPID キーによる署名、エンドポイントはユーザー自身のみ管理可能
-                       
+
+
+
+  select cron.schedule(
+    'send-shopping-notifications',
+    '0 * * * *',
+    $$
+    select net.http_post(                                     
+      url := 'https://xollwoorudgponxelfzk.supabase.co/functio
+  ns/v1/send-shopping-notifications',                         
+      headers := '{"Authorization": "Bearer                 
+  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbGx3b29ydWRncG9ueGVsZnprIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI0Nzg1MiwiZXhwIjoyMDkwODIzODUyfQ.j9qc1oPWVx3WNpVkVthyh6z9Lti7YzMLSJwJ3sCCrP0", "Content-Type":            
+  "application/json"}'::jsonb,
+      body := '{}'::jsonb                                     
+    )                                                       
+    $$                                                        
+  );
+    
+curl -X POST 'https://xollwoorudgponxelfzk.supabase.co/functions/v1/send-shopping-notifications' -H 'Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbGx3b29ydWRncG9ueGVsZnprIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI0Nzg1MiwiZXhwIjoyMDkwODIzODUyfQ.j9qc1oPWVx3WNpVkVthyh6z9Lti7YzMLSJwJ3sCCrP0' -H'Content-Type: application/json'                   
+
+
+select net.http_post(url := 'https://xollwoorudgponxelfzk.supabase.co/functions/v1/send-shopping-notifications', headers := '{"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbGx3b29ydWRncG9ueGVsZnprIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTI0Nzg1MiwiZXhwIjoyMDkwODIzODUyfQ.j9qc1oPWVx3WNpVkVthyh6z9Lti7YzMLSJwJ3sCCrP0", "Content-Type": "application/json"}'::jsonb,body := '{}'::jsonb);

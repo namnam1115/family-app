@@ -84,6 +84,14 @@ export default function HomePage() {
       available: true,
     },
     {
+      id: 'places',
+      title: 'お出かけリスト',
+      description: '行きたい場所をまとめて共有。行ったら評価を残せる。',
+      icon: '📍',
+      path: '/places',
+      available: true,
+    },
+    {
       id: 'budget',
       title: '予算管理',
       description: '月々の固定費を家族で管理。カテゴリ・メンバー別に把握。',

@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 import ShoppingPage from './pages/ShoppingPage'
 import PricePage from './pages/PricePage'
 import BudgetPage from './pages/BudgetPage'
+import PlacesPage from './pages/PlacesPage'
 import JoinPage from './pages/JoinPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -35,6 +36,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <BudgetPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/places"
+            element={
+              <ProtectedRoute>
+                <PlacesPage />
               </ProtectedRoute>
             }
           />
