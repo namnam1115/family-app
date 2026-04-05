@@ -20,6 +20,7 @@ export default function PlacesPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')   // 'all'|'want'|'visited'
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [visitTarget, setVisitTarget] = useState(null)      // place object
   const [editTarget, setEditTarget] = useState(null)        // place object
@@ -95,9 +96,16 @@ export default function PlacesPage() {
   }
 
   // フィルタリング
+  const q = searchQuery.trim().toLowerCase()
   const filtered = places.filter(p => {
     if (statusFilter !== 'all' && p.status !== statusFilter) return false
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false
+    if (q) {
+      const inName    = p.name?.toLowerCase().includes(q)
+      const inAddress = p.address?.toLowerCase().includes(q)
+      const inMemo    = p.memo?.toLowerCase().includes(q)
+      if (!inName && !inAddress && !inMemo) return false
+    }
     return true
   })
 
@@ -120,6 +128,23 @@ export default function PlacesPage() {
             onClick={() => setStatusFilter(v)}
           >{label}</button>
         ))}
+      </div>
+
+      {/* 検索バー */}
+      <div className={styles.searchBar}>
+        <div className={styles.searchWrapper}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input
+            className={styles.searchInput}
+            type="search"
+            placeholder="場所名・住所・メモで検索..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className={styles.searchClear} onClick={() => setSearchQuery('')} aria-label="クリア">×</button>
+          )}
+        </div>
       </div>
 
       {/* カテゴリチップ */}
@@ -456,9 +481,9 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
       acContainerRef.current.innerHTML = ''
       const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places')
       const element = new PlaceAutocompleteElement({ componentRestrictions: { country: 'jp' } })
-      if (place.address) element.value = place.address
       acElementRef.current = element
       acContainerRef.current.appendChild(element)
+      if (place.address) element.value = place.address  // DOM接続後にセット
       element.addEventListener('gmp-placeselect', async ({ place: p }) => {
         try {
           await p.fetchFields({ fields: ['formattedAddress'] })
