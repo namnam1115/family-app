@@ -92,51 +92,53 @@ export default function ShoppingPage() {
         >🔔</button>
       </header>
 
-      {/* リスト選択タブ */}
-      <div className={styles.tabsBar}>
-        {loadingLists ? (
-          <span className={styles.tabsLoading}>読み込み中...</span>
-        ) : (
-          <div className={styles.tabsScroll}>
-            {lists.map(l => (
-              <button
-                key={l.id}
-                className={`${styles.tab} ${l.id === selectedListId ? styles.tabActive : ''}`}
-                onClick={() => setSelectedListId(l.id)}
-              >
-                <span className={styles.tabName}>{l.name}</span>
-                <span
-                  className={styles.tabDelete}
-                  onClick={e => { e.stopPropagation(); handleDeleteList(l.id) }}
-                  role="button"
-                  aria-label={`${l.name}を削除`}
-                >×</span>
+      <div className={styles.body}>
+        {/* リスト選択タブ */}
+        <div className={styles.tabsBar}>
+          {loadingLists ? (
+            <span className={styles.tabsLoading}>読み込み中...</span>
+          ) : (
+            <div className={styles.tabsScroll}>
+              {lists.map(l => (
+                <button
+                  key={l.id}
+                  className={`${styles.tab} ${l.id === selectedListId ? styles.tabActive : ''}`}
+                  onClick={() => setSelectedListId(l.id)}
+                >
+                  <span className={styles.tabName}>{l.name}</span>
+                  <span
+                    className={styles.tabDelete}
+                    onClick={e => { e.stopPropagation(); handleDeleteList(l.id) }}
+                    role="button"
+                    aria-label={`${l.name}を削除`}
+                  >×</span>
+                </button>
+              ))}
+              <button className={styles.tabNew} onClick={() => setShowCreate(true)}>
+                ＋ 新しいリスト
               </button>
-            ))}
-            <button className={styles.tabNew} onClick={() => setShowCreate(true)}>
-              ＋ 新しいリスト
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* コンテンツ */}
-      <main className={styles.content}>
-        {selectedListId ? (
-          <ShoppingItemList
-            listId={selectedListId}
-            listName={selectedList?.name}
-            memberName={familyMember?.name || familyMember?.email || '名前なし'}
-          />
-        ) : (
-          !loadingLists && (
-            <div className={styles.empty}>
-              <span className={styles.emptyIcon}>🛒</span>
-              <p>「＋ 新しいリスト」からリストを作成してください</p>
             </div>
-          )
-        )}
-      </main>
+          )}
+        </div>
+
+        {/* コンテンツ */}
+        <main className={styles.content}>
+          {selectedListId ? (
+            <ShoppingItemList
+              listId={selectedListId}
+              listName={selectedList?.name}
+              memberName={familyMember?.name || familyMember?.email || '名前なし'}
+            />
+          ) : (
+            !loadingLists && (
+              <div className={styles.empty}>
+                <span className={styles.emptyIcon}>🛒</span>
+                <p>「＋ 新しいリスト」からリストを作成してください</p>
+              </div>
+            )
+          )}
+        </main>
+      </div>
 
       {showNotifSettings && (
         <NotificationSettings

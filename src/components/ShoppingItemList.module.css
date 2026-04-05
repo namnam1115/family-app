@@ -1,8 +1,8 @@
 .container {
-  max-width: 640px;
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
 }
 
 .listTitle {
@@ -292,6 +292,31 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 0.25rem 0;
+}
+
+/* ── デスクトップ ── */
+@media (min-width: 1024px) {
+  .listTitle {
+    font-size: 1.5rem;
+  }
+
+  /* 未購入・購入済みを横並び2カラム */
+  .itemsArea {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    overflow-y: auto;
+  }
+
+  .checkedSection {
+    margin-top: 0;
+  }
+
+  /* 入力フォームを横並び */
+  .addForm {
+    padding-block: 1rem;
+  }
 }
 
 /* ── モバイル ── */

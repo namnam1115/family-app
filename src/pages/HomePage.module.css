@@ -195,10 +195,22 @@
 .main {
   flex: 1;
   padding: 2rem 1.5rem;
-  max-width: 800px;
+  max-width: var(--max-w);
   width: 100%;
   margin: 0 auto;
   animation: fadeInUp 0.45s ease both;
+}
+
+@media (min-width: 1024px) {
+  .header {
+    padding-inline: max(1.5rem, calc((100% - var(--max-w)) / 2));
+  }
+  .main {
+    padding: 2.5rem 2rem;
+  }
+  .appGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .appsSection {

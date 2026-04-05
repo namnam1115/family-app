@@ -1157,3 +1157,45 @@
 
 .storeAddForm .input { flex: 1; }
 .storeAddForm .saveBtn { flex: none; padding: 0.75rem 1.25rem; }
+
+
+/* ══════════════════════════════════════
+   レスポンシブ (PC対応)
+══════════════════════════════════════ */
+
+@media (min-width: 768px) {
+  .productList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .header {
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+  }
+  .filterBar {
+    flex-direction: row;
+    align-items: center;
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+    gap: 1rem;
+  }
+  .searchWrapper {
+    padding: 0.625rem 0;
+    width: 300px;
+    flex-shrink: 0;
+  }
+  .categoryChips {
+    padding: 0.5rem 0;
+  }
+  .main {
+    padding-inline: max(1rem, calc((100% - var(--max-w)) / 2));
+  }
+  .productList {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .tableWrapper {
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+}

@@ -290,6 +290,30 @@
   line-height: 1.4;
 }
 
+.placeAddress {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--primary);
+  background: rgba(124, 58, 237, 0.07);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 0.2rem 0.6rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+  margin-bottom: 0.15rem;
+}
+
+.placeAddress:hover {
+  background: rgba(124, 58, 237, 0.14);
+}
+
 .placeReview {
   font-size: 0.82rem;
   color: var(--gray-600);
@@ -495,6 +519,24 @@
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
+/* ── Places Autocomplete ── */
+.acContainer {
+  width: 100%;
+}
+
+.acContainer gmp-placeautocomplete {
+  width: 100%;
+}
+
+.acSelected {
+  font-size: 0.8rem;
+  color: var(--primary);
+  background: rgba(124, 58, 237, 0.06);
+  border-radius: var(--radius);
+  padding: 0.375rem 0.625rem;
+  margin-top: 0.25rem;
+}
+
 /* ── カテゴリ選択 ── */
 .categorySelect {
   display: grid;
@@ -629,4 +671,30 @@
 .saveBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════
+   レスポンシブ (PC対応)
+══════════════════════════════════════ */
+
+@media (min-width: 768px) {
+  .placeList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    align-items: start;
+  }
+}
+
+@media (min-width: 1024px) {
+  .header,
+  .statusTabs,
+  .categoryChips {
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+  }
+
+  .placeList {
+    max-width: var(--max-w);
+    margin-inline: auto;
+    grid-template-columns: repeat(3, 1fr);
+  }
 }

@@ -661,3 +661,39 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* ══════════════════════════════════════
+   レスポンシブ (PC対応)
+══════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  .header,
+  .viewTabs {
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+  }
+
+  .listWrapper {
+    max-width: var(--max-w);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 合計・追加ボタンは常に全幅 */
+  .totalBlock,
+  .addCategoryBtn,
+  .totalRow,
+  .totalHero,
+  .summaryCard {
+    grid-column: 1 / -1;
+  }
+
+  /* 全体ビュー: サマリーカードを横並び */
+  .totalHero + .summaryCard,
+  .summaryCard + .summaryCard {
+    grid-column: auto;
+  }
+  .totalHero {
+    grid-column: 1 / -1;
+  }
+}

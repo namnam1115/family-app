@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { loadGoogleMapsScript } from '../utils/googleMaps'
 import styles from './PlacesPage.module.css'
 
 const CATEGORIES = {
@@ -53,12 +54,13 @@ export default function PlacesPage() {
     return () => supabase.removeChannel(ch)
   }, [familyMember?.family_id, fetchAll])
 
-  async function handleAdd({ name, category, memo }) {
+  async function handleAdd({ name, category, memo, address }) {
     await supabase.from('wish_places').insert({
       family_id: familyMember.family_id,
       name: name.trim(),
       category,
       memo: memo?.trim() || null,
+      address: address?.trim() || null,
       added_by: familyMember.id,
     })
     await fetchAll()
@@ -74,11 +76,12 @@ export default function PlacesPage() {
     await fetchAll()
   }
 
-  async function handleEdit(id, { name, category, memo }) {
+  async function handleEdit(id, { name, category, memo, address }) {
     await supabase.from('wish_places').update({
       name: name.trim(),
       category,
       memo: memo?.trim() || null,
+      address: address?.trim() || null,
     }).eq('id', id)
     await fetchAll()
   }
@@ -194,8 +197,9 @@ function PlaceCard({ place, onEdit, onVisit }) {
 
   function openMap(e) {
     e.stopPropagation()
+    const query = place.address || place.name
     window.open(
-      `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`,
+      `https://www.google.com/maps/search/${encodeURIComponent(query)}`,
       '_blank',
       'noopener,noreferrer'
     )
@@ -216,6 +220,13 @@ function PlaceCard({ place, onEdit, onVisit }) {
       <p className={styles.placeName}>{place.name}</p>
 
       {place.memo && <p className={styles.placeMemo}>{place.memo}</p>}
+      {place.address && (
+        <button
+          className={styles.placeAddress}
+          onClick={e => { e.stopPropagation(); openMap(e) }}
+          title="地図で確認"
+        >📍 {place.address}</button>
+      )}
       {isVisited && place.review && <p className={styles.placeReview}>💬 {place.review}</p>}
 
       <div className={styles.cardBottom}>
@@ -253,13 +264,43 @@ function AddPlaceModal({ onSubmit, onClose }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('food')
   const [memo, setMemo] = useState('')
+  const [address, setAddress] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const acContainerRef = useRef(null)
+  const acElementRef = useRef(null)
+
+  useEffect(() => {
+    let mounted = true
+    loadGoogleMapsScript().then(async () => {
+      if (!mounted || !acContainerRef.current) return
+      // StrictMode 対策: 既存の要素を削除してから追加
+      acContainerRef.current.innerHTML = ''
+      const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places')
+      const element = new PlaceAutocompleteElement({ componentRestrictions: { country: 'jp' } })
+      acElementRef.current = element
+      acContainerRef.current.appendChild(element)
+      element.addEventListener('gmp-placeselect', async ({ place }) => {
+        try {
+          await place.fetchFields({ fields: ['formattedAddress'] })
+          if (mounted) setAddress(place.formattedAddress || element.value || '')
+        } catch {
+          if (mounted) setAddress(element.value || '')
+        }
+      })
+    }).catch(() => {})
+    return () => {
+      mounted = false
+      acElementRef.current = null
+    }
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) return
     setSubmitting(true)
-    await onSubmit({ name, category, memo })
+    // gmp-placeselect が state に反映済みなら address を、未反映なら element.value をフォールバック
+    const finalAddress = address || acElementRef.current?.value || ''
+    await onSubmit({ name, category, memo, address: finalAddress })
     setSubmitting(false)
   }
 
@@ -296,6 +337,11 @@ function AddPlaceModal({ onSubmit, onClose }) {
               ))}
             </div>
           </label>
+          <div className={styles.label}>
+            住所（任意）
+            <div ref={acContainerRef} className={styles.acContainer} />
+            {address && <p className={styles.acSelected}>📍 {address}</p>}
+          </div>
           <label className={styles.label}>
             メモ（任意）
             <input
@@ -395,13 +441,42 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
   const [name, setName] = useState(place.name)
   const [category, setCategory] = useState(place.category)
   const [memo, setMemo] = useState(place.memo ?? '')
+  const [address, setAddress] = useState(place.address ?? '')
   const [submitting, setSubmitting] = useState(false)
+  const acContainerRef = useRef(null)
+  const acElementRef = useRef(null)
+
+  useEffect(() => {
+    let mounted = true
+    loadGoogleMapsScript().then(async () => {
+      if (!mounted || !acContainerRef.current) return
+      acContainerRef.current.innerHTML = ''
+      const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places')
+      const element = new PlaceAutocompleteElement({ componentRestrictions: { country: 'jp' } })
+      if (place.address) element.value = place.address
+      acElementRef.current = element
+      acContainerRef.current.appendChild(element)
+      element.addEventListener('gmp-placeselect', async ({ place: p }) => {
+        try {
+          await p.fetchFields({ fields: ['formattedAddress'] })
+          if (mounted) setAddress(p.formattedAddress || element.value || '')
+        } catch {
+          if (mounted) setAddress(element.value || '')
+        }
+      })
+    }).catch(() => {})
+    return () => {
+      mounted = false
+      acElementRef.current = null
+    }
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) return
     setSubmitting(true)
-    await onSubmit({ name, category, memo })
+    const finalAddress = address || acElementRef.current?.value || ''
+    await onSubmit({ name, category, memo, address: finalAddress })
     setSubmitting(false)
   }
 
@@ -436,6 +511,11 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
               ))}
             </div>
           </label>
+          <div className={styles.label}>
+            住所（任意）
+            <div ref={acContainerRef} className={styles.acContainer} />
+            {address && <p className={styles.acSelected}>📍 {address}</p>}
+          </div>
           <label className={styles.label}>
             メモ（任意）
             <input
