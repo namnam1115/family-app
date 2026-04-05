@@ -522,10 +522,13 @@
 /* ── Places Autocomplete ── */
 .acContainer {
   width: 100%;
+  color-scheme: light;
 }
 
 .acContainer gmp-placeautocomplete {
   width: 100%;
+  color-scheme: light;
+  --gmp-place-autocomplete-background-color: white;
 }
 
 .acSelected {

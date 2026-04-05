@@ -42,6 +42,9 @@ export default function PlacesPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  // Google Maps スクリプトをページロード時に事前読み込み
+  useEffect(() => { loadGoogleMapsScript().catch(() => {}) }, [])
+
   useEffect(() => {
     if (!familyMember?.family_id) return
     const ch = supabase
