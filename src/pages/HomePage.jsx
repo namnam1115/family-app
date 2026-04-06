@@ -92,6 +92,14 @@ export default function HomePage() {
       available: true,
     },
     {
+      id: 'dishes',
+      title: '食べたいおかず',
+      description: 'おかずのレシピを家族でストック。作ったら感想を残せる。',
+      icon: '🍳',
+      path: '/dishes',
+      available: true,
+    },
+    {
       id: 'budget',
       title: '予算管理',
       description: '月々の固定費を家族で管理。カテゴリ・メンバー別に把握。',
