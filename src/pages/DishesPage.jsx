@@ -322,6 +322,7 @@ function AddDishModal({ categories, onSubmit, onClose }) {
 
   async function fetchThumbnail(rawUrl) {
     const trimmed = rawUrl.trim()
+    console.log('[thumbnail] fetchThumbnail called:', trimmed)
     if (!trimmed) {
       setImageUrl('')
       setThumbAutoFetched(false)
@@ -330,21 +331,24 @@ function AddDishModal({ categories, onSubmit, onClose }) {
 
     // YouTubeはクライアント側で処理済みなのでスキップ
     if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+      console.log('[thumbnail] YouTube URL - skipping Edge Function')
       setThumbAutoFetched(false)
       return
     }
 
+    console.log('[thumbnail] calling Edge Function...')
     setFetchingThumb(true)
     try {
       const { data, error } = await supabase.functions.invoke('fetch-og-image', {
         body: { url: trimmed },
       })
+      console.log('[thumbnail] result:', { data, error })
       if (!error && data?.image) {
         setImageUrl(data.image)
         setThumbAutoFetched(true)
       }
-    } catch {
-      // 取得失敗はサイレントに無視
+    } catch (e) {
+      console.error('[thumbnail] exception:', e)
     } finally {
       setFetchingThumb(false)
     }
@@ -352,6 +356,7 @@ function AddDishModal({ categories, onSubmit, onClose }) {
 
   function handleUrlChange(e) {
     const val = e.target.value
+    console.log('[thumbnail] handleUrlChange:', val)
     setUrl(val)
     // 手動で画像URLを編集していたらauto-fetchしない
     if (imageUrl && !thumbAutoFetched) return
