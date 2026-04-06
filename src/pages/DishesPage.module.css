@@ -74,6 +74,69 @@
   box-shadow: 0 4px 18px rgba(124, 58, 237, 0.42);
 }
 
+/* ── 検索バー ── */
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.searchIcon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  color: var(--gray-400);
+}
+
+.searchInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-full);
+  outline: none;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  color: var(--gray-800);
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.searchInput:focus {
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.searchInput::placeholder {
+  color: var(--gray-400);
+}
+
+.searchClear {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--gray-200);
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+}
+
+.searchClear:hover {
+  background: var(--gray-300);
+}
+
 /* ── カテゴリバー ── */
 .categoryBar {
   display: flex;
@@ -370,14 +433,14 @@
   box-shadow: 0 4px 14px rgba(124, 58, 237, 0.42);
 }
 
-.deleteBtn {
-  width: 28px;
-  height: 28px;
+.editBtn {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: var(--gray-100);
-  color: var(--gray-400);
-  font-size: 0.9rem;
+  color: var(--gray-500);
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,9 +450,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.deleteBtn:hover {
-  background: #fee2e2;
-  color: var(--danger);
+.editBtn:hover {
+  background: var(--grad-primary-soft);
+  color: var(--primary);
+  transform: scale(1.08);
 }
 
 /* ── モーダル共通 ── */
@@ -679,6 +743,62 @@
 .saveBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ── 編集モーダル内の削除 ── */
+.deleteSeparator {
+  height: 1px;
+  background: var(--gray-100);
+  margin: 0 -1.75rem;
+}
+
+.deleteOutlineBtn {
+  width: 100%;
+  padding: 0.625rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid #fca5a5;
+  background: white;
+  color: var(--danger);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.deleteOutlineBtn:hover {
+  background: #fee2e2;
+  border-color: var(--danger);
+}
+
+.deleteConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.deleteConfirmText {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--danger);
+  text-align: center;
+}
+
+.deleteDangerBtn {
+  flex: 2;
+  padding: 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--danger);
+  border: none;
+  color: white;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.deleteDangerBtn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
 }
 
 /* ── カテゴリ管理 ── */
