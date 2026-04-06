@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
@@ -307,7 +307,10 @@ function AddDishModal({ categories, onSubmit, onClose }) {
   const [categoryId, setCategoryId] = useState('')
   const [url, setUrl] = useState('')
   const [imageUrl, setImageUrl] = useState('')
+  const [fetchingThumb, setFetchingThumb] = useState(false)
+  const [thumbAutoFetched, setThumbAutoFetched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const debounceRef = useRef(null)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -316,6 +319,59 @@ function AddDishModal({ categories, onSubmit, onClose }) {
     await onSubmit({ name, categoryId, url, imageUrl })
     setSubmitting(false)
   }
+
+  async function fetchThumbnail(rawUrl) {
+    const trimmed = rawUrl.trim()
+    if (!trimmed) {
+      setImageUrl('')
+      setThumbAutoFetched(false)
+      return
+    }
+
+    // YouTubeはクライアント側で処理済みなのでスキップ
+    if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+      setThumbAutoFetched(false)
+      return
+    }
+
+    setFetchingThumb(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-og-image', {
+        body: { url: trimmed },
+      })
+      if (!error && data?.image) {
+        setImageUrl(data.image)
+        setThumbAutoFetched(true)
+      }
+    } catch {
+      // 取得失敗はサイレントに無視
+    } finally {
+      setFetchingThumb(false)
+    }
+  }
+
+  function handleUrlChange(e) {
+    const val = e.target.value
+    setUrl(val)
+    // 手動で画像URLを編集していたらauto-fetchしない
+    if (imageUrl && !thumbAutoFetched) return
+    if (thumbAutoFetched && !val.trim()) {
+      setImageUrl('')
+      setThumbAutoFetched(false)
+    }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => fetchThumbnail(val), 800)
+  }
+
+  function handleImageUrlChange(e) {
+    setImageUrl(e.target.value)
+    setThumbAutoFetched(false)
+  }
+
+  const previewUrl = imageUrl || (() => {
+    const ytId = extractYouTubeId(url)
+    return ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null
+  })()
 
   return (
     <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -355,22 +411,37 @@ function AddDishModal({ categories, onSubmit, onClose }) {
             <input
               className={styles.input}
               value={url}
-              onChange={e => setUrl(e.target.value)}
+              onChange={handleUrlChange}
               placeholder="https://... (YouTube Shorts / TikTok / Web記事)"
               type="url"
             />
           </label>
           <label className={styles.label}>
             画像URL（任意）
-            <input
-              className={styles.input}
-              value={imageUrl}
-              onChange={e => setImageUrl(e.target.value)}
-              placeholder="https://... (サムネイル画像)"
-              type="url"
-            />
-            <span className={styles.inputHint}>YouTubeは自動でサムネイルを取得します</span>
+            <div className={styles.imageUrlRow}>
+              <input
+                className={styles.input}
+                value={imageUrl}
+                onChange={handleImageUrlChange}
+                placeholder="https://... (サムネイル画像)"
+                type="url"
+              />
+              {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
+            </div>
+            <span className={styles.inputHint}>
+              {thumbAutoFetched ? '✓ サムネイルを自動取得しました' : 'URLを入力すると自動でサムネイルを取得します'}
+            </span>
           </label>
+          {previewUrl && (
+            <div className={styles.thumbPreview}>
+              <img
+                src={previewUrl}
+                alt="サムネイルプレビュー"
+                className={styles.thumbPreviewImg}
+                onError={e => { e.currentTarget.style.display = 'none' }}
+              />
+            </div>
+          )}
           <div className={styles.formBtns}>
             <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
             <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
