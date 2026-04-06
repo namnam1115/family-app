@@ -42,6 +42,26 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    // TikTok: oEmbed APIでサムネイルを取得（bot対策のためHTMLスクレイピング不可）
+    if (parsedUrl.hostname.includes('tiktok.com')) {
+      const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`
+      const oembedRes = await fetch(oembedUrl, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (oembedRes.ok) {
+        const json = await oembedRes.json()
+        if (json?.thumbnail_url) {
+          return new Response(JSON.stringify({ image: json.thumbnail_url }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+      }
+      return new Response(JSON.stringify({ image: null }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; FamilyApp/1.0; +https://family-app.example.com)',
