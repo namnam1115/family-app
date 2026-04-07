@@ -74,23 +74,48 @@ export default function DishesPage() {
     setLoading(false)
   }, [familyMember?.family_id])
 
+  const fetchSingleDish = useCallback(async (id) => {
+    const { data } = await supabase
+      .from('dishes')
+      .select('*, category:dish_categories(id, name)')
+      .eq('id', id)
+      .single()
+    return data
+  }, [])
+
   useEffect(() => { fetchAll() }, [fetchAll])
 
   useEffect(() => {
     if (!familyMember?.family_id) return
+
+    async function handleDishChange(payload) {
+      if (payload.eventType === 'DELETE') {
+        setDishes(prev => prev.filter(d => d.id !== payload.old.id))
+      } else {
+        // INSERT/UPDATE: payload.new にはjoinデータがないので1行だけ取得
+        const dish = await fetchSingleDish(payload.new.id)
+        if (!dish) return
+        setDishes(prev => {
+          const exists = prev.some(d => d.id === dish.id)
+          if (exists) return prev.map(d => d.id === dish.id ? dish : d)
+          return [dish, ...prev]  // INSERT: created_at DESC 順を維持
+        })
+      }
+    }
+
     const ch = supabase
       .channel('dishes_rt')
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'dishes',
         filter: `family_id=eq.${familyMember.family_id}`,
-      }, fetchAll)
+      }, handleDishChange)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'dish_categories',
         filter: `family_id=eq.${familyMember.family_id}`,
       }, fetchAll)
       .subscribe()
     return () => supabase.removeChannel(ch)
-  }, [familyMember?.family_id, fetchAll])
+  }, [familyMember?.family_id, fetchAll, fetchSingleDish])
 
   async function handleAddDish({ name, categoryId, url, imageUrl }) {
     await supabase.from('dishes').insert({
@@ -101,7 +126,6 @@ export default function DishesPage() {
       image_url: imageUrl?.trim() || null,
       added_by: familyMember.id,
     })
-    await fetchAll()
   }
 
   async function handleReview(id, { rating, review }) {
@@ -110,7 +134,6 @@ export default function DishesPage() {
       rating: rating || null,
       review: review?.trim() || null,
     }).eq('id', id)
-    await fetchAll()
   }
 
   async function handleEditDish(id, { name, categoryId, url, imageUrl }) {
@@ -120,12 +143,10 @@ export default function DishesPage() {
       url: url?.trim() || null,
       image_url: imageUrl?.trim() || null,
     }).eq('id', id)
-    await fetchAll()
   }
 
   async function handleDelete(id) {
     await supabase.from('dishes').delete().eq('id', id)
-    await fetchAll()
   }
 
   async function handleAddCategory(name) {
@@ -134,12 +155,10 @@ export default function DishesPage() {
       name: name.trim(),
       sort_order: categories.length,
     })
-    await fetchAll()
   }
 
   async function handleDeleteCategory(id) {
     await supabase.from('dish_categories').delete().eq('id', id)
-    await fetchAll()
   }
 
   const filtered = dishes
