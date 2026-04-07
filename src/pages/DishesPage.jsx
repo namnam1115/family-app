@@ -47,8 +47,10 @@ export default function DishesPage() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [reviewTarget, setReviewTarget] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
   const [showManageCategories, setShowManageCategories] = useState(false)
 
   const fetchAll = useCallback(async () => {
@@ -111,6 +113,16 @@ export default function DishesPage() {
     await fetchAll()
   }
 
+  async function handleEditDish(id, { name, categoryId, url, imageUrl }) {
+    await supabase.from('dishes').update({
+      name: name.trim(),
+      category_id: categoryId || null,
+      url: url?.trim() || null,
+      image_url: imageUrl?.trim() || null,
+    }).eq('id', id)
+    await fetchAll()
+  }
+
   async function handleDelete(id) {
     await supabase.from('dishes').delete().eq('id', id)
     await fetchAll()
@@ -130,9 +142,9 @@ export default function DishesPage() {
     await fetchAll()
   }
 
-  const filtered = categoryFilter === 'all'
-    ? dishes
-    : dishes.filter(d => d.category_id === categoryFilter)
+  const filtered = dishes
+    .filter(d => categoryFilter === 'all' || d.category_id === categoryFilter)
+    .filter(d => !searchQuery.trim() || d.name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
 
   return (
     <div className={styles.page}>
@@ -143,6 +155,22 @@ export default function DishesPage() {
         <h1 className={styles.headerTitle}>🍳 食べたいおかず</h1>
         <button className={styles.addBtn} onClick={() => setShowAdd(true)}>＋ 追加</button>
       </header>
+
+      {/* 検索バー */}
+      <div className={styles.searchBar}>
+        <span className={styles.searchIcon}>🔍</span>
+        <input
+          className={styles.searchInput}
+          type="search"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="料理名で検索..."
+          aria-label="料理名で検索"
+        />
+        {searchQuery && (
+          <button className={styles.searchClear} onClick={() => setSearchQuery('')} aria-label="検索をクリア">×</button>
+        )}
+      </div>
 
       {/* カテゴリフィルター */}
       <div className={styles.categoryBar}>
@@ -182,7 +210,7 @@ export default function DishesPage() {
                 key={dish.id}
                 dish={dish}
                 onReview={() => setReviewTarget(dish)}
-                onDelete={() => handleDelete(dish.id)}
+                onEdit={() => setEditTarget(dish)}
               />
             ))}
           </ul>
@@ -205,6 +233,16 @@ export default function DishesPage() {
         />
       )}
 
+      {editTarget && (
+        <EditDishModal
+          dish={editTarget}
+          categories={categories}
+          onSubmit={async data => { await handleEditDish(editTarget.id, data); setEditTarget(null) }}
+          onDelete={async () => { await handleDelete(editTarget.id); setEditTarget(null) }}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
+
       {showManageCategories && (
         <ManageCategoriesModal
           categories={categories}
@@ -219,7 +257,7 @@ export default function DishesPage() {
 
 // ── 料理カード ────────────────────────────────────────────
 
-function DishCard({ dish, onReview, onDelete }) {
+function DishCard({ dish, onReview, onEdit }) {
   const thumbnailUrl = getThumbnailUrl(dish)
   const platform = getPlatform(dish.url)
   const platformInfo = platform ? PLATFORM_LABELS[platform] : null
@@ -290,10 +328,10 @@ function DishCard({ dish, onReview, onDelete }) {
             )}
           </div>
           <button
-            className={styles.deleteBtn}
-            onClick={onDelete}
-            aria-label="削除"
-          >×</button>
+            className={styles.editBtn}
+            onClick={onEdit}
+            aria-label="編集"
+          >✏️</button>
         </div>
       </div>
     </li>
@@ -513,6 +551,152 @@ function ReviewModal({ dish, onSubmit, onClose }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// ── 料理編集モーダル ──────────────────────────────────────
+
+function EditDishModal({ dish, categories, onSubmit, onDelete, onClose }) {
+  const [name, setName] = useState(dish.name)
+  const [categoryId, setCategoryId] = useState(dish.category_id || '')
+  const [url, setUrl] = useState(dish.url || '')
+  const [imageUrl, setImageUrl] = useState(dish.image_url || '')
+  const [fetchingThumb, setFetchingThumb] = useState(false)
+  const [thumbAutoFetched, setThumbAutoFetched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const debounceRef = useRef(null)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setSubmitting(true)
+    await onSubmit({ name, categoryId, url, imageUrl })
+    setSubmitting(false)
+  }
+
+  async function fetchThumbnail(rawUrl) {
+    const trimmed = rawUrl.trim()
+    if (!trimmed) { setImageUrl(''); setThumbAutoFetched(false); return }
+    if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) { setThumbAutoFetched(false); return }
+    setFetchingThumb(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-og-image', { body: { url: trimmed } })
+      if (!error && data?.image) { setImageUrl(data.image); setThumbAutoFetched(true) }
+    } catch (e) {
+      console.error('[thumbnail] exception:', e)
+    } finally {
+      setFetchingThumb(false)
+    }
+  }
+
+  function handleUrlChange(e) {
+    const val = e.target.value
+    setUrl(val)
+    if (imageUrl && !thumbAutoFetched) return
+    if (thumbAutoFetched && !val.trim()) { setImageUrl(''); setThumbAutoFetched(false) }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => fetchThumbnail(val), 800)
+  }
+
+  const previewUrl = imageUrl || (() => {
+    const ytId = extractYouTubeId(url)
+    return ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null
+  })()
+
+  return (
+    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>おかずを編集</h2>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <label className={styles.label}>
+            料理名
+            <input
+              className={styles.input}
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="例: 鶏の唐揚げ、麻婆豆腐..."
+              maxLength={100}
+              autoFocus
+              required
+            />
+          </label>
+          <label className={styles.label}>
+            カテゴリ（任意）
+            <select
+              className={styles.input}
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+            >
+              <option value="">カテゴリなし</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.label}>
+            参考URL（任意）
+            <input
+              className={styles.input}
+              value={url}
+              onChange={handleUrlChange}
+              placeholder="https://... (YouTube Shorts / TikTok / Web記事)"
+              type="url"
+            />
+          </label>
+          <label className={styles.label}>
+            画像URL（任意）
+            <div className={styles.imageUrlRow}>
+              <input
+                className={styles.input}
+                value={imageUrl}
+                onChange={e => { setImageUrl(e.target.value); setThumbAutoFetched(false) }}
+                placeholder="https://... (サムネイル画像)"
+                type="url"
+              />
+              {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
+            </div>
+            <span className={styles.inputHint}>
+              {thumbAutoFetched ? '✓ サムネイルを自動取得しました' : 'URLを入力すると自動でサムネイルを取得します'}
+            </span>
+          </label>
+          {previewUrl && (
+            <div className={styles.thumbPreview}>
+              <img
+                src={previewUrl}
+                alt="サムネイルプレビュー"
+                className={styles.thumbPreviewImg}
+                onError={e => { e.currentTarget.style.display = 'none' }}
+              />
+            </div>
+          )}
+          <div className={styles.formBtns}>
+            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+            <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
+              {submitting ? '保存中...' : '保存'}
+            </button>
+          </div>
+        </form>
+
+        <div className={styles.deleteSeparator} />
+        {confirmDelete ? (
+          <div className={styles.deleteConfirm}>
+            <p className={styles.deleteConfirmText}>本当に削除しますか？</p>
+            <div className={styles.formBtns}>
+              <button className={styles.cancelBtn} onClick={() => setConfirmDelete(false)}>キャンセル</button>
+              <button className={styles.deleteDangerBtn} onClick={onDelete}>削除する</button>
+            </div>
+          </div>
+        ) : (
+          <button className={styles.deleteOutlineBtn} onClick={() => setConfirmDelete(true)}>
+            🗑️ このおかずを削除
+          </button>
+        )}
       </div>
     </div>
   )
