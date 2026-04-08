@@ -149,7 +149,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(255, 255, 255, 0.95);
+  background: #ffffff;
   border: 1px solid var(--gray-100);
   padding: 0.75rem 0.875rem;
   transition: all 0.2s ease;
@@ -164,7 +164,6 @@
 
 .item.itemChecked {
   background: var(--gray-50);
-  opacity: 0.8;
 }
 
 .checkbox {
