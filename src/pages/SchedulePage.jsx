@@ -101,6 +101,9 @@ export default function SchedulePage() {
   const [initialShifts, setInitialShifts] = useState({})
   const [nurseSaving, setNurseSaving] = useState(false)
 
+  // メンバーフィルタ（空配列 = 全員表示）
+  const [selectedMemberIds, setSelectedMemberIds] = useState([])
+
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate])
   const monthGrid = useMemo(() => getMonthGrid(baseDate), [baseDate])
 
@@ -252,16 +255,30 @@ export default function SchedulePage() {
     cancelNurseMode()
   }
 
+  function toggleMember(memberId) {
+    setSelectedMemberIds(prev => {
+      if (prev.length === 0) return [memberId]
+      if (prev.includes(memberId)) return prev.filter(id => id !== memberId)
+      return [...prev, memberId]
+    })
+  }
+
+  // メンバーフィルタ適用済みイベント
+  const filteredEvents = useMemo(() => {
+    if (selectedMemberIds.length === 0) return events
+    return events.filter(e => !e.member_id || selectedMemberIds.includes(e.member_id))
+  }, [events, selectedMemberIds])
+
   // 週表示用
   const eventsByDay = useMemo(() => {
     return weekDates.map(date => ({
       date,
-      allDayEvents: events.filter(e => e.all_day && isEventOnDay(e, date)),
-      timedEvents: events
+      allDayEvents: filteredEvents.filter(e => e.all_day && isEventOnDay(e, date)),
+      timedEvents: filteredEvents
         .filter(e => !e.all_day && isEventOnDay(e, date))
         .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime)),
     }))
-  }, [events, weekDates])
+  }, [filteredEvents, weekDates])
 
   const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 
@@ -321,15 +338,28 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* ── 通常モード：メンバー凡例 ── */}
+      {/* ── 通常モード：メンバー凡例（タップでフィルタ） ── */}
       {!nurseMode && members.length > 0 && (
         <div className={styles.legend}>
-          {members.map((m, i) => (
-            <span key={m.id} className={styles.legendItem}>
-              <span className={styles.legendDot} style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
-              {m.name}
-            </span>
-          ))}
+          {members.map((m, i) => {
+            const isActive = selectedMemberIds.length === 0 || selectedMemberIds.includes(m.id)
+            return (
+              <button
+                key={m.id}
+                className={`${styles.legendItem} ${!isActive ? styles.legendItemDimmed : ''}`}
+                onClick={() => toggleMember(m.id)}
+                aria-pressed={isActive}
+              >
+                <span className={styles.legendDot} style={{ background: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
+                {m.name}
+              </button>
+            )
+          })}
+          {selectedMemberIds.length > 0 && (
+            <button className={styles.legendResetBtn} onClick={() => setSelectedMemberIds([])}>
+              全員
+            </button>
+          )}
         </div>
       )}
 
@@ -375,7 +405,7 @@ export default function SchedulePage() {
           /* 月表示 */
           <MonthView
             grid={monthGrid}
-            events={events}
+            events={filteredEvents}
             memberColorMap={memberColorMap}
             baseDate={baseDate}
             todayStr={todayStr}
