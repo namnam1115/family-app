@@ -150,11 +150,33 @@ export default function SchedulePage() {
 
   // ── 通常 CRUD ─────────────────────────────────────────────
   async function handleAdd(data) {
-    await supabase.from('schedule_events').insert({ family_id: familyMember.family_id, ...data })
+    const { data: inserted } = await supabase
+      .from('schedule_events')
+      .insert({ family_id: familyMember.family_id, ...data })
+      .select('id')
+      .single()
+    if (inserted?.id) {
+      await supabase.from('schedule_event_history').insert({
+        event_id: inserted.id,
+        family_id: familyMember.family_id,
+        changed_by: familyMember.id,
+        changed_by_name: familyMember.name,
+        action: 'created',
+        snapshot: data,
+      })
+    }
     await fetchAll()
   }
   async function handleEdit(id, data) {
     await supabase.from('schedule_events').update(data).eq('id', id)
+    await supabase.from('schedule_event_history').insert({
+      event_id: id,
+      family_id: familyMember.family_id,
+      changed_by: familyMember.id,
+      changed_by_name: familyMember.name,
+      action: 'updated',
+      snapshot: data,
+    })
     await fetchAll()
   }
   async function handleDelete(id) {
@@ -615,6 +637,17 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
   const [memberId, setMemberId] = useState(event?.member_id ?? defaultMemberId ?? '')
   const [submitting, setSubmitting] = useState(false)
 
+  const [history, setHistory] = useState([])
+  useEffect(() => {
+    if (mode !== 'edit' || !event?.id) return
+    supabase
+      .from('schedule_event_history')
+      .select('id, action, changed_by_name, changed_at')
+      .eq('event_id', event.id)
+      .order('changed_at', { ascending: false })
+      .then(({ data }) => { if (data) setHistory(data) })
+  }, [mode, event?.id])
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!title.trim()) return
@@ -690,6 +723,26 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
             <button type="submit" className={styles.saveBtn} disabled={submitting || !title.trim()}>{submitting ? '保存中...' : isEdit ? '保存' : '追加'}</button>
           </div>
         </form>
+        {isEdit && history.length > 0 && (
+          <div className={styles.historySection}>
+            <p className={styles.historySectionTitle}>変更履歴</p>
+            <ul className={styles.historyList}>
+              {history.map(h => (
+                <li key={h.id} className={styles.historyItem}>
+                  <span className={`${styles.historyAction} ${h.action === 'created' ? styles.historyActionCreated : styles.historyActionUpdated}`}>
+                    {h.action === 'created' ? '作成' : '更新'}
+                  </span>
+                  <span className={styles.historyDate}>
+                    {new Date(h.changed_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {h.changed_by_name && (
+                    <span className={styles.historyBy}>{h.changed_by_name}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   )
