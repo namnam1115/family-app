@@ -506,14 +506,18 @@ function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClic
                 {date.getDate()}
               </span>
               <div className={styles.monthEventList}>
-                {dayShifts.map(ev => (
-                  <ShiftBlock key={ev.id} shiftType={ev.shift_type} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
-                ))}
                 {visibleEvents.map(ev => (
                   <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
                 ))}
                 {overflow > 0 && <span className={styles.monthOverflow}>+{overflow}件</span>}
               </div>
+              {dayShifts.length > 0 && (
+                <div className={styles.monthShiftList}>
+                  {dayShifts.map(ev => (
+                    <ShiftBlock key={ev.id} shiftType={ev.shift_type} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}
