@@ -993,6 +993,15 @@
   white-space: nowrap;
 }
 
+.monthShiftList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-top: auto;
+  padding-top: 0.1rem;
+  border-top: 1px solid var(--gray-100);
+}
+
 /* ── PC レイアウト ── */
 @media (min-width: 1024px) {
   .header,
