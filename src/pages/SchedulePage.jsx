@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
@@ -107,28 +107,56 @@ export default function SchedulePage() {
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate])
   const monthGrid = useMemo(() => getMonthGrid(baseDate), [baseDate])
 
+  // 表示中の日付範囲（取得の絞り込みに使用）
+  const visibleRange = useMemo(() => {
+    if (viewMode === 'week') {
+      return { start: toDateStr(weekDates[0]), end: toDateStr(weekDates[6]) }
+    }
+    return { start: toDateStr(monthGrid[0]), end: toDateStr(monthGrid[41]) }
+  }, [viewMode, weekDates, monthGrid])
+
   // ── データ取得 ────────────────────────────────────────────
-  const fetchAll = useCallback(async () => {
+
+  // メンバー一覧：家族変更時のみ再取得
+  const fetchMembers = useCallback(async () => {
     if (!familyMember?.family_id) return
-    const fid = familyMember.family_id
-    const [{ data: ev }, { data: mem }] = await Promise.all([
-      supabase
-        .from('schedule_events')
-        .select('*, member:family_members!schedule_events_member_id_fkey(id, name)')
-        .eq('family_id', fid)
-        .order('start_datetime', { ascending: true, nullsFirst: false })
-        .order('start_date', { ascending: true }),
-      supabase
-        .from('family_members')
-        .select('id, name')
-        .eq('family_id', fid),
-    ])
-    if (ev) setEvents(ev)
+    const { data: mem } = await supabase
+      .from('family_members')
+      .select('id, name')
+      .eq('family_id', familyMember.family_id)
     if (mem) setMembers(mem)
-    setLoading(false)
   }, [familyMember?.family_id])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  // イベント：表示中の範囲のみ取得
+  // 複数日イベントの重複も考慮した OR フィルタ:
+  //   - 終日・単日: start_date が範囲内
+  //   - 終日・複数日: start_date <= end AND end_date >= start（範囲にまたがる）
+  //   - 時間指定: start_datetime ～ end_datetime が範囲と重なる
+  const fetchEvents = useCallback(async () => {
+    if (!familyMember?.family_id) return
+    const { start, end } = visibleRange
+    const orFilter = [
+      `and(all_day.eq.true,start_date.gte.${start},start_date.lte.${end},end_date.is.null)`,
+      `and(all_day.eq.true,start_date.lte.${end},end_date.gte.${start})`,
+      `and(all_day.eq.false,start_datetime.lte.${end}T23:59:59Z,end_datetime.gte.${start}T00:00:00Z)`,
+    ].join(',')
+    const { data: ev } = await supabase
+      .from('schedule_events')
+      .select('*, member:family_members!schedule_events_member_id_fkey(id, name)')
+      .eq('family_id', familyMember.family_id)
+      .or(orFilter)
+      .order('start_datetime', { ascending: true, nullsFirst: false })
+      .order('start_date', { ascending: true })
+    if (ev) setEvents(ev)
+    setLoading(false)
+  }, [familyMember?.family_id, visibleRange])
+
+  useEffect(() => { fetchMembers() }, [fetchMembers])
+  useEffect(() => { fetchEvents() }, [fetchEvents])
+
+  // リアルタイム購読：家族変更時のみ再接続し、月移動で不要な再接続を避ける
+  const fetchEventsRef = useRef(fetchEvents)
+  useEffect(() => { fetchEventsRef.current = fetchEvents }, [fetchEvents])
 
   useEffect(() => {
     if (!familyMember?.family_id) return
@@ -137,10 +165,10 @@ export default function SchedulePage() {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'schedule_events',
         filter: `family_id=eq.${familyMember.family_id}`,
-      }, fetchAll)
+      }, () => fetchEventsRef.current())
       .subscribe()
     return () => supabase.removeChannel(ch)
-  }, [familyMember?.family_id, fetchAll])
+  }, [familyMember?.family_id])
 
   const memberColorMap = useMemo(() => {
     const map = {}
@@ -165,7 +193,7 @@ export default function SchedulePage() {
         snapshot: data,
       })
     }
-    await fetchAll()
+    await fetchEvents()
   }
   async function handleEdit(id, data) {
     await supabase.from('schedule_events').update(data).eq('id', id)
@@ -177,11 +205,11 @@ export default function SchedulePage() {
       action: 'updated',
       snapshot: data,
     })
-    await fetchAll()
+    await fetchEvents()
   }
   async function handleDelete(id) {
     await supabase.from('schedule_events').delete().eq('id', id)
-    await fetchAll()
+    await fetchEvents()
   }
 
   // ── ナビゲーション ────────────────────────────────────────
@@ -272,7 +300,7 @@ export default function SchedulePage() {
       await supabase.from('schedule_events').insert(inserts)
     }
 
-    await fetchAll()
+    await fetchEvents()
     setNurseSaving(false)
     cancelNurseMode()
   }
