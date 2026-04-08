@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS schedule_events (
   start_datetime timestamp with time zone,
   end_datetime   timestamp with time zone,
   member_id      uuid REFERENCES family_members(id) ON DELETE SET NULL,
+  shift_type     text CHECK (shift_type IN ('日勤', '夜勤', '明け', '休み')),
   created_at     timestamp with time zone NOT NULL DEFAULT now(),
   updated_at     timestamp with time zone NOT NULL DEFAULT now(),
 

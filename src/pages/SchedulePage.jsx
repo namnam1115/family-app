@@ -5,16 +5,26 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './SchedulePage.module.css'
 
+// ── 定数 ─────────────────────────────────────────────────────
+
 const MEMBER_COLORS = [
-  '#8E81B5',
-  '#C2826A',
-  '#5A9E82',
-  '#C49A5A',
-  '#6B9EC2',
-  '#C26B8E',
-  '#6BC2B4',
-  '#9E6BC2',
+  '#8E81B5', '#C2826A', '#5A9E82', '#C49A5A',
+  '#6B9EC2', '#C26B8E', '#6BC2B4', '#9E6BC2',
 ]
+
+const SHIFT_TYPES = ['日勤', '夜勤', '明け', '休み']
+const SHIFT_COLORS = {
+  '日勤': '#3B82F6',
+  '夜勤': '#7C3AED',
+  '明け': '#F59E0B',
+  '休み': '#10B981',
+}
+
+function cycleShift(current) {
+  if (!current) return '日勤'
+  const idx = SHIFT_TYPES.indexOf(current)
+  return idx === SHIFT_TYPES.length - 1 ? null : SHIFT_TYPES[idx + 1]
+}
 
 // ── 日付ユーティリティ ────────────────────────────────────────
 
@@ -27,8 +37,7 @@ function toDateStr(date) {
 
 function formatTime(isoString) {
   if (!isoString) return ''
-  const d = new Date(isoString)
-  return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return new Date(isoString).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
 function isEventOnDay(event, date) {
@@ -61,7 +70,7 @@ function getMonthGrid(baseDate) {
   const year = baseDate.getFullYear()
   const month = baseDate.getMonth()
   const firstDay = new Date(year, month, 1)
-  const startOffset = (firstDay.getDay() + 6) % 7 // 月曜起点
+  const startOffset = (firstDay.getDay() + 6) % 7
   const gridStart = new Date(firstDay)
   gridStart.setDate(1 - startOffset)
   return Array.from({ length: 42 }, (_, i) => {
@@ -71,7 +80,7 @@ function getMonthGrid(baseDate) {
   })
 }
 
-// ── メインコンポーネント ────────────────────────────────────
+// ── メインコンポーネント ──────────────────────────────────────
 
 export default function SchedulePage() {
   const { familyMember } = useAuth()
@@ -80,15 +89,22 @@ export default function SchedulePage() {
   const [events, setEvents] = useState([])
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState('month') // 'week' | 'month'
+  const [viewMode, setViewMode] = useState('month')
   const [baseDate, setBaseDate] = useState(new Date())
   const [showAdd, setShowAdd] = useState(false)
   const [addDefaultDate, setAddDefaultDate] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
 
+  // 看護師モード
+  const [nurseMode, setNurseMode] = useState(false)
+  const [shiftDraft, setShiftDraft] = useState({})   // { dateStr: shift_type }
+  const [initialShifts, setInitialShifts] = useState({})
+  const [nurseSaving, setNurseSaving] = useState(false)
+
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate])
   const monthGrid = useMemo(() => getMonthGrid(baseDate), [baseDate])
 
+  // ── データ取得 ────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!familyMember?.family_id) return
     const fid = familyMember.family_id
@@ -129,42 +145,114 @@ export default function SchedulePage() {
     return map
   }, [members])
 
+  // ── 通常 CRUD ─────────────────────────────────────────────
   async function handleAdd(data) {
     await supabase.from('schedule_events').insert({ family_id: familyMember.family_id, ...data })
     await fetchAll()
   }
-
   async function handleEdit(id, data) {
     await supabase.from('schedule_events').update(data).eq('id', id)
     await fetchAll()
   }
-
   async function handleDelete(id) {
     await supabase.from('schedule_events').delete().eq('id', id)
     await fetchAll()
   }
 
-  // ── ナビゲーション ──────────────────────────────────────────
+  // ── ナビゲーション ────────────────────────────────────────
   function prev() {
+    if (nurseMode) return
     const d = new Date(baseDate)
     if (viewMode === 'week') { d.setDate(d.getDate() - 7) }
     else { d.setDate(1); d.setMonth(d.getMonth() - 1) }
     setBaseDate(d)
   }
   function next() {
+    if (nurseMode) return
     const d = new Date(baseDate)
     if (viewMode === 'week') { d.setDate(d.getDate() + 7) }
     else { d.setDate(1); d.setMonth(d.getMonth() + 1) }
     setBaseDate(d)
   }
-  function goToday() { setBaseDate(new Date()) }
 
   const todayStr = toDateStr(new Date())
   const isCurrentPeriod = viewMode === 'week'
     ? weekDates.some(d => toDateStr(d) === todayStr)
     : baseDate.getFullYear() === new Date().getFullYear() && baseDate.getMonth() === new Date().getMonth()
 
-  // 週ビュー用データ
+  const navLabel = viewMode === 'week'
+    ? `${weekDates[0].toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} 〜 ${weekDates[6].toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}`
+    : `${baseDate.getFullYear()}年${baseDate.getMonth() + 1}月`
+
+  // ── 看護師モード ──────────────────────────────────────────
+  function enableNurseMode() {
+    setViewMode('month')
+    const existing = {}
+    events.forEach(e => {
+      if (e.shift_type && e.member_id === familyMember?.id && e.start_date) {
+        existing[e.start_date] = e.shift_type
+      }
+    })
+    setInitialShifts(existing)
+    setShiftDraft({ ...existing })
+    setNurseMode(true)
+  }
+
+  function cancelNurseMode() {
+    setNurseMode(false)
+    setShiftDraft({})
+    setInitialShifts({})
+  }
+
+  function handleNurseDayTap(dateStr) {
+    setShiftDraft(prev => {
+      const current = prev[dateStr] ?? null
+      const next = cycleShift(current)
+      if (next === null) {
+        const { [dateStr]: _, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [dateStr]: next }
+    })
+  }
+
+  async function handleSaveShifts() {
+    const affectedDates = [...new Set([...Object.keys(initialShifts), ...Object.keys(shiftDraft)])]
+    setNurseSaving(true)
+
+    // 変更対象の日付の既存シフトを全削除
+    if (affectedDates.length > 0) {
+      await supabase
+        .from('schedule_events')
+        .delete()
+        .eq('family_id', familyMember.family_id)
+        .eq('member_id', familyMember.id)
+        .not('shift_type', 'is', null)
+        .in('start_date', affectedDates)
+    }
+
+    // ドラフトを一括登録
+    const inserts = Object.entries(shiftDraft).map(([date, shift]) => ({
+      family_id: familyMember.family_id,
+      member_id: familyMember.id,
+      title: shift,
+      all_day: true,
+      start_date: date,
+      end_date: null,
+      start_datetime: null,
+      end_datetime: null,
+      shift_type: shift,
+    }))
+    if (inserts.length > 0) {
+      await supabase.from('schedule_events').insert(inserts)
+    }
+
+    await fetchAll()
+    setNurseSaving(false)
+    cancelNurseMode()
+  }
+
+  // 週表示用
   const eventsByDay = useMemo(() => {
     return weekDates.map(date => ({
       date,
@@ -174,11 +262,6 @@ export default function SchedulePage() {
         .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime)),
     }))
   }, [events, weekDates])
-
-  // ナビラベル
-  const navLabel = viewMode === 'week'
-    ? `${weekDates[0].toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} 〜 ${weekDates[6].toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}`
-    : `${baseDate.getFullYear()}年${baseDate.getMonth() + 1}月`
 
   const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 
@@ -190,35 +273,56 @@ export default function SchedulePage() {
           <BsHouseFill />
         </button>
         <h1 className={styles.headerTitle}>📅 スケジュール</h1>
-        <div className={styles.viewToggle}>
-          <button
-            className={`${styles.viewBtn} ${viewMode === 'month' ? styles.viewBtnActive : ''}`}
-            onClick={() => setViewMode('month')}
-          >月</button>
-          <button
-            className={`${styles.viewBtn} ${viewMode === 'week' ? styles.viewBtnActive : ''}`}
-            onClick={() => setViewMode('week')}
-          >週</button>
-        </div>
-        <button className={styles.addHeaderBtn} onClick={() => { setAddDefaultDate(null); setShowAdd(true) }}>
-          ＋
+
+        {/* 看護師モードボタン：モバイルはアイコンのみ */}
+        <button
+          className={`${styles.nurseBtn} ${nurseMode ? styles.nurseBtnActive : ''}`}
+          onClick={nurseMode ? cancelNurseMode : enableNurseMode}
+          aria-label={nurseMode ? '勤務入力モードを終了' : '勤務入力モード'}
+          title={nurseMode ? '勤務入力モードを終了' : '勤務入力モード'}
+        >
+          <span className={styles.nurseBtnIcon}>{nurseMode ? '✕' : '👩‍⚕️'}</span>
+          <span className={styles.nurseBtnLabel}>{nurseMode ? '終了' : '勤務'}</span>
         </button>
+
+        {!nurseMode && (
+          <button className={styles.addHeaderBtn} onClick={() => { setAddDefaultDate(null); setShowAdd(true) }} aria-label="予定を追加">＋</button>
+        )}
       </header>
 
-      {/* ── ナビゲーション ── */}
+      {/* ── ナビゲーション（月週トグルもここに） ── */}
       <div className={styles.weekNav}>
-        <button className={styles.navBtn} onClick={prev} aria-label="前へ">‹</button>
+        <button className={styles.navBtn} onClick={prev} disabled={nurseMode} aria-label="前へ">‹</button>
         <div className={styles.weekLabel}>
           <span className={styles.weekRange}>{navLabel}</span>
-          {!isCurrentPeriod && (
-            <button className={styles.todayBtn} onClick={goToday}>今日</button>
+          {!isCurrentPeriod && !nurseMode && (
+            <button className={styles.todayBtn} onClick={() => setBaseDate(new Date())}>今日</button>
           )}
         </div>
-        <button className={styles.navBtn} onClick={next} aria-label="次へ">›</button>
+        <button className={styles.navBtn} onClick={next} disabled={nurseMode} aria-label="次へ">›</button>
+        {!nurseMode && (
+          <div className={styles.viewToggle}>
+            <button className={`${styles.viewBtn} ${viewMode === 'month' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('month')}>月</button>
+            <button className={`${styles.viewBtn} ${viewMode === 'week' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('week')}>週</button>
+          </div>
+        )}
       </div>
 
-      {/* ── メンバー凡例 ── */}
-      {members.length > 0 && (
+      {/* ── 看護師モード：シフト凡例 ── */}
+      {nurseMode && (
+        <div className={styles.nurseLegend}>
+          {SHIFT_TYPES.map(s => (
+            <span key={s} className={styles.nurseLegendItem}>
+              <span className={styles.nurseLegendDot} style={{ background: SHIFT_COLORS[s] }} />
+              {s}
+            </span>
+          ))}
+          <span className={styles.nurseLegendHint}>日付をタップして切り替え</span>
+        </div>
+      )}
+
+      {/* ── 通常モード：メンバー凡例 ── */}
+      {!nurseMode && members.length > 0 && (
         <div className={styles.legend}>
           {members.map((m, i) => (
             <span key={m.id} className={styles.legendItem}>
@@ -234,7 +338,7 @@ export default function SchedulePage() {
         {loading ? (
           <p className={styles.hint}>読み込み中...</p>
         ) : viewMode === 'week' ? (
-          /* ── 週表示 ── */
+          /* 週表示 */
           <div className={styles.weekGrid}>
             {eventsByDay.map(({ date, allDayEvents, timedEvents }, idx) => {
               const dateStr = toDateStr(date)
@@ -248,30 +352,19 @@ export default function SchedulePage() {
                   onClick={() => { setAddDefaultDate(dateStr); setShowAdd(true) }}
                 >
                   <div className={`${styles.dayHeader} ${isToday ? styles.dayHeaderToday : ''}`}>
-                    <span className={`${styles.dayLabel} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>
-                      {DAY_LABELS[idx]}
-                    </span>
-                    <span className={`${styles.dayNum} ${isToday ? styles.dayNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>
-                      {date.getDate()}
-                    </span>
+                    <span className={`${styles.dayLabel} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{DAY_LABELS[idx]}</span>
+                    <span className={`${styles.dayNum} ${isToday ? styles.dayNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{date.getDate()}</span>
                   </div>
                   <div className={styles.allDayArea}>
                     {allDayEvents.map(ev => (
-                      <EventChip
-                        key={ev.id} event={ev}
-                        color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'}
-                        onClick={e => { e.stopPropagation(); setEditTarget(ev) }}
-                      />
+                      ev.shift_type
+                        ? <ShiftBlock key={ev.id} shiftType={ev.shift_type} onClick={e => { e.stopPropagation(); setEditTarget(ev) }} />
+                        : <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} onClick={e => { e.stopPropagation(); setEditTarget(ev) }} />
                     ))}
                   </div>
                   <div className={styles.timedArea}>
                     {timedEvents.map(ev => (
-                      <EventChip
-                        key={ev.id} event={ev}
-                        color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'}
-                        showTime
-                        onClick={e => { e.stopPropagation(); setEditTarget(ev) }}
-                      />
+                      <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} showTime onClick={e => { e.stopPropagation(); setEditTarget(ev) }} />
                     ))}
                   </div>
                 </div>
@@ -279,19 +372,43 @@ export default function SchedulePage() {
             })}
           </div>
         ) : (
-          /* ── 月表示 ── */
+          /* 月表示 */
           <MonthView
             grid={monthGrid}
             events={events}
             memberColorMap={memberColorMap}
             baseDate={baseDate}
             todayStr={todayStr}
-            onDayClick={dateStr => { setAddDefaultDate(dateStr); setShowAdd(true) }}
-            onEventClick={ev => setEditTarget(ev)}
+            onDayClick={nurseMode ? handleNurseDayTap : dateStr => { setAddDefaultDate(dateStr); setShowAdd(true) }}
+            onEventClick={nurseMode ? null : ev => setEditTarget(ev)}
+            nurseMode={nurseMode}
+            shiftDraft={shiftDraft}
           />
         )}
       </main>
 
+      {/* ── 看護師モード：一括登録バー ── */}
+      {nurseMode && (
+        <div className={styles.nurseBar}>
+          <span className={styles.nurseBarCount}>
+            {Object.keys(shiftDraft).length > 0
+              ? `${Object.keys(shiftDraft).length}日入力中`
+              : '日付をタップしてシフトを入力'}
+          </span>
+          <div className={styles.nurseBarBtns}>
+            <button className={styles.nurseCancelBtn} onClick={cancelNurseMode}>キャンセル</button>
+            <button
+              className={styles.nurseSaveBtn}
+              onClick={handleSaveShifts}
+              disabled={nurseSaving || Object.keys(shiftDraft).length === 0}
+            >
+              {nurseSaving ? '保存中...' : '登録'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── モーダル ── */}
       {showAdd && (
         <EventModal
           mode="add"
@@ -303,7 +420,6 @@ export default function SchedulePage() {
           onClose={() => setShowAdd(false)}
         />
       )}
-
       {editTarget && (
         <EventModal
           mode="edit"
@@ -319,30 +435,24 @@ export default function SchedulePage() {
   )
 }
 
-// ── 月表示コンポーネント ────────────────────────────────────
+// ── 月表示コンポーネント ──────────────────────────────────────
 
-const MAX_CHIPS = 3
+const MAX_CHIPS = 2
 
-function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClick, onEventClick }) {
+function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClick, onEventClick, nurseMode, shiftDraft }) {
   const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
   const currentMonth = baseDate.getMonth()
   const currentYear = baseDate.getFullYear()
 
   return (
     <div className={styles.monthWrapper}>
-      {/* 曜日ヘッダー */}
       <div className={styles.monthDayLabels}>
         {DAY_LABELS.map((label, i) => (
-          <div
-            key={label}
-            className={`${styles.monthDayLabel} ${i === 5 ? styles.sat : ''} ${i === 6 ? styles.sun : ''}`}
-          >
+          <div key={label} className={`${styles.monthDayLabel} ${i === 5 ? styles.sat : ''} ${i === 6 ? styles.sun : ''}`}>
             {label}
           </div>
         ))}
       </div>
-
-      {/* 6行 × 7列グリッド */}
       <div className={styles.monthGrid}>
         {grid.map((date, idx) => {
           const dateStr = toDateStr(date)
@@ -351,16 +461,39 @@ function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClic
           const isSat = idx % 7 === 5
           const isSun = idx % 7 === 6
 
+          // 看護師モード
+          if (nurseMode) {
+            const draftShift = shiftDraft[dateStr] ?? null
+            return (
+              <div
+                key={dateStr}
+                className={`${styles.monthCell} ${styles.monthCellNurse} ${isToday ? styles.monthCellToday : ''} ${!isCurrentMonth ? styles.monthCellOtherMonth : ''}`}
+                style={draftShift ? { '--shift-color': SHIFT_COLORS[draftShift] } : {}}
+                onClick={() => onDayClick(dateStr)}
+              >
+                <span className={`${styles.monthDateNum} ${isToday ? styles.monthDateNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''} ${!isCurrentMonth ? styles.otherMonth : ''}`}>
+                  {date.getDate()}
+                </span>
+                {draftShift && (
+                  <div className={styles.nurseShiftBadge}>
+                    {draftShift}
+                  </div>
+                )}
+              </div>
+            )
+          }
+
+          // 通常モード
+          const dayShifts = events.filter(e => e.shift_type && isEventOnDay(e, date))
           const dayEvents = events
-            .filter(e => isEventOnDay(e, date))
+            .filter(e => !e.shift_type && isEventOnDay(e, date))
             .sort((a, b) => {
-              // 終日→時間指定の順、同種は時刻順
               if (a.all_day !== b.all_day) return a.all_day ? -1 : 1
               const aTime = a.all_day ? a.start_date : a.start_datetime
               const bTime = b.all_day ? b.start_date : b.start_datetime
               return aTime < bTime ? -1 : 1
             })
-          const visible = dayEvents.slice(0, MAX_CHIPS)
+          const visibleEvents = dayEvents.slice(0, MAX_CHIPS)
           const overflow = dayEvents.length - MAX_CHIPS
 
           return (
@@ -373,19 +506,13 @@ function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClic
                 {date.getDate()}
               </span>
               <div className={styles.monthEventList}>
-                {visible.map(ev => (
-                  <EventChip
-                    key={ev.id}
-                    event={ev}
-                    color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'}
-                    showTime={!ev.all_day}
-                    compact
-                    onClick={e => { e.stopPropagation(); onEventClick(ev) }}
-                  />
+                {dayShifts.map(ev => (
+                  <ShiftBlock key={ev.id} shiftType={ev.shift_type} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
                 ))}
-                {overflow > 0 && (
-                  <span className={styles.monthOverflow}>+{overflow}件</span>
-                )}
+                {visibleEvents.map(ev => (
+                  <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
+                ))}
+                {overflow > 0 && <span className={styles.monthOverflow}>+{overflow}件</span>}
               </div>
             </div>
           )
@@ -395,7 +522,23 @@ function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClic
   )
 }
 
-// ── イベントチップ ──────────────────────────────────────────
+// ── シフトブロック ────────────────────────────────────────────
+
+function ShiftBlock({ shiftType, compact = false, onClick }) {
+  const color = SHIFT_COLORS[shiftType] ?? '#8E81B5'
+  return (
+    <button
+      className={`${styles.shiftBlock} ${compact ? styles.shiftBlockCompact : ''}`}
+      style={{ '--shift-color': color }}
+      onClick={onClick}
+      title={shiftType}
+    >
+      {shiftType}
+    </button>
+  )
+}
+
+// ── イベントチップ ────────────────────────────────────────────
 
 function EventChip({ event, color, showTime = false, compact = false, onClick }) {
   return (
@@ -405,18 +548,14 @@ function EventChip({ event, color, showTime = false, compact = false, onClick })
       onClick={onClick}
       title={event.title}
     >
-      {showTime && (
-        <span className={styles.eventTime}>{formatTime(event.start_datetime)}</span>
-      )}
+      {showTime && <span className={styles.eventTime}>{formatTime(event.start_datetime)}</span>}
       <span className={styles.eventTitle}>{event.title}</span>
-      {!compact && event.member?.name && (
-        <span className={styles.eventMember}>{event.member.name}</span>
-      )}
+      {!compact && event.member?.name && <span className={styles.eventMember}>{event.member.name}</span>}
     </button>
   )
 }
 
-// ── イベント追加・編集モーダル ──────────────────────────────
+// ── イベント追加・編集モーダル ────────────────────────────────
 
 function EventModal({ mode, event, members, memberColorMap, defaultDate, defaultMemberId, onSubmit, onDelete, onClose }) {
   const today = toDateStr(new Date())
@@ -451,6 +590,7 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
       memo: memo.trim() || null,
       all_day: allDay,
       member_id: memberId || null,
+      shift_type: null,
       ...(allDay
         ? { start_date: startDate, end_date: endDate || null, start_datetime: null, end_datetime: null }
         : { start_date: null, end_date: null, start_datetime: new Date(startDt).toISOString(), end_datetime: new Date(endDt).toISOString() }
@@ -468,21 +608,11 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
           <h2 className={styles.modalTitle}>{isEdit ? '予定を編集' : '予定を追加'}</h2>
           <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
         </div>
-
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.fieldLabel}>
             タイトル
-            <input
-              className={styles.input}
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="例: 家族でお出かけ、歯医者..."
-              maxLength={100}
-              autoFocus
-              required
-            />
+            <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="例: 家族でお出かけ、歯医者..." maxLength={100} autoFocus required />
           </label>
-
           <div className={styles.fieldLabel}>
             種類
             <div className={styles.toggleRow}>
@@ -490,82 +620,40 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
               <button type="button" className={`${styles.toggleBtn} ${!allDay ? styles.toggleActive : ''}`} onClick={() => setAllDay(false)}>時間指定</button>
             </div>
           </div>
-
           {allDay ? (
             <>
-              <label className={styles.fieldLabel}>
-                開始日
-                <input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
-              </label>
-              <label className={styles.fieldLabel}>
-                終了日（任意・複数日の場合）
-                <input className={styles.input} type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} />
-              </label>
+              <label className={styles.fieldLabel}>開始日<input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required /></label>
+              <label className={styles.fieldLabel}>終了日（任意・複数日の場合）<input className={styles.input} type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} /></label>
             </>
           ) : (
             <>
-              <label className={styles.fieldLabel}>
-                開始
-                <input className={styles.input} type="datetime-local" value={startDt} onChange={e => setStartDt(e.target.value)} required />
-              </label>
-              <label className={styles.fieldLabel}>
-                終了
-                <input className={styles.input} type="datetime-local" value={endDt} min={startDt} onChange={e => setEndDt(e.target.value)} required />
-              </label>
+              <label className={styles.fieldLabel}>開始<input className={styles.input} type="datetime-local" value={startDt} onChange={e => setStartDt(e.target.value)} required /></label>
+              <label className={styles.fieldLabel}>終了<input className={styles.input} type="datetime-local" value={endDt} min={startDt} onChange={e => setEndDt(e.target.value)} required /></label>
             </>
           )}
-
           {members.length > 0 && (
             <div className={styles.fieldLabel}>
               誰の予定？
               <div className={styles.memberSelect}>
-                <button
-                  type="button"
-                  className={`${styles.memberOption} ${!memberId ? styles.memberOptionActive : ''}`}
-                  style={!memberId ? { '--active-color': 'var(--primary)' } : {}}
-                  onClick={() => setMemberId('')}
-                >
-                  <span className={styles.memberDot} style={{ background: 'var(--gray-300)' }} />
-                  家族全員
+                <button type="button" className={`${styles.memberOption} ${!memberId ? styles.memberOptionActive : ''}`} style={!memberId ? { '--active-color': 'var(--primary)' } : {}} onClick={() => setMemberId('')}>
+                  <span className={styles.memberDot} style={{ background: 'var(--gray-300)' }} />家族全員
                 </button>
                 {members.map((m, i) => {
                   const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
                   return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      className={`${styles.memberOption} ${memberId === m.id ? styles.memberOptionActive : ''}`}
-                      style={memberId === m.id ? { '--active-color': color } : {}}
-                      onClick={() => setMemberId(m.id)}
-                    >
-                      <span className={styles.memberDot} style={{ background: color }} />
-                      {m.name}
+                    <button key={m.id} type="button" className={`${styles.memberOption} ${memberId === m.id ? styles.memberOptionActive : ''}`} style={memberId === m.id ? { '--active-color': color } : {}} onClick={() => setMemberId(m.id)}>
+                      <span className={styles.memberDot} style={{ background: color }} />{m.name}
                     </button>
                   )
                 })}
               </div>
             </div>
           )}
-
-          <label className={styles.fieldLabel}>
-            メモ（任意）
-            <input
-              className={styles.input}
-              value={memo}
-              onChange={e => setMemo(e.target.value)}
-              placeholder="詳細・場所など..."
-              maxLength={200}
-            />
-          </label>
-
+          <label className={styles.fieldLabel}>メモ（任意）<input className={styles.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="詳細・場所など..." maxLength={200} /></label>
           <div className={styles.formBtns}>
-            {isEdit && (
-              <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>
-            )}
+            {isEdit && <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>}
             <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !title.trim()}>
-              {submitting ? '保存中...' : isEdit ? '保存' : '追加'}
-            </button>
+            <button type="submit" className={styles.saveBtn} disabled={submitting || !title.trim()}>{submitting ? '保存中...' : isEdit ? '保存' : '追加'}</button>
           </div>
         </form>
       </div>
