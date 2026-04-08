@@ -253,6 +253,38 @@
   font-size: 0.78rem;
   color: var(--gray-600);
   white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0.2rem 0.4rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.legendItem:hover {
+  background: rgba(142, 129, 181, 0.08);
+}
+
+.legendItemDimmed {
+  opacity: 0.35;
+}
+
+.legendResetBtn {
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  background: rgba(142, 129, 181, 0.1);
+  border: none;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.legendResetBtn:hover {
+  background: rgba(142, 129, 181, 0.2);
 }
 
 .legendDot {
