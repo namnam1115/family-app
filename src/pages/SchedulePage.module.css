@@ -738,6 +738,66 @@
   cursor: not-allowed;
 }
 
+/* ── 変更履歴 ── */
+.historySection {
+  border-top: 1px solid var(--gray-100);
+  padding-top: 0.75rem;
+}
+
+.historySectionTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--gray-400);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+}
+
+.historyList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.historyAction {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.historyActionCreated {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.historyActionUpdated {
+  background: rgba(142, 129, 181, 0.12);
+  color: var(--primary);
+}
+
+.historyDate {
+  flex: 1;
+  color: var(--gray-500);
+}
+
+.historyBy {
+  color: var(--gray-400);
+  font-size: 0.72rem;
+}
+
 /* ── シフトブロック ── */
 .shiftBlock {
   width: 100%;
