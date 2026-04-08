@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -5,45 +7,48 @@
 }
 
 :root {
-  /* === Primary - Violet === */
-  --primary: #7c3aed;
-  --primary-light: #a78bfa;
-  --primary-mid: #8b5cf6;
-  --primary-dark: #5b21b6;
-  --primary-glow: rgba(124, 58, 237, 0.2);
+  /* === Primary - 鈍色花 Noshimehana (muted lavender-purple) === */
+  --primary: #8E81B5;
+  --primary-light: #B4AACF;
+  --primary-mid: #9E92C0;
+  --primary-dark: #6B5F96;
+  --primary-glow: rgba(142, 129, 181, 0.18);
 
-  /* === Accent - Pink === */
-  --accent: #ec4899;
-  --accent-light: #f9a8d4;
+  /* === Accent - 紅鳶 Benitobi-inspired warm rose-earth === */
+  --accent: #C2826A;
+  --accent-light: #E5B9A8;
 
   /* === Status === */
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
+  --success: #5A9E82;
+  --danger: #C45A5A;
+  --warning: #C49A5A;
 
-  /* === Neutrals === */
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
+  /* === Neutrals (warm-toned earth) === */
+  --gray-50: #FAFAF9;
+  --gray-100: #F4F2EF;
+  --gray-200: #E8E4E0;
+  --gray-300: #D4CFCA;
+  --gray-400: #A09A94;
+  --gray-500: #756E67;
+  --gray-600: #544E48;
+  --gray-700: #3A3530;
+  --gray-800: #221E1A;
+  --gray-900: #131210;
 
-  /* === Glass === */
-  --glass: rgba(255, 255, 255, 0.78);
-  --glass-light: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.65);
-  --glass-blur: blur(20px) saturate(180%);
+  /* === Glass (warm washi paper feel) === */
+  --glass: rgba(252, 250, 247, 0.86);
+  --glass-light: rgba(252, 250, 247, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --glass-blur: blur(20px) saturate(160%);
 
   /* === Gradients === */
-  --grad-primary: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
-  --grad-primary-rev: linear-gradient(135deg, #ec4899 0%, #7c3aed 100%);
-  --grad-primary-soft: linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%);
-  --grad-bg: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 45%, #fdf2f8 100%);
+  --grad-primary: linear-gradient(135deg, #8E81B5 0%, #C2826A 100%);
+  --grad-primary-rev: linear-gradient(135deg, #C2826A 0%, #8E81B5 100%);
+  --grad-primary-soft: linear-gradient(135deg, #EDE9F6 0%, #F5E8E2 100%);
+  --grad-bg: linear-gradient(160deg, #FAF8FC 0%, #F5F1F9 50%, #FAF5F3 100%);
+
+  /* === Display Font (see out-of-box Japanese elegance) === */
+  --font-display: 'Shippori Mincho B1', 'Noto Serif JP', Georgia, serif;
 
   /* === Radii === */
   --radius: 0.75rem;
@@ -55,10 +60,10 @@
   --max-w: 1140px;
 
   /* === Shadows === */
-  --shadow: 0 2px 8px rgba(124, 58, 237, 0.06), 0 1px 3px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 16px rgba(124, 58, 237, 0.1), 0 2px 6px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 32px rgba(124, 58, 237, 0.14), 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-glow: 0 0 0 3px rgba(124, 58, 237, 0.15), 0 4px 20px rgba(124, 58, 237, 0.25);
+  --shadow: 0 2px 8px rgba(142, 129, 181, 0.07), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(142, 129, 181, 0.11), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(142, 129, 181, 0.15), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-glow: 0 0 0 3px rgba(142, 129, 181, 0.16), 0 4px 20px rgba(142, 129, 181, 0.28);
 }
 
 /* ===== Keyframes ===== */
@@ -96,8 +101,8 @@
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.25); }
-  50%  { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(142, 129, 181, 0.25); }
+  50%  { box-shadow: 0 0 0 8px rgba(142, 129, 181, 0); }
 }
 
 @keyframes blobFloat1 {
@@ -139,7 +144,7 @@ html, body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
   background: var(--grad-bg);
   min-height: 100vh;
   color: var(--gray-800);

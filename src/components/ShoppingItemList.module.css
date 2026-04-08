@@ -6,12 +6,13 @@
 }
 
 .listTitle {
-  font-size: 1.3rem;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
   color: var(--gray-900);
   margin-bottom: 1rem;
   flex-shrink: 0;
-  letter-spacing: -0.025em;
+  letter-spacing: 0.01em;
   background: var(--grad-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -27,7 +28,7 @@
   padding: 0.875rem 0;
   padding-bottom: max(0.875rem, env(safe-area-inset-bottom));
   border-top: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 -4px 24px rgba(124, 58, 237, 0.07);
+  box-shadow: 0 -4px 24px rgba(142, 129, 181, 0.07);
 }
 
 .inputRow {
@@ -59,7 +60,7 @@
 .memoInput:focus {
   border-color: var(--primary);
   background: white;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 0 3px rgba(142, 129, 181, 0.1);
 }
 
 .addBtn {
@@ -73,12 +74,12 @@
   white-space: nowrap;
   transition: all 0.22s ease;
   touch-action: manipulation;
-  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 2px 10px rgba(142, 129, 181, 0.3);
 }
 
 .addBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.42);
+  box-shadow: 0 4px 18px rgba(142, 129, 181, 0.42);
 }
 
 .addBtn:active:not(:disabled) {
@@ -148,9 +149,9 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border: 1px solid var(--gray-100);
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 0.875rem;
   transition: all 0.2s ease;
   position: relative;
   box-shadow: var(--shadow);
@@ -158,7 +159,7 @@
 
 .item:hover {
   box-shadow: var(--shadow-md);
-  border-color: rgba(167, 139, 250, 0.35);
+  border-color: rgba(181, 170, 202, 0.35);
 }
 
 .item.itemChecked {
@@ -187,7 +188,7 @@
 .itemChecked .checkbox {
   background: var(--grad-primary);
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 2px 8px rgba(142, 129, 181, 0.3);
   animation: checkPop 0.3s ease;
 }
 

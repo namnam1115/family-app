@@ -16,7 +16,7 @@
   border-top-color: var(--primary);
   border-right-color: var(--accent);
   animation: spin 0.75s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.3));
+  filter: drop-shadow(0 0 8px rgba(142, 129, 181, 0.3));
 }
 
 .message {

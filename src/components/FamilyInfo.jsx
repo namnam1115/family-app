@@ -35,25 +35,20 @@ export default function FamilyInfo() {
 
   return (
     <div className={styles.card}>
-      <div className={styles.topRow}>
-        <div>
-          <h2 className={styles.familyName}>{familyMember.families?.name}</h2>
-          <p className={styles.memberCount}>メンバー {members.length}人</p>
-        </div>
-        <button className={styles.inviteBtn} onClick={copyInviteLink}>
-          {inviteCopied ? '✓ コピーしました' : '招待リンクをコピー'}
-        </button>
-      </div>
-      <div className={styles.memberList}>
-        {members.map(m => (
-          <div key={m.id} className={styles.member}>
-            <div className={styles.avatar}>
+      <div className={styles.info}>
+        <span className={styles.familyName}>{familyMember.families?.name}</span>
+        <div className={styles.memberList}>
+          {members.map(m => (
+            <div key={m.id} className={styles.avatar} title={m.name || m.email}>
               {(m.name || m.email || '?')[0].toUpperCase()}
             </div>
-            <span className={styles.memberName}>{m.name || m.email}</span>
-          </div>
-        ))}
+          ))}
+          <span className={styles.memberCount}>{members.length}名</span>
+        </div>
       </div>
+      <button className={styles.inviteBtn} onClick={copyInviteLink}>
+        {inviteCopied ? '✓ コピー' : '招待'}
+      </button>
     </div>
   )
 }
