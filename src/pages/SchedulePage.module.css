@@ -1,0 +1,802 @@
+.page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--grad-bg);
+}
+
+/* ── ヘッダー ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+  box-shadow: 0 1px 16px rgba(142, 129, 181, 0.06);
+  z-index: 5;
+}
+
+.backBtn {
+  background: rgba(142, 129, 181, 0.08);
+  border: none;
+  color: var(--primary);
+  font-size: 1.1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.backBtn:hover {
+  background: rgba(142, 129, 181, 0.16);
+  transform: scale(1.08);
+}
+
+.headerTitle {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.01em;
+}
+
+/* ── 週/月 切り替えトグル ── */
+.viewToggle {
+  display: flex;
+  background: rgba(142, 129, 181, 0.1);
+  border-radius: var(--radius-full);
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.viewBtn {
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--gray-500);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.viewBtnActive {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 1px 6px rgba(142, 129, 181, 0.2);
+}
+
+.addHeaderBtn {
+  background: var(--grad-primary);
+  border: none;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 10px rgba(142, 129, 181, 0.3);
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.addHeaderBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(142, 129, 181, 0.42);
+}
+
+/* ── 週ナビゲーション ── */
+.weekNav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+
+.navBtn {
+  background: rgba(142, 129, 181, 0.08);
+  border: none;
+  color: var(--primary);
+  font-size: 1.4rem;
+  font-weight: 700;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1;
+}
+
+.navBtn:hover {
+  background: rgba(142, 129, 181, 0.18);
+}
+
+.weekLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+}
+
+.weekRange {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  font-family: var(--font-display);
+}
+
+.todayBtn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.625rem;
+  background: rgba(142, 129, 181, 0.1);
+  border: 1.5px solid rgba(142, 129, 181, 0.3);
+  border-radius: var(--radius-full);
+  color: var(--primary);
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.todayBtn:hover {
+  background: var(--grad-primary);
+  color: white;
+  border-color: transparent;
+}
+
+/* ── メンバー凡例 ── */
+.legend {
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.375rem 1.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.62);
+  border-bottom: 1px solid var(--glass-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.legend::-webkit-scrollbar {
+  display: none;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--gray-600);
+  white-space: nowrap;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── メインエリア ── */
+.main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hint {
+  padding: 2rem;
+  text-align: center;
+  color: var(--gray-400);
+  font-size: 0.9rem;
+}
+
+/* ── 週グリッド ── */
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-height: 100%;
+}
+
+/* ── 1日カラム ── */
+.dayColumn {
+  border-right: 1px solid var(--gray-100);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 200px;
+}
+
+.dayColumn:last-child {
+  border-right: none;
+}
+
+.dayColumn:hover {
+  background: rgba(142, 129, 181, 0.03);
+}
+
+.dayColumnToday {
+  background: rgba(142, 129, 181, 0.04);
+}
+
+/* ── 日付ヘッダー ── */
+.dayHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0.25rem 0.375rem;
+  border-bottom: 1px solid var(--gray-100);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1;
+}
+
+.dayHeaderToday {
+  background: rgba(142, 129, 181, 0.08);
+}
+
+.dayLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.dayNum {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  line-height: 1.4;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.dayNumToday {
+  background: var(--grad-primary);
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(142, 129, 181, 0.4);
+}
+
+.sat {
+  color: #6B9EC2 !important;
+}
+
+.sun {
+  color: #C2826A !important;
+}
+
+/* ── 終日エリア ── */
+.allDayArea {
+  padding: 0.25rem 0.2rem 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--gray-100);
+  min-height: 28px;
+  flex-shrink: 0;
+}
+
+/* ── 時間指定エリア ── */
+.timedArea {
+  flex: 1;
+  padding: 0.25rem 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+/* ── イベントチップ ── */
+.eventChip {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 3px;
+  padding: 0.2rem 0.3rem;
+  background: color-mix(in srgb, var(--chip-color) 15%, white);
+  border-left: 2.5px solid var(--chip-color);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.eventChip:hover {
+  background: color-mix(in srgb, var(--chip-color) 25%, white);
+  transform: scale(1.02);
+}
+
+.eventTime {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--chip-color);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventTitle {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventMember {
+  font-size: 0.58rem;
+  color: var(--gray-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── モーダル ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 20, 50, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s ease both;
+}
+
+@media (min-width: 480px) {
+  .overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+}
+
+.modal {
+  background: white;
+  border-radius: 1.75rem 1.75rem 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 -8px 48px rgba(142, 129, 181, 0.14);
+  animation: slideUp 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  position: relative;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+}
+
+@media (min-width: 480px) {
+  .modal {
+    border-radius: 1.75rem;
+    animation: scaleIn 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+    max-height: 80dvh;
+  }
+  .modal::before {
+    display: none;
+  }
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+}
+
+.modalTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  letter-spacing: 0.01em;
+  flex: 1;
+  padding-right: 0.5rem;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  border: none;
+  color: var(--gray-500);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.22s ease;
+  touch-action: manipulation;
+}
+
+.closeBtn:hover {
+  background: #fee2e2;
+  color: var(--danger);
+  transform: rotate(90deg);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.input {
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  outline: none;
+  transition: all 0.2s ease;
+  background: var(--gray-50);
+  font-size: 1rem;
+  color: var(--gray-800);
+}
+
+.input:focus {
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(142, 129, 181, 0.1);
+}
+
+/* ── 終日 / 時間指定トグル ── */
+.toggleRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.toggleBtn {
+  padding: 0.625rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toggleBtn:hover {
+  border-color: rgba(142, 129, 181, 0.4);
+  color: var(--primary);
+}
+
+.toggleActive {
+  background: rgba(142, 129, 181, 0.12);
+  border-color: rgba(142, 129, 181, 0.5);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ── メンバー選択 ── */
+.memberSelect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.memberOption {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.memberOption:hover {
+  border-color: rgba(142, 129, 181, 0.4);
+  color: var(--primary);
+}
+
+.memberOptionActive {
+  background: color-mix(in srgb, var(--active-color, var(--primary)) 12%, white);
+  border-color: var(--active-color, var(--primary));
+  color: var(--active-color, var(--primary));
+  font-weight: 700;
+}
+
+.memberDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── フォームボタン ── */
+.formBtns {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.deleteBtn {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: #fee2e2;
+  border: none;
+  color: var(--danger);
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+
+.deleteBtn:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.cancelBtn {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--gray-100);
+  border: none;
+  color: var(--gray-600);
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.cancelBtn:hover {
+  background: var(--gray-200);
+}
+
+.saveBtn {
+  flex: 2;
+  padding: 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--grad-primary);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 10px rgba(142, 129, 181, 0.3);
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.saveBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(142, 129, 181, 0.42);
+}
+
+.saveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── イベントチップ（コンパクト） ── */
+.eventChipCompact {
+  padding: 0.15rem 0.25rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.eventChipCompact .eventTime {
+  flex-shrink: 0;
+}
+
+.eventChipCompact .eventTitle {
+  font-size: 0.62rem;
+}
+
+/* ── 月表示 ── */
+.monthWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.monthDayLabels {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--gray-200);
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.8);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.monthDayLabel {
+  text-align: center;
+  padding: 0.4rem 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  letter-spacing: 0.03em;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(80px, 1fr));
+  flex: 1;
+}
+
+.monthCell {
+  border-right: 1px solid var(--gray-100);
+  border-bottom: 1px solid var(--gray-100);
+  padding: 0.25rem 0.2rem 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+
+.monthCell:nth-child(7n) {
+  border-right: none;
+}
+
+.monthCell:hover {
+  background: rgba(142, 129, 181, 0.04);
+}
+
+.monthCellToday {
+  background: rgba(142, 129, 181, 0.05);
+}
+
+.monthCellOtherMonth {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.monthDateNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  flex-shrink: 0;
+  line-height: 1;
+  align-self: flex-start;
+}
+
+.monthDateNumToday {
+  background: var(--grad-primary);
+  color: white !important;
+  box-shadow: 0 2px 6px rgba(142, 129, 181, 0.38);
+}
+
+.otherMonth {
+  color: var(--gray-300) !important;
+}
+
+.monthEventList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+.monthOverflow {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  padding: 0 0.2rem;
+  white-space: nowrap;
+}
+
+/* ── PC レイアウト ── */
+@media (min-width: 1024px) {
+  .header,
+  .weekNav,
+  .legend {
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+  }
+
+  .weekGrid,
+  .monthWrapper {
+    max-width: var(--max-w);
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  .monthGrid {
+    grid-template-rows: repeat(6, minmax(100px, 1fr));
+  }
+
+  .monthDateNum {
+    font-size: 0.85rem;
+    width: 28px;
+    height: 28px;
+  }
+
+  .eventTitle { font-size: 0.75rem; }
+  .eventTime  { font-size: 0.65rem; }
+  .eventMember { font-size: 0.62rem; }
+}

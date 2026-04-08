@@ -110,10 +110,10 @@ export default function HomePage() {
     {
       id: 'schedule',
       title: 'スケジュール',
-      description: '家族の予定を共有しよう（近日公開）',
+      description: '家族の予定を週単位で共有。リアルタイムに同期。',
       icon: '📅',
       path: '/schedule',
-      available: false,
+      available: true,
     },
     {
       id: 'memo',
