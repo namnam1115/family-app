@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
+import { App as CapApp } from '@capacitor/app'
 
 const AuthContext = createContext(null)
 
@@ -28,7 +31,26 @@ export function AuthProvider({ children }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    // ネイティブアプリ: OAuth コールバックの deep link を処理
+    let appUrlListener
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener('appUrlOpen', async ({ url }) => {
+        if (url.includes('login-callback')) {
+          // PKCE フロー: code パラメータから session を取得
+          const urlObj = new URL(url)
+          const code = urlObj.searchParams.get('code')
+          if (code) {
+            await supabase.auth.exchangeCodeForSession(code)
+          }
+          await Browser.close()
+        }
+      }).then(listener => { appUrlListener = listener })
+    }
+
+    return () => {
+      subscription.unsubscribe()
+      appUrlListener?.remove()
+    }
   }, [])
 
   async function fetchFamilyMember(userId) {
@@ -47,13 +69,27 @@ export function AuthProvider({ children }) {
   }
 
   async function signInWithGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    })
-    if (error) throw error
+    if (Capacitor.isNativePlatform()) {
+      // ネイティブアプリ: インアプリブラウザで OAuth を開く
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'com.familyapp.app://login-callback',
+          skipBrowserRedirect: true,
+        },
+      })
+      if (error) throw error
+      await Browser.open({ url: data.url, windowName: '_self' })
+    } else {
+      // Web: 既存のリダイレクトフロー
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      })
+      if (error) throw error
+    }
   }
 
   async function signOut() {
