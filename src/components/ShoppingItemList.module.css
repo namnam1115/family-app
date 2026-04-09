@@ -321,28 +321,32 @@
 
 /* ── モバイル ── */
 @media (max-width: 600px) {
-  /* 2段レイアウト：[商品名 | 追加] / [メモ（全幅）] */
+  /* Flexbox + order で DOM 順序に関わらず
+     [商品名] [追加]
+     [メモ（全幅）]
+     に並べる                              */
   .inputRow {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.375rem;
+    align-items: stretch;
   }
 
   .nameInput {
-    grid-column: 1;
-    grid-row: 1;
+    flex: 1;
+    min-width: 0;
+    order: 1;
   }
 
   .addBtn {
-    grid-column: 2;
-    grid-row: 1;
-    padding: 0.75rem 1rem;
+    flex-shrink: 0;
+    padding: 0.75rem 1.125rem;
+    order: 2;           /* DOM は3番目だが視覚的に2番目 */
   }
 
   .memoInput {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    flex: 0 0 100%;     /* 強制的に全幅で折り返す */
+    order: 3;           /* DOM は2番目だが視覚的に3番目 */
   }
 
   /* スワイプで削除するのでモバイルは × 非表示 */
