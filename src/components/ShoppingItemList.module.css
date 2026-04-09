@@ -25,7 +25,7 @@
   background: var(--glass);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  padding: 0.875rem 0;
+  padding: 0.875rem 1rem;
   padding-bottom: max(0.875rem, env(safe-area-inset-bottom));
   border-top: 1px solid rgba(255, 255, 255, 0.65);
   box-shadow: 0 -4px 24px rgba(142, 129, 181, 0.07);
