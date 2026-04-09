@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Capacitor } from '@capacitor/core'
 import { Browser } from '@capacitor/browser'
 import { App as CapApp } from '@capacitor/app'
+import { SignInWithApple } from '@capacitor-community/apple-sign-in'
 
 const AuthContext = createContext(null)
 
@@ -92,6 +93,32 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function signInWithApple() {
+    if (Capacitor.getPlatform() === 'ios') {
+      // iOS ネイティブ: Apple Sign In シートを直接表示 → identityToken を取得
+      const { response } = await SignInWithApple.authorize({
+        clientId: 'com.familyapp.app',
+        redirectURI: `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/callback`,
+        scopes: 'email name',
+        state: Math.random().toString(36).substring(2),
+      })
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: response.identityToken,
+      })
+      if (error) throw error
+    } else {
+      // Web: OAuth リダイレクトフロー
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      })
+      if (error) throw error
+    }
+  }
+
   async function signOut() {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
@@ -153,6 +180,7 @@ export function AuthProvider({ children }) {
     loading,
     familyMember,
     signInWithGoogle,
+    signInWithApple,
     signOut,
     createFamily,
     joinFamily,

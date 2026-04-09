@@ -264,7 +264,44 @@ npm run build && npx cap sync
 
 ---
 
-## 9. Push 通知のテスト
+## 9. Sign in with Apple のセットアップ
+
+Apple のガイドライン 4.8 により、**Google などサードパーティログインを提供する iOS アプリには Sign in with Apple の実装が必須**です。
+
+### 9-1. Apple Developer で Sign in with Apple を有効化
+
+1. [Apple Developer](https://developer.apple.com/) →「Certificates, Identifiers & Profiles」→「Identifiers」
+2. アプリの App ID (`com.familyapp.app`) を選択
+3. 「Sign in with Apple」にチェックを入れて保存
+4. Xcode の「Signing & Capabilities」→「+ Capability」→「Sign in with Apple」を追加
+
+### 9-2. Supabase で Apple プロバイダを設定
+
+Supabase ダッシュボード →「Authentication」→「Providers」→「Apple」を有効化し、以下を設定します。
+
+| 項目 | 取得場所 |
+|------|---------|
+| Service ID (Client ID) | Apple Developer → Identifiers → Services IDs → 新規作成 |
+| Team ID | Apple Developer → Membership → Team ID |
+| Key ID | Apple Developer → Keys → 新規作成 (Sign in with Apple を有効化) |
+| Private Key (.p8) | 上記 Key の作成時にダウンロード (一度のみ) |
+
+**Service ID の設定:**
+- Identifier: `com.familyapp.app.signin` (App ID とは別に作成)
+- 「Sign in with Apple」を有効化し、Domains に Supabase URL を追加
+- Return URLs: `https://your-project.supabase.co/auth/v1/callback`
+
+### 9-3. Supabase の Redirect URL に追加
+
+「Authentication」→「URL Configuration」→「Redirect URLs」に以下を追加します。
+
+```
+com.familyapp.app://login-callback
+```
+
+---
+
+## 10. Push 通知のテスト
 
 ### Web Push のテスト (既存)
 
