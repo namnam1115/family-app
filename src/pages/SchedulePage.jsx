@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
@@ -93,6 +93,7 @@ export default function SchedulePage() {
   const [baseDate, setBaseDate] = useState(new Date())
   const [showAdd, setShowAdd] = useState(false)
   const [addDefaultDate, setAddDefaultDate] = useState(null)
+  const [addDefaultStartDt, setAddDefaultStartDt] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
 
   // 看護師モード
@@ -107,28 +108,56 @@ export default function SchedulePage() {
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate])
   const monthGrid = useMemo(() => getMonthGrid(baseDate), [baseDate])
 
+  // 表示中の日付範囲（取得の絞り込みに使用）
+  const visibleRange = useMemo(() => {
+    if (viewMode === 'week') {
+      return { start: toDateStr(weekDates[0]), end: toDateStr(weekDates[6]) }
+    }
+    return { start: toDateStr(monthGrid[0]), end: toDateStr(monthGrid[41]) }
+  }, [viewMode, weekDates, monthGrid])
+
   // ── データ取得 ────────────────────────────────────────────
-  const fetchAll = useCallback(async () => {
+
+  // メンバー一覧：家族変更時のみ再取得
+  const fetchMembers = useCallback(async () => {
     if (!familyMember?.family_id) return
-    const fid = familyMember.family_id
-    const [{ data: ev }, { data: mem }] = await Promise.all([
-      supabase
-        .from('schedule_events')
-        .select('*, member:family_members!schedule_events_member_id_fkey(id, name)')
-        .eq('family_id', fid)
-        .order('start_datetime', { ascending: true, nullsFirst: false })
-        .order('start_date', { ascending: true }),
-      supabase
-        .from('family_members')
-        .select('id, name')
-        .eq('family_id', fid),
-    ])
-    if (ev) setEvents(ev)
+    const { data: mem } = await supabase
+      .from('family_members')
+      .select('id, name')
+      .eq('family_id', familyMember.family_id)
     if (mem) setMembers(mem)
-    setLoading(false)
   }, [familyMember?.family_id])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  // イベント：表示中の範囲のみ取得
+  // 複数日イベントの重複も考慮した OR フィルタ:
+  //   - 終日・単日: start_date が範囲内
+  //   - 終日・複数日: start_date <= end AND end_date >= start（範囲にまたがる）
+  //   - 時間指定: start_datetime ～ end_datetime が範囲と重なる
+  const fetchEvents = useCallback(async () => {
+    if (!familyMember?.family_id) return
+    const { start, end } = visibleRange
+    const orFilter = [
+      `and(all_day.eq.true,start_date.gte.${start},start_date.lte.${end},end_date.is.null)`,
+      `and(all_day.eq.true,start_date.lte.${end},end_date.gte.${start})`,
+      `and(all_day.eq.false,start_datetime.lte.${end}T23:59:59Z,end_datetime.gte.${start}T00:00:00Z)`,
+    ].join(',')
+    const { data: ev } = await supabase
+      .from('schedule_events')
+      .select('*, member:family_members!schedule_events_member_id_fkey(id, name)')
+      .eq('family_id', familyMember.family_id)
+      .or(orFilter)
+      .order('start_datetime', { ascending: true, nullsFirst: false })
+      .order('start_date', { ascending: true })
+    if (ev) setEvents(ev)
+    setLoading(false)
+  }, [familyMember?.family_id, visibleRange])
+
+  useEffect(() => { fetchMembers() }, [fetchMembers])
+  useEffect(() => { fetchEvents() }, [fetchEvents])
+
+  // リアルタイム購読：家族変更時のみ再接続し、月移動で不要な再接続を避ける
+  const fetchEventsRef = useRef(fetchEvents)
+  useEffect(() => { fetchEventsRef.current = fetchEvents }, [fetchEvents])
 
   useEffect(() => {
     if (!familyMember?.family_id) return
@@ -137,10 +166,10 @@ export default function SchedulePage() {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'schedule_events',
         filter: `family_id=eq.${familyMember.family_id}`,
-      }, fetchAll)
+      }, () => fetchEventsRef.current())
       .subscribe()
     return () => supabase.removeChannel(ch)
-  }, [familyMember?.family_id, fetchAll])
+  }, [familyMember?.family_id])
 
   const memberColorMap = useMemo(() => {
     const map = {}
@@ -165,7 +194,7 @@ export default function SchedulePage() {
         snapshot: data,
       })
     }
-    await fetchAll()
+    await fetchEvents()
   }
   async function handleEdit(id, data) {
     await supabase.from('schedule_events').update(data).eq('id', id)
@@ -177,11 +206,11 @@ export default function SchedulePage() {
       action: 'updated',
       snapshot: data,
     })
-    await fetchAll()
+    await fetchEvents()
   }
   async function handleDelete(id) {
     await supabase.from('schedule_events').delete().eq('id', id)
-    await fetchAll()
+    await fetchEvents()
   }
 
   // ── ナビゲーション ────────────────────────────────────────
@@ -272,7 +301,7 @@ export default function SchedulePage() {
       await supabase.from('schedule_events').insert(inserts)
     }
 
-    await fetchAll()
+    await fetchEvents()
     setNurseSaving(false)
     cancelNurseMode()
   }
@@ -386,43 +415,23 @@ export default function SchedulePage() {
       )}
 
       {/* ── カレンダー本体 ── */}
-      <main className={styles.main}>
+      <main className={`${styles.main} ${viewMode === 'week' ? styles.mainWeekView : ''}`}>
         {loading ? (
           <p className={styles.hint}>読み込み中...</p>
         ) : viewMode === 'week' ? (
-          /* 週表示 */
-          <div className={styles.weekGrid}>
-            {eventsByDay.map(({ date, allDayEvents, timedEvents }, idx) => {
-              const dateStr = toDateStr(date)
-              const isToday = dateStr === todayStr
-              const isSat = idx === 5
-              const isSun = idx === 6
-              return (
-                <div
-                  key={dateStr}
-                  className={`${styles.dayColumn} ${isToday ? styles.dayColumnToday : ''}`}
-                  onClick={() => { setAddDefaultDate(dateStr); setShowAdd(true) }}
-                >
-                  <div className={`${styles.dayHeader} ${isToday ? styles.dayHeaderToday : ''}`}>
-                    <span className={`${styles.dayLabel} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{DAY_LABELS[idx]}</span>
-                    <span className={`${styles.dayNum} ${isToday ? styles.dayNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{date.getDate()}</span>
-                  </div>
-                  <div className={styles.allDayArea}>
-                    {allDayEvents.map(ev => (
-                      ev.shift_type
-                        ? <ShiftBlock key={ev.id} shiftType={ev.shift_type} onClick={e => { e.stopPropagation(); setEditTarget(ev) }} />
-                        : <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} onClick={e => { e.stopPropagation(); setEditTarget(ev) }} />
-                    ))}
-                  </div>
-                  <div className={styles.timedArea}>
-                    {timedEvents.map(ev => (
-                      <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} showTime onClick={e => { e.stopPropagation(); setEditTarget(ev) }} />
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <WeekTimeGrid
+            weekDates={weekDates}
+            filteredEvents={filteredEvents}
+            memberColorMap={memberColorMap}
+            todayStr={todayStr}
+            onEventClick={ev => setEditTarget(ev)}
+            onEdit={handleEdit}
+            onSlotClick={dt => {
+              setAddDefaultDate(toDateStr(dt))
+              setAddDefaultStartDt(dt.toISOString().slice(0, 16))
+              setShowAdd(true)
+            }}
+          />
         ) : (
           /* 月表示 */
           <MonthView
@@ -467,9 +476,10 @@ export default function SchedulePage() {
           members={members}
           memberColorMap={memberColorMap}
           defaultDate={addDefaultDate}
+          defaultStartDt={addDefaultStartDt}
           defaultMemberId={familyMember?.id}
-          onSubmit={async data => { await handleAdd(data); setShowAdd(false) }}
-          onClose={() => setShowAdd(false)}
+          onSubmit={async data => { await handleAdd(data); setShowAdd(false); setAddDefaultStartDt(null) }}
+          onClose={() => { setShowAdd(false); setAddDefaultStartDt(null) }}
         />
       )}
       {editTarget && (
@@ -578,6 +588,318 @@ function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClic
   )
 }
 
+// ── 週タイムグリッド 定数 ─────────────────────────────────────
+
+const PX_PER_HOUR = 64
+const PX_PER_MIN = PX_PER_HOUR / 60
+const TOTAL_HEIGHT = 24 * PX_PER_HOUR
+const SNAP_MIN = 15
+const GRID_HOURS = Array.from({ length: 24 }, (_, i) => i)
+
+// 同日に重複するイベントを列分割してレイアウト
+function layoutDay(events) {
+  if (!events.length) return []
+  const sorted = [...events].sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))
+  const cols = []
+  for (const ev of sorted) {
+    const evStart = new Date(ev.start_datetime).getTime()
+    let placed = false
+    for (const col of cols) {
+      if (new Date(col[col.length - 1].end_datetime).getTime() <= evStart) {
+        col.push(ev); placed = true; break
+      }
+    }
+    if (!placed) cols.push([ev])
+  }
+  const total = cols.length
+  return cols.flatMap((col, ci) => col.map(ev => ({ ev, colIdx: ci, totalCols: total })))
+}
+
+// ── 現在時刻ライン ────────────────────────────────────────────
+
+function CurrentTimeLine({ weekDates, todayStr }) {
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(t)
+  }, [])
+  const todayIdx = weekDates.findIndex(d => toDateStr(d) === todayStr)
+  if (todayIdx === -1) return null
+  const top = (now.getHours() * 60 + now.getMinutes()) * PX_PER_MIN
+  return (
+    <div
+      className={styles.currentTimeLine}
+      style={{ top, left: `${(todayIdx / 7) * 100}%`, width: `${100 / 7}%` }}
+    />
+  )
+}
+
+// ── 週タイムグリッドコンポーネント ────────────────────────────
+
+function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, onEventClick, onEdit, onSlotClick }) {
+  const scrollRef = useRef(null)
+  const gridRef = useRef(null)
+  const draggingRef = useRef(null)
+  const onEditRef = useRef(onEdit)
+  const weekDatesRef = useRef(weekDates)
+  const [dragState, setDragState] = useState(null)
+
+  useEffect(() => { onEditRef.current = onEdit }, [onEdit])
+  useEffect(() => { weekDatesRef.current = weekDates }, [weekDates])
+
+  // 初回表示で 7 時にスクロール
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 7 * PX_PER_HOUR
+  }, [])
+
+  // グローバルドラッグイベント（マウス＋タッチ）
+  useEffect(() => {
+    function getPos(e) {
+      const src = e.touches?.[0] ?? e
+      return { x: src.clientX, y: src.clientY }
+    }
+
+    function onMove(e) {
+      const d = draggingRef.current
+      if (!d) return
+      const { x, y } = getPos(e)
+      const deltaMin = (y - d.startY) / PX_PER_MIN
+
+      let next
+      if (d.mode === 'move') {
+        const snapped = Math.round((d.origStartMin + deltaMin) / SNAP_MIN) * SNAP_MIN
+        const clamped = Math.max(0, Math.min(23 * 60, snapped))
+        const newDay = xToDayIndex(x)
+        next = {
+          ...d,
+          currentStartMin: clamped,
+          currentEndMin: clamped + d.duration,
+          currentDayIndex: newDay >= 0 ? newDay : d.currentDayIndex,
+        }
+      } else {
+        const snapped = Math.round((d.origEndMin + deltaMin) / SNAP_MIN) * SNAP_MIN
+        const clamped = Math.max(d.origStartMin + SNAP_MIN, Math.min(24 * 60, snapped))
+        next = { ...d, currentEndMin: clamped }
+      }
+
+      draggingRef.current = next
+      setDragState({ ...next })
+      if (e.cancelable) e.preventDefault()
+    }
+
+    async function onUp() {
+      const d = draggingRef.current
+      if (!d) return
+      draggingRef.current = null
+      setDragState(null)
+
+      const { event, mode, currentStartMin, currentEndMin, currentDayIndex,
+              origStartMin, origEndMin, origDayIndex } = d
+      if (mode === 'move' && currentDayIndex === origDayIndex && currentStartMin === origStartMin) return
+      if (mode === 'resize' && currentEndMin === origEndMin) return
+
+      const targetDate = weekDatesRef.current[currentDayIndex] ?? new Date(event.start_datetime)
+      const newStart = new Date(targetDate)
+      newStart.setHours(Math.floor(currentStartMin / 60), currentStartMin % 60, 0, 0)
+
+      const endBase = mode === 'resize' ? new Date(event.start_datetime) : new Date(targetDate)
+      const newEnd = new Date(endBase)
+      newEnd.setHours(Math.floor(currentEndMin / 60), currentEndMin % 60, 0, 0)
+
+      await onEditRef.current(event.id, {
+        title: event.title,
+        memo: event.memo,
+        all_day: false,
+        member_id: event.member_id,
+        shift_type: event.shift_type,
+        start_date: null,
+        end_date: null,
+        start_datetime: newStart.toISOString(),
+        end_datetime: newEnd.toISOString(),
+      })
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onUp)
+    }
+  }, []) // マウント時に一度だけ登録
+
+  function xToDayIndex(clientX) {
+    if (!gridRef.current) return -1
+    const rect = gridRef.current.getBoundingClientRect()
+    return Math.max(0, Math.min(6, Math.floor((clientX - rect.left) / (rect.width / 7))))
+  }
+
+  function yToMinutes(clientY) {
+    if (!gridRef.current || !scrollRef.current) return 0
+    const rect = gridRef.current.getBoundingClientRect()
+    return (clientY - rect.top + scrollRef.current.scrollTop) / PX_PER_MIN
+  }
+
+  function onDragStart(e, event, mode) {
+    e.stopPropagation()
+    const src = e.touches?.[0] ?? e
+    const origStart = new Date(event.start_datetime)
+    const origEnd = new Date(event.end_datetime)
+    const origStartMin = origStart.getHours() * 60 + origStart.getMinutes()
+    const origEndMin = origEnd.getHours() * 60 + origEnd.getMinutes()
+    const origDayIndex = weekDatesRef.current.findIndex(d => toDateStr(d) === toDateStr(origStart))
+    const state = {
+      event, mode,
+      startY: src.clientY, startX: src.clientX,
+      origStartMin, origEndMin, origDayIndex,
+      duration: origEndMin - origStartMin,
+      currentStartMin: origStartMin, currentEndMin: origEndMin,
+      currentDayIndex: origDayIndex,
+    }
+    draggingRef.current = state
+    setDragState(state)
+    if (e.cancelable && e.preventDefault) e.preventDefault()
+  }
+
+  function onGridClick(e) {
+    if (draggingRef.current) return
+    const dayIndex = xToDayIndex(e.clientX)
+    const snapped = Math.round(yToMinutes(e.clientY) / SNAP_MIN) * SNAP_MIN
+    const date = weekDates[dayIndex]
+    if (!date) return
+    const dt = new Date(date)
+    dt.setHours(Math.floor(snapped / 60), snapped % 60, 0, 0)
+    onSlotClick(dt)
+  }
+
+  const allDayByDay = weekDates.map(d => filteredEvents.filter(e => e.all_day && isEventOnDay(e, d)))
+  const timedByDay = weekDates.map(d => filteredEvents.filter(e => !e.all_day && isEventOnDay(e, d)))
+  const WLABELS = ['月', '火', '水', '木', '金', '土', '日']
+
+  return (
+    <div className={styles.weekWrapper}>
+      {/* ── 曜日ヘッダー ── */}
+      <div className={styles.weekHeaderRow}>
+        <div className={styles.weekGutter} />
+        {weekDates.map((date, idx) => {
+          const ds = toDateStr(date)
+          const isToday = ds === todayStr
+          const isSat = idx === 5, isSun = idx === 6
+          return (
+            <div key={ds} className={`${styles.weekDayHead} ${isToday ? styles.weekDayHeadToday : ''}`}>
+              <span className={`${styles.dayLabel} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{WLABELS[idx]}</span>
+              <span className={`${styles.dayNum} ${isToday ? styles.dayNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{date.getDate()}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── 終日行 ── */}
+      <div className={styles.weekAllDayRow}>
+        <div className={styles.weekGutter}><span className={styles.allDayLabel}>終日</span></div>
+        {weekDates.map((date, idx) => (
+          <div key={toDateStr(date)} className={styles.weekAllDayCell}>
+            {allDayByDay[idx].map(ev => (
+              ev.shift_type
+                ? <ShiftBlock key={ev.id} shiftType={ev.shift_type} compact onClick={e => { e.stopPropagation(); onEventClick(ev) }} />
+                : <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} compact onClick={e => { e.stopPropagation(); onEventClick(ev) }} />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* ── 時間スクロールエリア ── */}
+      <div className={styles.weekScrollArea} ref={scrollRef}>
+        <div className={styles.weekTimeBody}>
+          {/* 時刻ガター */}
+          <div className={styles.weekGutter} style={{ height: TOTAL_HEIGHT, position: 'relative', flexShrink: 0 }}>
+            {GRID_HOURS.map(h => (
+              <div key={h} className={styles.timeLabel} style={{ top: h * PX_PER_HOUR }}>
+                {h > 0 ? `${h}:00` : ''}
+              </div>
+            ))}
+          </div>
+
+          {/* グリッド本体 */}
+          <div
+            className={styles.weekDayGrid}
+            ref={gridRef}
+            style={{ height: TOTAL_HEIGHT, cursor: dragState ? 'grabbing' : 'default' }}
+            onClick={onGridClick}
+          >
+            {/* 時間区切り線 */}
+            {GRID_HOURS.map(h => (
+              <div key={h} className={styles.hourLine} style={{ top: h * PX_PER_HOUR }} />
+            ))}
+            {GRID_HOURS.map(h => (
+              <div key={`hh${h}`} className={styles.halfHourLine} style={{ top: h * PX_PER_HOUR + PX_PER_HOUR / 2 }} />
+            ))}
+            {/* 曜日区切り線 */}
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={`d${i}`} className={styles.dayDivider} style={{ left: `${(i / 7) * 100}%` }} />
+            ))}
+
+            <CurrentTimeLine weekDates={weekDates} todayStr={todayStr} />
+
+            {/* 時間指定イベント */}
+            {timedByDay.flatMap((evs, dayIndex) =>
+              layoutDay(evs).map(({ ev, colIdx, totalCols }) => {
+                const origStart = new Date(ev.start_datetime)
+                const origStartMin = origStart.getHours() * 60 + origStart.getMinutes()
+                const origDuration = (new Date(ev.end_datetime) - origStart) / 60000
+
+                const isDragging = dragState?.event.id === ev.id
+                const ds = isDragging ? dragState : null
+
+                const dispDay = ds?.mode === 'move' ? ds.currentDayIndex : dayIndex
+                const dispStart = ds?.mode === 'move' ? ds.currentStartMin : origStartMin
+                const dispEnd = ds?.mode === 'resize' ? ds.currentEndMin : dispStart + origDuration
+
+                const top = dispStart * PX_PER_MIN
+                const height = Math.max(22, (dispEnd - dispStart) * PX_PER_MIN)
+                const leftPct = (dispDay / 7 + colIdx / (totalCols * 7)) * 100
+                const widthPct = 100 / (totalCols * 7)
+                const color = ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'
+
+                return (
+                  <div
+                    key={ev.id}
+                    className={`${styles.timedEventBlock} ${isDragging ? styles.timedEventDragging : ''}`}
+                    style={{
+                      top, height,
+                      left: `calc(${leftPct}% + 1px)`,
+                      width: `calc(${widthPct}% - 2px)`,
+                      '--chip-color': color,
+                    }}
+                    onMouseDown={e => onDragStart(e, ev, 'move')}
+                    onTouchStart={e => onDragStart(e, ev, 'move')}
+                    onClick={e => { e.stopPropagation(); if (!draggingRef.current) onEventClick(ev) }}
+                  >
+                    <span className={styles.timedEventTitle}>{ev.title}</span>
+                    {height > 34 && (
+                      <span className={styles.timedEventTime}>
+                        {formatTime(ev.start_datetime)}–{formatTime(ev.end_datetime)}
+                      </span>
+                    )}
+                    <div
+                      className={styles.resizeHandle}
+                      onMouseDown={e => { e.stopPropagation(); onDragStart(e, ev, 'resize') }}
+                      onTouchStart={e => { e.stopPropagation(); onDragStart(e, ev, 'resize') }}
+                    />
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── シフトブロック ────────────────────────────────────────────
 
 function ShiftBlock({ shiftType, compact = false, onClick }) {
@@ -613,7 +935,7 @@ function EventChip({ event, color, showTime = false, compact = false, onClick })
 
 // ── イベント追加・編集モーダル ────────────────────────────────
 
-function EventModal({ mode, event, members, memberColorMap, defaultDate, defaultMemberId, onSubmit, onDelete, onClose }) {
+function EventModal({ mode, event, members, memberColorMap, defaultDate, defaultStartDt, defaultMemberId, onSubmit, onDelete, onClose }) {
   const today = toDateStr(new Date())
   const nowRound = (() => {
     const d = new Date()
@@ -623,16 +945,22 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
 
   const [title, setTitle] = useState(event?.title ?? '')
   const [memo, setMemo] = useState(event?.memo ?? '')
-  const [allDay, setAllDay] = useState(event?.all_day ?? true)
+  const [allDay, setAllDay] = useState(event?.all_day ?? (defaultStartDt ? false : true))
   const [startDate, setStartDate] = useState(event?.start_date ?? defaultDate ?? today)
   const [endDate, setEndDate] = useState(event?.end_date ?? '')
   const [startDt, setStartDt] = useState(
-    event?.start_datetime ? new Date(event.start_datetime).toISOString().slice(0, 16) : nowRound
+    event?.start_datetime
+      ? new Date(event.start_datetime).toISOString().slice(0, 16)
+      : defaultStartDt ?? nowRound
   )
   const [endDt, setEndDt] = useState(
     event?.end_datetime
       ? new Date(event.end_datetime).toISOString().slice(0, 16)
-      : (() => { const d = new Date(nowRound); d.setHours(d.getHours() + 1); return d.toISOString().slice(0, 16) })()
+      : (() => {
+          const base = new Date(defaultStartDt ?? nowRound)
+          base.setHours(base.getHours() + 1)
+          return base.toISOString().slice(0, 16)
+        })()
   )
   const [memberId, setMemberId] = useState(event?.member_id ?? defaultMemberId ?? '')
   const [submitting, setSubmitting] = useState(false)

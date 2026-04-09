@@ -406,13 +406,217 @@
   flex-shrink: 0;
 }
 
-/* ── 時間指定エリア ── */
+/* ── 時間指定エリア（旧） ── */
 .timedArea {
   flex: 1;
   padding: 0.25rem 0.2rem;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+}
+
+/* ── 週タイムグリッド ── */
+
+.mainWeekView {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.weekWrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.weekHeaderRow {
+  display: flex;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--gray-200);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 4;
+}
+
+.weekGutter {
+  width: 44px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weekDayHead {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.3rem 0 0.4rem;
+  border-right: 1px solid var(--gray-100);
+}
+
+.weekDayHead:last-child {
+  border-right: none;
+}
+
+.weekDayHeadToday {
+  background: rgba(142, 129, 181, 0.06);
+}
+
+.weekAllDayRow {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 2px solid var(--gray-200);
+  min-height: 26px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.allDayLabel {
+  font-size: 0.58rem;
+  color: var(--gray-400);
+  font-weight: 600;
+}
+
+.weekAllDayCell {
+  flex: 1;
+  padding: 0.15rem 0.1rem;
+  border-right: 1px solid var(--gray-100);
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-height: 22px;
+}
+
+.weekAllDayCell:last-child {
+  border-right: none;
+}
+
+.weekScrollArea {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.weekTimeBody {
+  display: flex;
+}
+
+.timeLabel {
+  position: absolute;
+  right: 4px;
+  font-size: 0.58rem;
+  color: var(--gray-400);
+  transform: translateY(-50%);
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.weekDayGrid {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.hourLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--gray-100);
+  pointer-events: none;
+}
+
+.halfHourLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(0, 0, 0, 0.04);
+  pointer-events: none;
+}
+
+.dayDivider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--gray-100);
+  pointer-events: none;
+}
+
+.currentTimeLine {
+  position: absolute;
+  height: 2px;
+  background: #ef4444;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.currentTimeLine::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+.timedEventBlock {
+  position: absolute;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--chip-color) 16%, white);
+  border-left: 3px solid var(--chip-color);
+  padding: 0.15rem 0.25rem 0.25rem;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.1s ease;
+  box-sizing: border-box;
+}
+
+.timedEventBlock:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timedEventDragging {
+  cursor: grabbing !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18) !important;
+  opacity: 0.88;
+  z-index: 20 !important;
+  transition: none;
+}
+
+.timedEventTitle {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--chip-color);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timedEventTime {
+  display: block;
+  font-size: 0.6rem;
+  color: color-mix(in srgb, var(--chip-color) 70%, var(--gray-600));
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.resizeHandle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
 }
 
 /* ── イベントチップ ── */

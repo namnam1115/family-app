@@ -5,6 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import GroupSetup from '../components/GroupSetup'
 import AppCard from '../components/AppCard'
 import FamilyInfo from '../components/FamilyInfo'
+import TodaySchedule from '../components/TodaySchedule'
 import styles from './HomePage.module.css'
 
 export default function HomePage() {
@@ -134,6 +135,7 @@ export default function HomePage() {
       </header>
       <main className={styles.main}>
         <FamilyInfo />
+        <TodaySchedule />
         <section className={styles.appsSection}>
           <h2 className={styles.sectionTitle}>アプリ一覧</h2>
           <div className={styles.appGrid}>
