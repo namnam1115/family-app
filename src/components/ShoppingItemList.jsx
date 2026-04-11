@@ -4,6 +4,8 @@ import styles from './ShoppingItemList.module.css'
 
 export default function ShoppingItemList({ listId, listName, memberName }) {
   const [items, setItems] = useState([])
+  const [checkedItems, setCheckedItems] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [memo, setMemo] = useState('')
@@ -21,18 +23,36 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
     setLoading(false)
   }, [listId])
 
+  const fetchHistory = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('shopping_items')
+      .select('*')
+      .eq('list_id', listId)
+      .eq('checked', true)
+      .order('checked_at', { ascending: false })
+      .limit(20)
+    if (!error && data) setCheckedItems(data)
+  }, [listId])
+
   useEffect(() => {
     setLoading(true)
     fetchItems()
   }, [fetchItems])
 
   useEffect(() => {
+    if (showHistory) fetchHistory()
+  }, [showHistory, fetchHistory])
+
+  useEffect(() => {
     const channel = supabase
       .channel(`shopping_items_${listId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter: `list_id=eq.${listId}` }, () => fetchItems())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter: `list_id=eq.${listId}` }, () => {
+        fetchItems()
+        if (showHistory) fetchHistory()
+      })
       .subscribe()
     return () => supabase.removeChannel(channel)
-  }, [listId, fetchItems])
+  }, [listId, fetchItems, fetchHistory, showHistory])
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -51,22 +71,35 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
   }
 
   async function handleToggle(item) {
-    // チェック → リストから即座に除去（購入済みは表示しない）
-    setItems(prev => prev.filter(i => i.id !== item.id))
+    const checked = !item.checked
+    const checked_at = checked ? new Date().toISOString() : null
+    if (checked) {
+      // 未購入 → 購入済み: メインリストから除去
+      setItems(prev => prev.filter(i => i.id !== item.id))
+      if (showHistory) {
+        setCheckedItems(prev => [{ ...item, checked: true, checked_at }, ...prev])
+      }
+    } else {
+      // 購入済み → 未購入: 履歴から除去、メインリストに戻す
+      setCheckedItems(prev => prev.filter(i => i.id !== item.id))
+      fetchItems()
+    }
     await supabase
       .from('shopping_items')
-      .update({ checked: true, checked_at: new Date().toISOString() })
+      .update({ checked, checked_at })
       .eq('id', item.id)
   }
 
   async function handleDelete(id) {
     setItems(prev => prev.filter(i => i.id !== id))
+    setCheckedItems(prev => prev.filter(i => i.id !== id))
     await supabase.from('shopping_items').delete().eq('id', id)
   }
 
   async function handleToggleImportant(item) {
     const important = !item.important
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, important } : i))
+    setCheckedItems(prev => prev.map(i => i.id === item.id ? { ...i, important } : i))
     await supabase.from('shopping_items').update({ important }).eq('id', item.id)
   }
 
@@ -76,15 +109,41 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
 
       {loading ? (
         <p className={styles.hint}>読み込み中...</p>
-      ) : items.length === 0 ? (
-        <p className={styles.hint}>アイテムがありません。最初の商品を追加してみましょう！</p>
       ) : (
         <div className={styles.itemsArea}>
-          <ul className={styles.itemList}>
-            {items.map(item => (
-              <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
-            ))}
-          </ul>
+          {items.length === 0 && !showHistory && (
+            <p className={styles.hint}>アイテムがありません。最初の商品を追加してみましょう！</p>
+          )}
+          {items.length > 0 && (
+            <ul className={styles.itemList}>
+              {items.map(item => (
+                <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
+              ))}
+            </ul>
+          )}
+
+          {/* 購入済み履歴トグル */}
+          <button
+            className={styles.historyToggle}
+            onClick={() => setShowHistory(prev => !prev)}
+          >
+            <span className={styles.historyToggleIcon}>{showHistory ? '▲' : '▼'}</span>
+            購入済み履歴
+          </button>
+
+          {showHistory && (
+            <div className={styles.historySection}>
+              {checkedItems.length === 0 ? (
+                <p className={styles.historyEmpty}>購入済みのアイテムはありません</p>
+              ) : (
+                <ul className={styles.itemList}>
+                  {checkedItems.map(item => (
+                    <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
 

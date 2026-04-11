@@ -277,21 +277,45 @@
   background: #fee2e2;
 }
 
-/* ── 購入済みセクション ── */
-.checkedSection {
-  margin-top: 1rem;
+/* ── 購入済み履歴 ── */
+.historyToggle {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--gray-400);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease;
+  align-self: flex-start;
 }
 
-.checkedSummary {
-  font-size: 0.72rem;
-  font-weight: 700;
+.historyToggle:hover {
+  color: var(--gray-600);
+}
+
+.historyToggleIcon {
+  font-size: 0.65rem;
+}
+
+.historySection {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed var(--gray-200);
+}
+
+.historyEmpty {
+  font-size: 0.82rem;
   color: var(--gray-400);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 0.25rem 0;
+  padding: 0.75rem 0;
+  text-align: center;
 }
 
 /* ── デスクトップ ── */
