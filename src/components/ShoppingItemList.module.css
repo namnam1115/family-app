@@ -321,10 +321,9 @@
 
 /* ── モバイル ── */
 @media (max-width: 600px) {
-  /* Flexbox + order で DOM 順序に関わらず
-     [商品名] [追加]
-     [メモ（全幅）]
-     に並べる                              */
+  /* 2段レイアウト:
+     [商品名（全幅）]
+     [メモ] [追加]       */
   .inputRow {
     display: flex;
     flex-wrap: wrap;
@@ -333,20 +332,21 @@
   }
 
   .nameInput {
-    flex: 1;
+    flex: 0 0 100%;     /* 1段目: 全幅 */
     min-width: 0;
     order: 1;
+  }
+
+  .memoInput {
+    flex: 1;            /* 2段目: 残りの幅 */
+    min-width: 0;
+    order: 2;
   }
 
   .addBtn {
     flex-shrink: 0;
     padding: 0.75rem 1.125rem;
-    order: 2;           /* DOM は3番目だが視覚的に2番目 */
-  }
-
-  .memoInput {
-    flex: 0 0 100%;     /* 強制的に全幅で折り返す */
-    order: 3;           /* DOM は2番目だが視覚的に3番目 */
+    order: 3;           /* 2段目: メモの右 */
   }
 
   /* スワイプで削除するのでモバイルは × 非表示 */
