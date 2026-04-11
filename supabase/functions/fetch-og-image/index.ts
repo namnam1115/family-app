@@ -42,21 +42,81 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    // TikTok: oEmbed APIでサムネイルを取得（bot対策のためHTMLスクレイピング不可）
+    // TikTok: oEmbed APIを試し、失敗時はモバイルUAでHTMLのog:imageにフォールバック
     if (parsedUrl.hostname.includes('tiktok.com')) {
-      const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`
-      const oembedRes = await fetch(oembedUrl, {
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(8000),
-      })
-      if (oembedRes.ok) {
-        const json = await oembedRes.json()
-        if (json?.thumbnail_url) {
-          return new Response(JSON.stringify({ image: json.thumbnail_url }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          })
+      // 1st: oEmbed API
+      try {
+        const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`
+        const oembedRes = await fetch(oembedUrl, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; FamilyApp/1.0)',
+          },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (oembedRes.ok) {
+          const json = await oembedRes.json()
+          if (json?.thumbnail_url) {
+            return new Response(JSON.stringify({ image: json.thumbnail_url }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
         }
+      } catch {
+        // oEmbed失敗 → HTMLフォールバックへ
       }
+
+      // 2nd: モバイルUAでHTMLを取得してog:imageを抽出
+      try {
+        const tiktokRes = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+          },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(8000),
+        })
+        if (tiktokRes.ok) {
+          const reader = tiktokRes.body?.getReader()
+          if (reader) {
+            const MAX_BYTES = 200 * 1024
+            const chunks: Uint8Array[] = []
+            let totalBytes = 0
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done || !value) break
+              chunks.push(value)
+              totalBytes += value.byteLength
+              if (totalBytes >= MAX_BYTES) break
+            }
+            reader.cancel()
+            const decoder = new TextDecoder('utf-8', { fatal: false })
+            const html = decoder.decode(
+              chunks.reduce((acc, chunk) => {
+                const merged = new Uint8Array(acc.length + chunk.length)
+                merged.set(acc)
+                merged.set(chunk, acc.length)
+                return merged
+              }, new Uint8Array(0))
+            )
+            const ogImage = extractMetaContent(html, [
+              /og:image["'\s]+content=["']([^"']+)["']/i,
+              /content=["']([^"']+)["']\s+property=["']og:image["']/i,
+              /twitter:image["'\s]+content=["']([^"']+)["']/i,
+              /content=["']([^"']+)["']\s+name=["']twitter:image["']/i,
+            ])
+            if (ogImage) {
+              return new Response(JSON.stringify({ image: toAbsoluteUrl(ogImage, parsedUrl) }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              })
+            }
+          }
+        }
+      } catch {
+        // HTMLフォールバックも失敗
+      }
+
       return new Response(JSON.stringify({ image: null }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
