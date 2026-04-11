@@ -2,7 +2,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%;
+  /* width: 100% を削除 — iOS Safari では flex 親の padding-box 幅で解決され
+     右側が content padding 分（約 20px）だけはみ出すバグがある。
+     代わりにデフォルトの align-self: stretch で content-box 幅に収める。 */
 }
 
 .listTitle {
@@ -332,6 +334,7 @@
   .nameInput {
     grid-column: 1;
     grid-row: 1;
+    min-width: 0; /* グリッドアイテムのデフォルト min-width によるはみ出しを防ぐ */
   }
 
   .addBtn {
@@ -343,6 +346,7 @@
   .memoInput {
     grid-column: 1 / -1;
     grid-row: 2;
+    min-width: 0;
   }
 
   /* スワイプで削除するのでモバイルは × 非表示 */
