@@ -14,7 +14,9 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
       .from('shopping_items')
       .select('*')
       .eq('list_id', listId)
-      .order('created_at')
+      .eq('checked', false)
+      .order('created_at', { ascending: false })
+      .limit(10)
     if (!error && data) setItems(data)
     setLoading(false)
   }, [listId])
@@ -49,12 +51,11 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
   }
 
   async function handleToggle(item) {
-    const checked = !item.checked
-    const checked_at = checked ? new Date().toISOString() : null
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, checked, checked_at } : i))
+    // チェック → リストから即座に除去（購入済みは表示しない）
+    setItems(prev => prev.filter(i => i.id !== item.id))
     await supabase
       .from('shopping_items')
-      .update({ checked, checked_at })
+      .update({ checked: true, checked_at: new Date().toISOString() })
       .eq('id', item.id)
   }
 
@@ -69,9 +70,6 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
     await supabase.from('shopping_items').update({ important }).eq('id', item.id)
   }
 
-  const unchecked = items.filter(i => !i.checked)
-  const checked = items.filter(i => i.checked)
-
   return (
     <div className={styles.container}>
       <h2 className={styles.listTitle}>{listName}</h2>
@@ -82,23 +80,11 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
         <p className={styles.hint}>アイテムがありません。最初の商品を追加してみましょう！</p>
       ) : (
         <div className={styles.itemsArea}>
-          {unchecked.length > 0 && (
-            <ul className={styles.itemList}>
-              {unchecked.map(item => (
-                <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
-              ))}
-            </ul>
-          )}
-          {checked.length > 0 && (
-            <div className={styles.checkedSection}>
-              <p className={styles.checkedSummary}>購入済み ({checked.length})</p>
-              <ul className={styles.itemList}>
-                {checked.map(item => (
-                  <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
-                ))}
-              </ul>
-            </div>
-          )}
+          <ul className={styles.itemList}>
+            {items.map(item => (
+              <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onToggleImportant={handleToggleImportant} />
+            ))}
+          </ul>
         </div>
       )}
 
