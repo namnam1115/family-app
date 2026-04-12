@@ -1158,7 +1158,7 @@
   gap: 0.5rem;
 }
 
-.storeAddForm .input { flex: 1; }
+.storeAddForm .input { flex: 1; min-width: 0; }
 .storeAddForm .saveBtn { flex: none; padding: 0.75rem 1.25rem; }
 
 
