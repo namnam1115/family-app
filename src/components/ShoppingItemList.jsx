@@ -43,16 +43,19 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
     if (showHistory) fetchHistory()
   }, [showHistory, fetchHistory])
 
+  const showHistoryRef = useRef(showHistory)
+  useEffect(() => { showHistoryRef.current = showHistory }, [showHistory])
+
   useEffect(() => {
     const channel = supabase
       .channel(`shopping_items_${listId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter: `list_id=eq.${listId}` }, () => {
         fetchItems()
-        if (showHistory) fetchHistory()
+        if (showHistoryRef.current) fetchHistory()
       })
       .subscribe()
     return () => supabase.removeChannel(channel)
-  }, [listId, fetchItems, fetchHistory, showHistory])
+  }, [listId, fetchItems, fetchHistory])
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -68,6 +71,7 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
     setName('')
     setMemo('')
     setSubmitting(false)
+    fetchItems()
   }
 
   async function handleToggle(item) {
