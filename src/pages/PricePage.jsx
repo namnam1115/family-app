@@ -5,6 +5,10 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './PricePage.module.css'
 
+function formatPrice(p) {
+  return Number(p).toLocaleString('ja-JP', { maximumFractionDigits: 2 })
+}
+
 export default function PricePage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
@@ -301,7 +305,7 @@ function ProductListView({ products, cheapestInfo, onSelect }) {
             <div className={styles.productListRight}>
               {best ? (
                 <div className={styles.bestInfo}>
-                  <span className={styles.bestPrice}>¥{best.price.toLocaleString()}</span>
+                  <span className={styles.bestPrice}>¥{formatPrice(best.price)}</span>
                   <span className={styles.bestStore}>{best.store}</span>
                 </div>
               ) : (
@@ -406,6 +410,7 @@ function CompareRow({ store, item, isBest, product, onUpsert, onDeleteItem }) {
             onKeyDown={handleKeyDown}
             placeholder="価格（円）"
             min={0}
+            step="0.01"
           />
           <input
             className={styles.compareNoteInput}
@@ -441,7 +446,7 @@ function CompareRow({ store, item, isBest, product, onUpsert, onDeleteItem }) {
         {item ? (
           <>
             <span className={`${styles.comparePrice} ${isBest ? styles.comparePriceBest : ''}`}>
-              ¥{item.price.toLocaleString()}
+              ¥{formatPrice(item.price)}
             </span>
             <button
               className={styles.compareDelBtn}
@@ -551,6 +556,7 @@ function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
             onChange={e => setPrice(e.target.value)}
             onKeyDown={handleKeyDown}
             min={0}
+            step="0.01"
             placeholder="価格"
           />
           <input
@@ -578,7 +584,7 @@ function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
     >
       {item ? (
         <div className={styles.priceContent}>
-          <span className={styles.price}>¥{item.price.toLocaleString()}</span>
+          <span className={styles.price}>¥{formatPrice(item.price)}</span>
           {item.note && <span className={styles.note}>{item.note}</span>}
           <button
             className={styles.deleteCell}
@@ -676,9 +682,10 @@ function AddModal({ stores, productNames, productCategory, onSubmit, onClose }) 
               type="number"
               value={price}
               onChange={e => setPrice(e.target.value)}
-              placeholder="例: 198"
+              placeholder="例: 198.50"
               min={0}
               max={999999}
+              step="0.01"
               required
             />
           </label>
