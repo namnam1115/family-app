@@ -650,7 +650,7 @@ function AddModal({ stores, productNames, productCategory, onSubmit, onClose }) 
               placeholder="例: 牛乳 1L"
               maxLength={100}
               required
-              autoFocus
+              autoComplete="off"
             />
             <datalist id="product-list">
               {productNames.map(p => <option key={p} value={p} />)}
@@ -755,7 +755,7 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
             onChange={e => setNewName(e.target.value)}
             placeholder="新しい店舗名を入力..."
             maxLength={50}
-            autoFocus
+            autoComplete="off"
           />
           <button type="submit" className={styles.saveBtn} disabled={adding || !newName.trim()}>
             追加
