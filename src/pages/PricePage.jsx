@@ -324,6 +324,7 @@ function ProductListView({ products, cheapestInfo, onSelect }) {
 function CompareSheet({ product, storeNames, lookup, cheapestInfo, onUpsert, onDeleteItem, onDeleteProduct, onClose }) {
   const best = cheapestInfo[product]
   const registeredCount = storeNames.filter(s => lookup[product]?.[s]).length
+  const [confirmState, setConfirmState] = useState(null)
 
   return (
     <div className={styles.sheetOverlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -357,11 +358,21 @@ function CompareSheet({ product, storeNames, lookup, cheapestInfo, onUpsert, onD
 
         <button
           className={styles.deleteProductSheetBtn}
-          onClick={() => onDeleteProduct(product)}
+          onClick={() => setConfirmState({
+            message: `「${product}」をリストから削除しますか？全店舗の価格データも削除されます。`,
+            onConfirm: () => onDeleteProduct(product),
+          })}
         >
           この商品をリストから削除
         </button>
       </div>
+      {confirmState && (
+        <DeleteConfirmDialog
+          message={confirmState.message}
+          onConfirm={() => { confirmState.onConfirm(); setConfirmState(null) }}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
     </div>
   )
 }
@@ -464,6 +475,8 @@ function CompareRow({ store, item, isBest, product, onUpsert, onDeleteItem }) {
 
 // ── 一覧グリッドビュー ────────────────────────────────────
 function GridView({ products, storeNames, lookup, cheapestInfo, onUpsert, onDeleteItem, onDeleteProduct }) {
+  const [confirmState, setConfirmState] = useState(null)
+
   return (
     <div className={styles.tableWrapper}>
       <table className={styles.matrix}>
@@ -485,7 +498,10 @@ function GridView({ products, storeNames, lookup, cheapestInfo, onUpsert, onDele
                     <span className={styles.productName}>{product}</span>
                     <button
                       className={styles.deleteProductBtn}
-                      onClick={() => onDeleteProduct(product)}
+                      onClick={() => setConfirmState({
+                        message: `「${product}」をリストから削除しますか？全店舗の価格データも削除されます。`,
+                        onConfirm: () => onDeleteProduct(product),
+                      })}
                       aria-label={`${product}を削除`}
                     >×</button>
                   </div>
@@ -510,6 +526,13 @@ function GridView({ products, storeNames, lookup, cheapestInfo, onUpsert, onDele
           })}
         </tbody>
       </table>
+      {confirmState && (
+        <DeleteConfirmDialog
+          message={confirmState.message}
+          onConfirm={() => { confirmState.onConfirm(); setConfirmState(null) }}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
     </div>
   )
 }
@@ -721,6 +744,7 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
+  const [confirmState, setConfirmState] = useState(null)
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -749,7 +773,10 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
               <span className={styles.storeName}>{s.name}</span>
               <button
                 className={styles.storeDeleteBtn}
-                onClick={() => onDelete(s.id, s.name)}
+                onClick={() => setConfirmState({
+                  message: `「${s.name}」を削除しますか？登録済みの価格データもすべて削除されます。`,
+                  onConfirm: () => onDelete(s.id, s.name),
+                })}
                 aria-label={`${s.name}を削除`}
               >削除</button>
             </li>
@@ -769,6 +796,28 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
           </button>
         </form>
         {error && <p className={styles.errorMsg}>{error}</p>}
+      </div>
+      {confirmState && (
+        <DeleteConfirmDialog
+          message={confirmState.message}
+          onConfirm={() => { confirmState.onConfirm(); setConfirmState(null) }}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── 削除確認ダイアログ ────────────────────────────────────
+function DeleteConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className={styles.confirmOverlay} onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
+      <div className={styles.confirmDialog}>
+        <p className={styles.confirmMessage}>{message}</p>
+        <div className={styles.formBtns}>
+          <button className={styles.cancelBtn} onClick={onCancel}>キャンセル</button>
+          <button className={styles.deleteDangerBtn} onClick={onConfirm}>削除する</button>
+        </div>
       </div>
     </div>
   )

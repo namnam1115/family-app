@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { loadGoogleMapsScript } from '../utils/googleMaps'
 import styles from './PlacesPage.module.css'
 
+
 const CATEGORIES = {
   food:  { label: 'グルメ', icon: '🍽️' },
   play:  { label: '遊び',   icon: '🎡' },
@@ -24,6 +25,7 @@ export default function PlacesPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [visitTarget, setVisitTarget] = useState(null)      // place object
   const [editTarget, setEditTarget] = useState(null)        // place object
+  const [view, setView] = useState('list')                  // 'list' | 'map'
 
   const fetchAll = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -58,13 +60,15 @@ export default function PlacesPage() {
     return () => supabase.removeChannel(ch)
   }, [familyMember?.family_id, fetchAll])
 
-  async function handleAdd({ name, category, memo, address }) {
+  async function handleAdd({ name, category, memo, address, lat, lng }) {
     await supabase.from('wish_places').insert({
       family_id: familyMember.family_id,
       name: name.trim(),
       category,
       memo: memo?.trim() || null,
       address: address?.trim() || null,
+      lat: lat ?? null,
+      lng: lng ?? null,
       added_by: familyMember.id,
     })
     await fetchAll()
@@ -80,12 +84,14 @@ export default function PlacesPage() {
     await fetchAll()
   }
 
-  async function handleEdit(id, { name, category, memo, address }) {
+  async function handleEdit(id, { name, category, memo, address, lat, lng }) {
     await supabase.from('wish_places').update({
       name: name.trim(),
       category,
       memo: memo?.trim() || null,
       address: address?.trim() || null,
+      lat: lat ?? null,
+      lng: lng ?? null,
     }).eq('id', id)
     await fetchAll()
   }
@@ -147,7 +153,7 @@ export default function PlacesPage() {
         </div>
       </div>
 
-      {/* カテゴリチップ */}
+      {/* カテゴリチップ + ビュー切り替え */}
       <div className={styles.categoryChips}>
         <button
           className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
@@ -160,10 +166,26 @@ export default function PlacesPage() {
             onClick={() => setCategoryFilter(key)}
           >{icon} {label}</button>
         ))}
+        <div className={styles.viewToggle}>
+          <button
+            className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
+            onClick={() => setView('list')}
+            aria-label="リスト表示"
+            title="リスト"
+          >📋</button>
+          <button
+            className={`${styles.viewBtn} ${view === 'map' ? styles.viewBtnActive : ''}`}
+            onClick={() => setView('map')}
+            aria-label="地図表示"
+            title="地図"
+          >🗺</button>
+        </div>
       </div>
 
-      <main className={styles.main}>
-        {loading ? (
+      <main className={`${styles.main} ${view === 'map' ? styles.mainMap : ''}`}>
+        {view === 'map' ? (
+          <MapView places={filtered} />
+        ) : loading ? (
           <p className={styles.hint}>読み込み中...</p>
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>
@@ -293,42 +315,39 @@ function AddPlaceModal({ onSubmit, onClose }) {
   const [category, setCategory] = useState('food')
   const [memo, setMemo] = useState('')
   const [address, setAddress] = useState('')
+  const [selectedName, setSelectedName] = useState('')
+  const [lat, setLat] = useState(null)
+  const [lng, setLng] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const acContainerRef = useRef(null)
-  const acElementRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     let mounted = true
     loadGoogleMapsScript().then(async () => {
-      if (!mounted || !acContainerRef.current) return
-      // StrictMode 対策: 既存の要素を削除してから追加
-      acContainerRef.current.innerHTML = ''
-      const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places')
-      const element = new PlaceAutocompleteElement({ componentRestrictions: { country: 'jp' } })
-      acElementRef.current = element
-      acContainerRef.current.appendChild(element)
-      element.addEventListener('gmp-placeselect', async ({ place }) => {
-        try {
-          await place.fetchFields({ fields: ['formattedAddress'] })
-          if (mounted) setAddress(place.formattedAddress || element.value || '')
-        } catch {
-          if (mounted) setAddress(element.value || '')
-        }
+      if (!mounted || !inputRef.current) return
+      await window.google.maps.importLibrary('places')
+      const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
+        componentRestrictions: { country: 'jp' },
+        fields: ['formatted_address', 'geometry', 'name'],
+      })
+      ac.addListener('place_changed', () => {
+        if (!mounted) return
+        const place = ac.getPlace()
+        setAddress(place.formatted_address || inputRef.current?.value || '')
+        setSelectedName(place.name || '')
+        const loc = place.geometry?.location
+        if (loc) { setLat(loc.lat()); setLng(loc.lng()) }
       })
     }).catch(() => {})
-    return () => {
-      mounted = false
-      acElementRef.current = null
-    }
+    return () => { mounted = false }
   }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) return
     setSubmitting(true)
-    // gmp-placeselect が state に反映済みなら address を、未反映なら element.value をフォールバック
-    const finalAddress = address || acElementRef.current?.value || ''
-    await onSubmit({ name, category, memo, address: finalAddress })
+    const finalAddress = address || inputRef.current?.value || ''
+    await onSubmit({ name, category, memo, address: finalAddress, lat, lng })
     setSubmitting(false)
   }
 
@@ -365,11 +384,23 @@ function AddPlaceModal({ onSubmit, onClose }) {
               ))}
             </div>
           </label>
-          <div className={styles.label}>
+          <label className={styles.label}>
             住所（任意）
-            <div ref={acContainerRef} className={styles.acContainer} />
-            {address && <p className={styles.acSelected}>📍 {address}</p>}
-          </div>
+            <input
+              ref={inputRef}
+              className={styles.input}
+              type="text"
+              defaultValue=""
+              placeholder="例: 大阪府大阪市港区海岸通..."
+              autoComplete="off"
+            />
+            {(selectedName || address) && (
+              <p className={styles.acSelected}>
+                📍 {selectedName || address}
+                {selectedName && address && <span className={styles.acAddress}>{address}</span>}
+              </p>
+            )}
+          </label>
           <label className={styles.label}>
             メモ（任意）
             <input
@@ -470,41 +501,39 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
   const [category, setCategory] = useState(place.category)
   const [memo, setMemo] = useState(place.memo ?? '')
   const [address, setAddress] = useState(place.address ?? '')
+  const [selectedName, setSelectedName] = useState('')
+  const [lat, setLat] = useState(place.lat ?? null)
+  const [lng, setLng] = useState(place.lng ?? null)
   const [submitting, setSubmitting] = useState(false)
-  const acContainerRef = useRef(null)
-  const acElementRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     let mounted = true
     loadGoogleMapsScript().then(async () => {
-      if (!mounted || !acContainerRef.current) return
-      acContainerRef.current.innerHTML = ''
-      const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places')
-      const element = new PlaceAutocompleteElement({ componentRestrictions: { country: 'jp' } })
-      acElementRef.current = element
-      acContainerRef.current.appendChild(element)
-      if (place.address) element.value = place.address  // DOM接続後にセット
-      element.addEventListener('gmp-placeselect', async ({ place: p }) => {
-        try {
-          await p.fetchFields({ fields: ['formattedAddress'] })
-          if (mounted) setAddress(p.formattedAddress || element.value || '')
-        } catch {
-          if (mounted) setAddress(element.value || '')
-        }
+      if (!mounted || !inputRef.current) return
+      await window.google.maps.importLibrary('places')
+      const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
+        componentRestrictions: { country: 'jp' },
+        fields: ['formatted_address', 'geometry', 'name'],
+      })
+      ac.addListener('place_changed', () => {
+        if (!mounted) return
+        const p = ac.getPlace()
+        setAddress(p.formatted_address || inputRef.current?.value || '')
+        setSelectedName(p.name || '')
+        const loc = p.geometry?.location
+        if (loc) { setLat(loc.lat()); setLng(loc.lng()) }
       })
     }).catch(() => {})
-    return () => {
-      mounted = false
-      acElementRef.current = null
-    }
+    return () => { mounted = false }
   }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) return
     setSubmitting(true)
-    const finalAddress = address || acElementRef.current?.value || ''
-    await onSubmit({ name, category, memo, address: finalAddress })
+    const finalAddress = address || inputRef.current?.value || ''
+    await onSubmit({ name, category, memo, address: finalAddress, lat, lng })
     setSubmitting(false)
   }
 
@@ -539,11 +568,23 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
               ))}
             </div>
           </label>
-          <div className={styles.label}>
+          <label className={styles.label}>
             住所（任意）
-            <div ref={acContainerRef} className={styles.acContainer} />
-            {address && <p className={styles.acSelected}>📍 {address}</p>}
-          </div>
+            <input
+              ref={inputRef}
+              className={styles.input}
+              type="text"
+              defaultValue={place.address ?? ''}
+              placeholder="例: 大阪府大阪市港区海岸通..."
+              autoComplete="off"
+            />
+            {(selectedName || address) && (
+              <p className={styles.acSelected}>
+                📍 {selectedName || address}
+                {selectedName && address && <span className={styles.acAddress}>{address}</span>}
+              </p>
+            )}
+          </label>
           <label className={styles.label}>
             メモ（任意）
             <input
@@ -562,6 +603,126 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+// ── 地図ビュー ────────────────────────────────────────────
+function MapView({ places }) {
+  const mapRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const AdvancedMarkerElementRef = useRef(null)
+  const markersRef = useRef([])
+  const [selectedPlace, setSelectedPlace] = useState(null)
+
+  const placesWithCoords = places.filter(p => p.lat != null && p.lng != null)
+
+  // マップ初期化（マウント時1回のみ・API呼び出しは1回）
+  useEffect(() => {
+    let mounted = true
+    async function init() {
+      await loadGoogleMapsScript()
+      if (!mounted || !mapRef.current) return
+      const [{ Map }, { AdvancedMarkerElement }] = await Promise.all([
+        window.google.maps.importLibrary('maps'),
+        window.google.maps.importLibrary('marker'),
+      ])
+      AdvancedMarkerElementRef.current = AdvancedMarkerElement
+      mapInstanceRef.current = new Map(mapRef.current, {
+        center: { lat: 36.2048, lng: 138.2529 },
+        zoom: 6,
+        mapId: 'DEMO_MAP_ID',
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+      })
+    }
+    init().catch(() => {})
+    return () => { mounted = false }
+  }, []) // マウント時1回のみ
+
+  // フィルター変更時はマーカーだけ更新（API呼び出しなし）
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    const AdvancedMarkerElement = AdvancedMarkerElementRef.current
+    if (!map || !AdvancedMarkerElement) return
+
+    // 既存ピンを削除
+    markersRef.current.forEach(m => { m.map = null })
+    markersRef.current = []
+
+    if (placesWithCoords.length === 0) return
+
+    // ピンを追加
+    placesWithCoords.forEach(place => {
+      const pin = document.createElement('div')
+      pin.className = `${styles.mapPin}${place.status === 'visited' ? ` ${styles.mapPinVisited}` : ''}`
+      pin.textContent = place.status === 'visited' ? '✅' : '📍'
+      const marker = new AdvancedMarkerElement({
+        map,
+        position: { lat: place.lat, lng: place.lng },
+        content: pin,
+        title: place.name,
+      })
+      marker.addListener('click', () => setSelectedPlace(place))
+      markersRef.current.push(marker)
+    })
+
+    // 全ピンが収まるようにフィット
+    if (placesWithCoords.length === 1) {
+      map.setCenter({ lat: placesWithCoords[0].lat, lng: placesWithCoords[0].lng })
+      map.setZoom(14)
+    } else {
+      const bounds = new window.google.maps.LatLngBounds()
+      placesWithCoords.forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }))
+      map.fitBounds(bounds, { top: 60, right: 20, bottom: 80, left: 20 })
+    }
+  }, [placesWithCoords.length, places]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (placesWithCoords.length === 0) {
+    return (
+      <div className={styles.mapEmpty}>
+        <span className={styles.mapEmptyIcon}>🗺️</span>
+        <p>住所が登録された場所が地図に表示されます</p>
+        <p className={styles.mapEmptyDesc}>場所を追加・編集して住所を入力してください</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={styles.mapContainer}>
+      <div ref={mapRef} className={styles.mapEl} />
+      {selectedPlace && (
+        <MapPopup place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+      )}
+    </div>
+  )
+}
+
+// ── 地図ピンタップ時のポップアップ ────────────────────────
+function MapPopup({ place, onClose }) {
+  const cat = CATEGORIES[place.category] ?? CATEGORIES.other
+  const isVisited = place.status === 'visited'
+  return (
+    <div className={styles.mapPopup}>
+      <div className={styles.mapPopupHeader}>
+        <span className={styles.mapPopupCat}>{cat.icon}</span>
+        <span className={styles.mapPopupName}>{place.name}</span>
+        <button className={styles.mapPopupClose} onClick={onClose}>×</button>
+      </div>
+      {place.address && <p className={styles.mapPopupAddress}>📍 {place.address}</p>}
+      <div className={styles.mapPopupMeta}>
+        {isVisited && place.rating && (
+          <span className={styles.mapPopupRating}>
+            {'★'.repeat(place.rating)}{'☆'.repeat(5 - place.rating)}
+          </span>
+        )}
+        {isVisited
+          ? <span className={styles.mapPopupVisited}>✅ 行った</span>
+          : <span className={styles.mapPopupWant}>🌟 行きたい</span>
+        }
+      </div>
+      {place.memo && <p className={styles.mapPopupMemo}>{place.memo}</p>}
     </div>
   )
 }
