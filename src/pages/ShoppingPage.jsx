@@ -20,7 +20,7 @@ export default function ShoppingPage() {
     if (!familyMember?.family_id) return
     const { data, error } = await supabase
       .from('shopping_lists')
-      .select('id, name, created_at, created_by')
+      .select('id, name, created_at, created_by, is_favorite')
       .eq('family_id', familyMember.family_id)
       .order('created_at', { ascending: false })
     if (!error && data) {
@@ -35,15 +35,20 @@ export default function ShoppingPage() {
           countMap[item.list_id] = (countMap[item.list_id] || 0) + 1
         })
       }
-      setLists(data.map(l => ({ ...l, uncheckedCount: countMap[l.id] || 0 })))
+      const withCounts = data.map(l => ({ ...l, uncheckedCount: countMap[l.id] || 0 }))
+      // お気に入り優先、同条件内は未購入数の多い順
+      withCounts.sort((a, b) => {
+        if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1
+        return b.uncheckedCount - a.uncheckedCount
+      })
+      setLists(withCounts)
     }
     setLoadingLists(false)
   }, [familyMember?.family_id])
 
   useEffect(() => {
     if (lists.length > 0 && !selectedListId) {
-      const listWithMost = lists.reduce((max, l) => l.uncheckedCount > max.uncheckedCount ? l : max, lists[0])
-      setSelectedListId(listWithMost.id)
+      setSelectedListId(lists[0].id)
     }
   }, [lists, selectedListId])
 
@@ -67,6 +72,33 @@ export default function ShoppingPage() {
     if (!error && data) {
       await fetchLists()
       setSelectedListId(data.id)
+    }
+  }
+
+  async function handleToggleFavorite(listId) {
+    const list = lists.find(l => l.id === listId)
+    if (!list) return
+    const is_favorite = !list.is_favorite
+    setLists(prev => {
+      const updated = prev.map(l => l.id === listId ? { ...l, is_favorite } : l)
+      updated.sort((a, b) => {
+        if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1
+        return b.uncheckedCount - a.uncheckedCount
+      })
+      return updated
+    })
+    const { error } = await supabase.from('shopping_lists').update({ is_favorite }).eq('id', listId)
+    if (error) {
+      console.error('お気に入り更新エラー:', error)
+      // ロールバック
+      setLists(prev => {
+        const rolled = prev.map(l => l.id === listId ? { ...l, is_favorite: !is_favorite } : l)
+        rolled.sort((a, b) => {
+          if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1
+          return b.uncheckedCount - a.uncheckedCount
+        })
+        return rolled
+      })
     }
   }
 
@@ -128,6 +160,8 @@ export default function ShoppingPage() {
               listId={selectedListId}
               listName={selectedList?.name}
               memberName={familyMember?.name || familyMember?.email || '名前なし'}
+              isFavorite={selectedList?.is_favorite ?? false}
+              onToggleFavorite={() => handleToggleFavorite(selectedListId)}
             />
           ) : (
             !loadingLists && (

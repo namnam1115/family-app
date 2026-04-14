@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import styles from './ShoppingItemList.module.css'
 
-export default function ShoppingItemList({ listId, listName, memberName }) {
+export default function ShoppingItemList({ listId, listName, memberName, isFavorite, onToggleFavorite }) {
   const [items, setItems] = useState([])
   const [checkedItems, setCheckedItems] = useState([])
   const [showHistory, setShowHistory] = useState(false)
@@ -109,7 +109,16 @@ export default function ShoppingItemList({ listId, listName, memberName }) {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.listTitle}>{listName}</h2>
+      <div className={styles.titleRow}>
+        <h2 className={styles.listTitle}>{listName}</h2>
+        <button
+          className={`${styles.favBtn} ${isFavorite ? styles.favOn : ''}`}
+          onClick={onToggleFavorite}
+          aria-label={isFavorite ? 'お気に入りを外す' : 'お気に入りに追加'}
+        >
+          {isFavorite ? '★' : '☆'}
+        </button>
+      </div>
 
       {loading ? (
         <p className={styles.hint}>読み込み中...</p>

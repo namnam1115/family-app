@@ -9,6 +9,7 @@
   position: relative;
   overflow: hidden;
   animation: fadeInUp 0.4s 0.04s ease both;
+  margin-top: 0.75rem;
 }
 
 /* 左アクセントライン */
