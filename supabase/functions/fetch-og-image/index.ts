@@ -43,6 +43,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // TikTok: oEmbed APIでサムネイルを取得（bot対策のためHTMLスクレイピング不可）
+    // 取得したサムネイルURLは署名付きCDN URLで期限切れになるため、
+    // 画像をダウンロードしてSupabase Storageに永続保存する
     if (parsedUrl.hostname.includes('tiktok.com')) {
       const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`
       const oembedRes = await fetch(oembedUrl, {
@@ -52,7 +54,8 @@ Deno.serve(async (req: Request) => {
       if (oembedRes.ok) {
         const json = await oembedRes.json()
         if (json?.thumbnail_url) {
-          return new Response(JSON.stringify({ image: json.thumbnail_url }), {
+          const permanentUrl = await uploadThumbnailToStorage(url, json.thumbnail_url)
+          return new Response(JSON.stringify({ image: permanentUrl ?? json.thumbnail_url }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           })
         }
@@ -147,6 +150,59 @@ Deno.serve(async (req: Request) => {
     })
   }
 })
+
+// TikTokのサムネイル画像をダウンロードしてSupabase Storageに保存する。
+// 成功したら永続的な公開URLを返す。失敗したらnullを返す（呼び出し側で元URLにフォールバック）。
+async function uploadThumbnailToStorage(sourceUrl: string, thumbnailUrl: string): Promise<string | null> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!supabaseUrl || !serviceRoleKey) return null
+
+  try {
+    // 画像をダウンロード
+    const imgRes = await fetch(thumbnailUrl, { signal: AbortSignal.timeout(10000) })
+    if (!imgRes.ok) return null
+
+    const imgBytes = await imgRes.arrayBuffer()
+    const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg'
+    const ext = contentType.includes('png') ? 'png'
+      : contentType.includes('webp') ? 'webp'
+      : 'jpg'
+
+    // TikTok動画URLのハッシュをファイル名に使い、同じ動画で重複保存しない
+    const hash = await sha256Hex(sourceUrl)
+    const fileName = `tiktok_${hash}.${ext}`
+
+    // Supabase Storage にアップロード（既存ファイルは上書き）
+    const storageRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/dish-thumbnails/${fileName}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'Content-Type': contentType,
+          'x-upsert': 'true',
+        },
+        body: imgBytes,
+      }
+    )
+
+    if (!storageRes.ok) return null
+
+    return `${supabaseUrl}/storage/v1/object/public/dish-thumbnails/${fileName}`
+  } catch {
+    return null
+  }
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const data = new TextEncoder().encode(text)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 24)
+}
 
 function extractMetaContent(html: string, patterns: RegExp[]): string | null {
   for (const pattern of patterns) {
