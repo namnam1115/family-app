@@ -117,6 +117,14 @@ export default function HomePage() {
       available: true,
     },
     {
+      id: 'inventory',
+      title: '在庫管理',
+      description: '食材・日用品のストックを家族で共有。数量をサクッと更新。',
+      icon: '📦',
+      path: '/inventory',
+      available: true,
+    },
+    {
       id: 'memo',
       title: '共有メモ',
       description: '大切な情報を家族でメモ（近日公開）',
