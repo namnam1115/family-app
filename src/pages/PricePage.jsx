@@ -1,6 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+// Tabler Icons（線画・メイン）
+import {
+  TbMeat, TbPig, TbSausage, TbGrill, TbChefHat,
+  TbFishBone, TbMushroom, TbLeaf, TbLeaf2, TbSeedling,
+  TbLemon, TbLemon2,
+  TbMilk, TbMilkshake,
+  TbBottle, TbTeapot, TbGlass, TbGlassFull, TbDroplet,
+  TbSalt, TbIceCream,
+  TbToiletPaper, TbRazor, TbSpray, TbPills, TbWashMachine, TbVacuumCleaner, TbHandSanitizer, TbBucket,
+  TbShoppingCart, TbPackage, TbTag, TbBasket, TbBox, TbStar, TbHeart,
+} from 'react-icons/tb'
+// Lucide Icons（線画・果物・野菜・食材）
+import {
+  LuBeef, LuFish, LuEgg, LuEggFried, LuMilk,
+  LuCarrot, LuLeafyGreen, LuSprout, LuSalad,
+  LuApple, LuGrape, LuCherry, LuBanana,
+  LuBeer, LuWine, LuCoffee,
+  LuWheat, LuCroissant, LuSoup, LuCandy, LuCake, LuCookie, LuNut,
+} from 'react-icons/lu'
+// Phosphor Icons（線画・牛・エビ・その他）
+import { PiCow, PiShrimp, PiOrange, PiLeaf, PiAvocado, PiPepper, PiCheese } from 'react-icons/pi'
+// Game Icons（鶏のみ）
+import { GiChicken } from 'react-icons/gi'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './PricePage.module.css'
@@ -8,6 +31,51 @@ import styles from './PricePage.module.css'
 function formatPrice(p) {
   return Number(p).toLocaleString('ja-JP', { maximumFractionDigits: 2 })
 }
+
+// 使用するアイコンのマップ
+const ICON_MAP = {
+  // 肉類
+  TbMeat, TbPig, LuBeef, GiChicken, TbSausage, TbGrill, TbChefHat,
+  // 魚介
+  LuFish, TbFishBone, PiShrimp,
+  // 野菜（象徴含む）
+  LuSprout, LuLeafyGreen, LuSalad,
+  LuCarrot, TbMushroom, PiPepper, PiAvocado, TbLeaf, TbLeaf2, TbSeedling, PiLeaf,
+  // 果物（象徴含む）
+  LuApple, LuGrape,
+  LuCherry, LuBanana, PiOrange, TbLemon, TbLemon2,
+  // 乳製品・卵
+  TbMilk, LuMilk, LuEgg, LuEggFried, PiCheese, TbMilkshake,
+  // 飲み物
+  TbBottle, LuBeer, LuCoffee, TbTeapot, TbGlass, TbGlassFull, LuWine, TbDroplet,
+  // 加工・食材
+  LuWheat, LuCroissant, LuSoup, TbSalt, LuCandy, LuCake, LuCookie, TbIceCream, LuNut,
+  // 日用品
+  TbToiletPaper, TbRazor, TbSpray, TbPills, TbWashMachine, TbVacuumCleaner, TbHandSanitizer, TbBucket,
+  // その他
+  TbShoppingCart, TbPackage, TbTag, TbBasket, TbBox, TbStar, TbHeart,
+  // 牛
+  PiCow,
+}
+
+// アイコン名を受け取ってコンポーネントを返す
+function Icon({ name, size, className, style }) {
+  const Comp = ICON_MAP[name] || TbShoppingCart
+  return <Comp size={size} className={className} style={style} />
+}
+
+// ── アイコン定義 ──────────────────────────────────────────
+const ICON_GROUPS = [
+  { label: '肉・加工肉',   icons: ['TbMeat','TbPig','PiCow','LuBeef','GiChicken','TbSausage','TbGrill','TbChefHat'] },
+  { label: '魚介',        icons: ['LuFish','TbFishBone','PiShrimp'] },
+  { label: '野菜',        icons: ['LuSprout','LuLeafyGreen','LuSalad','LuCarrot','PiPepper','TbMushroom','PiAvocado','TbLeaf','TbSeedling'] },
+  { label: '果物',        icons: ['LuApple','LuGrape','LuCherry','LuBanana','PiOrange','TbLemon'] },
+  { label: '乳製品・卵',   icons: ['TbMilk','LuEgg','LuEggFried','PiCheese','TbMilkshake'] },
+  { label: '飲み物',      icons: ['TbBottle','LuBeer','LuCoffee','TbTeapot','TbGlass','LuWine','TbDroplet'] },
+  { label: '加工・食材',   icons: ['LuWheat','LuCroissant','LuSoup','TbSalt','LuCandy','LuCake','LuCookie','TbIceCream','LuNut'] },
+  { label: '日用品',      icons: ['TbToiletPaper','TbRazor','TbSpray','TbPills','TbWashMachine','TbVacuumCleaner','TbHandSanitizer','TbBucket'] },
+  { label: 'その他',      icons: ['TbShoppingCart','TbPackage','TbTag','TbBasket','TbBox','TbStar','TbHeart'] },
+]
 
 export default function PricePage() {
   const { familyMember } = useAuth()
@@ -58,29 +126,46 @@ export default function PricePage() {
     return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
   }, [fetchItems, fetchStores])
 
-  async function handleUpsert({ storeName, productName, price, note, category }) {
+  async function handleUpsert({ storeName, productName, price, note, category, icon }) {
+    const payload = {
+      family_id: familyMember.family_id,
+      store_name: storeName,
+      product_name: productName,
+      price: Number(price),
+      note: note?.trim() || null,
+      category: category ?? 'food',
+      updated_by: familyMember.name,
+      updated_at: new Date().toISOString(),
+    }
+    if (icon !== undefined) payload.icon = icon
+
     const { error } = await supabase.from('price_items').upsert(
-      {
-        family_id: familyMember.family_id,
-        store_name: storeName,
-        product_name: productName,
-        price: Number(price),
-        note: note?.trim() || null,
-        category: category ?? 'food',
-        updated_by: familyMember.name,
-        updated_at: new Date().toISOString(),
-      },
+      payload,
       { onConflict: 'family_id,store_name,product_name' }
     )
-    // 同一商品の全行にカテゴリを反映
+    // 同一商品の全行にカテゴリ・アイコンを反映
     if (!error && category) {
       await supabase.from('price_items')
         .update({ category })
         .eq('family_id', familyMember.family_id)
         .eq('product_name', productName)
     }
+    if (!error && icon) {
+      await supabase.from('price_items')
+        .update({ icon })
+        .eq('family_id', familyMember.family_id)
+        .eq('product_name', productName)
+    }
     if (!error) await fetchItems()
     return error
+  }
+
+  async function handleIconUpdate(productName, icon) {
+    await supabase.from('price_items')
+      .update({ icon })
+      .eq('family_id', familyMember.family_id)
+      .eq('product_name', productName)
+    await fetchItems()
   }
 
   async function handleDeleteItem(id) {
@@ -118,11 +203,15 @@ export default function PricePage() {
   const storeNames = stores.map(s => s.name)
   const allProducts = [...new Set(items.map(i => i.product_name))].sort()
 
-  // 商品ごとのカテゴリ（最初の行から取得）
+  // 商品ごとのカテゴリ・アイコン（最初の行から取得）
   const productCategory = {}
+  const productIcon = {}
   for (const item of items) {
     if (!productCategory[item.product_name]) {
       productCategory[item.product_name] = item.category ?? 'food'
+    }
+    if (!productIcon[item.product_name] && item.icon) {
+      productIcon[item.product_name] = item.icon
     }
   }
 
@@ -239,6 +328,7 @@ export default function PricePage() {
           <ProductListView
             products={products}
             cheapestInfo={cheapestInfo}
+            productIcon={productIcon}
             onSelect={setSelectedProduct}
           />
         ) : (
@@ -247,6 +337,7 @@ export default function PricePage() {
             storeNames={storeNames}
             lookup={lookup}
             cheapestInfo={cheapestInfo}
+            productIcon={productIcon}
             onUpsert={handleUpsert}
             onDeleteItem={handleDeleteItem}
             onDeleteProduct={handleDeleteProduct}
@@ -260,9 +351,11 @@ export default function PricePage() {
           storeNames={storeNames}
           lookup={lookup}
           cheapestInfo={cheapestInfo}
+          productIcon={productIcon}
           onUpsert={handleUpsert}
           onDeleteItem={handleDeleteItem}
           onDeleteProduct={name => { handleDeleteProduct(name); setSelectedProduct(null) }}
+          onIconUpdate={handleIconUpdate}
           onClose={() => setSelectedProduct(null)}
         />
       )}
@@ -272,6 +365,7 @@ export default function PricePage() {
           stores={storeNames}
           productNames={allProducts}
           productCategory={productCategory}
+          productIcon={productIcon}
           onSubmit={async data => {
             const err = await handleUpsert(data)
             if (!err) setShowAddModal(false)
@@ -294,13 +388,17 @@ export default function PricePage() {
 }
 
 // ── リストビュー ──────────────────────────────────────────
-function ProductListView({ products, cheapestInfo, onSelect }) {
+function ProductListView({ products, cheapestInfo, productIcon, onSelect }) {
   return (
     <ul className={styles.productList}>
       {products.map(product => {
         const best = cheapestInfo[product]
+        const icon = productIcon[product]
         return (
           <li key={product} className={styles.productListItem} onClick={() => onSelect(product)}>
+            <span className={styles.productListIcon}>
+              <Icon name={icon || 'TbShoppingCart'} size={22} />
+            </span>
             <span className={styles.productListName}>{product}</span>
             <div className={styles.productListRight}>
               {best ? (
@@ -321,19 +419,34 @@ function ProductListView({ products, cheapestInfo, onSelect }) {
 }
 
 // ── 店舗別比較シート ──────────────────────────────────────
-function CompareSheet({ product, storeNames, lookup, cheapestInfo, onUpsert, onDeleteItem, onDeleteProduct, onClose }) {
+function CompareSheet({ product, storeNames, lookup, cheapestInfo, productIcon, onUpsert, onDeleteItem, onDeleteProduct, onIconUpdate, onClose }) {
   const best = cheapestInfo[product]
   const registeredCount = storeNames.filter(s => lookup[product]?.[s]).length
   const [confirmState, setConfirmState] = useState(null)
+  const [showIconPicker, setShowIconPicker] = useState(false)
+  const icon = productIcon[product] || null
 
   return (
     <div className={styles.sheetOverlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className={styles.sheet}>
         <div className={styles.sheetHandle} />
         <div className={styles.sheetHeader}>
-          <div>
-            <h2 className={styles.sheetTitle}>{product}</h2>
-            <p className={styles.sheetMeta}>{registeredCount} / {storeNames.length} 店舗に価格登録済み</p>
+          <div className={styles.sheetTitleRow}>
+            <button
+              className={styles.iconDisplay}
+              onClick={() => setShowIconPicker(true)}
+              title="アイコンを変更"
+              type="button"
+            >
+              <span className={styles.iconDisplayEmoji}>
+                <Icon name={icon || 'TbShoppingCart'} size={28} />
+              </span>
+              <span className={styles.iconDisplayEditBadge}>✏</span>
+            </button>
+            <div>
+              <h2 className={styles.sheetTitle}>{product}</h2>
+              <p className={styles.sheetMeta}>{registeredCount} / {storeNames.length} 店舗に価格登録済み</p>
+            </div>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
         </div>
@@ -366,6 +479,15 @@ function CompareSheet({ product, storeNames, lookup, cheapestInfo, onUpsert, onD
           この商品をリストから削除
         </button>
       </div>
+
+      {showIconPicker && (
+        <IconPicker
+          value={icon}
+          onChange={newIcon => { onIconUpdate(product, newIcon); setShowIconPicker(false) }}
+          onClose={() => setShowIconPicker(false)}
+        />
+      )}
+
       {confirmState && (
         <DeleteConfirmDialog
           message={confirmState.message}
@@ -474,7 +596,7 @@ function CompareRow({ store, item, isBest, product, onUpsert, onDeleteItem }) {
 }
 
 // ── 一覧グリッドビュー ────────────────────────────────────
-function GridView({ products, storeNames, lookup, cheapestInfo, onUpsert, onDeleteItem, onDeleteProduct }) {
+function GridView({ products, storeNames, lookup, cheapestInfo, productIcon, onUpsert, onDeleteItem, onDeleteProduct }) {
   const [confirmState, setConfirmState] = useState(null)
 
   return (
@@ -491,10 +613,12 @@ function GridView({ products, storeNames, lookup, cheapestInfo, onUpsert, onDele
         <tbody>
           {products.map(product => {
             const minPrice = cheapestInfo[product]?.price ?? Infinity
+            const icon = productIcon[product]
             return (
               <tr key={product}>
                 <td className={styles.productCell}>
                   <div className={styles.productCellInner}>
+                    {icon && <span className={styles.productGridIcon}><Icon name={icon} size={14} /></span>}
                     <span className={styles.productName}>{product}</span>
                     <button
                       className={styles.deleteProductBtn}
@@ -629,20 +753,22 @@ const PRICE_CATEGORIES = [
 ]
 
 // ── 価格追加モーダル ──────────────────────────────────────
-function AddModal({ stores, productNames, productCategory, onSubmit, onClose }) {
+function AddModal({ stores, productNames, productCategory, productIcon, onSubmit, onClose }) {
   const [storeName, setStoreName] = useState(stores[0] || '')
   const [productName, setProductName] = useState('')
   const [category, setCategory] = useState('food')
+  const [icon, setIcon] = useState(null)
   const [price, setPrice] = useState('')
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [showIconPicker, setShowIconPicker] = useState(false)
 
   function handleProductChange(e) {
     const val = e.target.value
     setProductName(val)
-    // 既存商品ならカテゴリを自動セット
     if (productCategory[val]) setCategory(productCategory[val])
+    if (productIcon[val]) setIcon(productIcon[val])
   }
 
   async function handleSubmit(e) {
@@ -650,7 +776,7 @@ function AddModal({ stores, productNames, productCategory, onSubmit, onClose }) 
     if (!storeName || !productName.trim() || price === '') return
     setSubmitting(true)
     setError('')
-    const err = await onSubmit({ storeName, productName: productName.trim(), price, note, category })
+    const err = await onSubmit({ storeName, productName: productName.trim(), price, note, category, icon })
     if (err) setError('保存に失敗しました')
     setSubmitting(false)
   }
@@ -685,6 +811,21 @@ function AddModal({ stores, productNames, productCategory, onSubmit, onClose }) 
               {productNames.map(p => <option key={p} value={p} />)}
             </datalist>
           </label>
+
+          <div className={styles.label}>
+            アイコン
+            <button
+              type="button"
+              className={styles.iconSelectBtn}
+              onClick={() => setShowIconPicker(true)}
+            >
+              <span className={styles.iconSelectEmoji}>
+                <Icon name={icon || 'TbShoppingCart'} size={26} />
+              </span>
+              <span className={styles.iconSelectLabel}>{icon ? 'タップして変更' : 'アイコンを選択'}</span>
+            </button>
+          </div>
+
           <div className={styles.label}>
             カテゴリ
             <div className={styles.categoryBtns}>
@@ -734,6 +875,48 @@ function AddModal({ stores, productNames, productCategory, onSubmit, onClose }) 
             </button>
           </div>
         </form>
+      </div>
+
+      {showIconPicker && (
+        <IconPicker
+          value={icon}
+          onChange={newIcon => { setIcon(newIcon); setShowIconPicker(false) }}
+          onClose={() => setShowIconPicker(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── アイコンピッカー ──────────────────────────────────────
+function IconPicker({ value, onChange, onClose }) {
+  return (
+    <div className={styles.iconPickerOverlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.iconPickerPanel}>
+        <div className={styles.iconPickerHeader}>
+          <span className={styles.iconPickerTitle}>アイコンを選択</span>
+          <button className={styles.closeBtn} onClick={onClose} type="button">×</button>
+        </div>
+        <div className={styles.iconPickerBody}>
+          {ICON_GROUPS.map(group => (
+            <div key={group.label}>
+              <div className={styles.iconGroupLabel}>{group.label}</div>
+              <div className={styles.iconGrid}>
+                {group.icons.map(ico => (
+                  <button
+                    key={ico}
+                    type="button"
+                    className={`${styles.iconBtn} ${value === ico ? styles.iconBtnActive : ''}`}
+                    onClick={() => onChange(ico)}
+                    title={ico.replace(/^Tb/, '')}
+                  >
+                    <Icon name={ico} size={24} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
