@@ -253,7 +253,7 @@
 .qtyBtn:active { transform: scale(0.9); opacity: 0.8; }
 
 .qtyValue {
-  min-width: 2.8rem;
+  min-width: 3.8rem;
   text-align: center;
   font-size: 1.05rem;
   font-weight: 700;
@@ -261,7 +261,7 @@
   background: none;
   border: 1.5px dashed var(--gray-200);
   border-radius: var(--radius);
-  padding: 0.2rem 0.4rem;
+  padding: 0.2rem 0.5rem;
   cursor: pointer;
   transition: border-color 0.18s, background 0.18s;
   -webkit-tap-highlight-color: transparent;
@@ -272,16 +272,17 @@
 }
 
 .qtyInput {
-  width: 3.5rem;
+  width: 5rem;
   text-align: center;
   font-size: 1rem;
   font-weight: 700;
   color: #2d2d2d;
   border: 1.5px solid var(--primary);
   border-radius: var(--radius);
-  padding: 0.2rem 0.3rem;
+  padding: 0.2rem 0.5rem;
   outline: none;
   background: #fff;
+  box-sizing: border-box;
 }
 
 .unit {
@@ -424,10 +425,18 @@
 .qtyUnitRow {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
 }
 
 .qtyNumInput {
   flex: 1;
+  min-width: 0;
+}
+
+.qtyUnitRow .select {
+  width: auto;
+  min-width: 5.5rem;
+  flex-shrink: 0;
 }
 
 .select {
