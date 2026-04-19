@@ -223,16 +223,23 @@ function InventoryCard({ item, editingQtyId, tempQty, onMinus, onPlus, onQtyTap,
 
   return (
     <div className={styles.card}>
-      <div className={styles.cardLeft}>
-        <span className={styles.badge} style={{ background: cat.color + '22', color: cat.color }}>
-          {cat.label}
-        </span>
-        <span className={styles.itemName}>{item.name}</span>
-        {item.note && <span className={styles.itemNote}>{item.note}</span>}
+      <div className={styles.cardTop}>
+        <div className={styles.cardInfo}>
+          <span className={styles.badge} style={{ background: cat.color + '22', color: cat.color }}>
+            {cat.label}
+          </span>
+          <span className={styles.itemName}>{item.name}</span>
+          {item.note && <span className={styles.itemNote}>{item.note}</span>}
+        </div>
+        <div className={styles.cardMenu}>
+          <button className={styles.menuBtn} onClick={onEdit} aria-label="編集">✏️</button>
+          <button className={`${styles.menuBtn} ${styles.menuBtnDel}`} onClick={onDelete} aria-label="削除">✕</button>
+        </div>
       </div>
-      <div className={styles.cardRight}>
-        <div className={styles.qtyRow}>
-          <button className={styles.qtyBtn} onClick={onMinus} aria-label="減らす">－</button>
+
+      <div className={styles.cardBottom}>
+        <button className={`${styles.qtyBtn} ${styles.qtyBtnMinus}`} onClick={onMinus} aria-label="減らす">－</button>
+        <div className={styles.qtyCenter}>
           {isEditing ? (
             <input
               type="number"
@@ -248,13 +255,9 @@ function InventoryCard({ item, editingQtyId, tempQty, onMinus, onPlus, onQtyTap,
               {Number(item.quantity) % 1 === 0 ? Number(item.quantity) : item.quantity}
             </button>
           )}
-          <button className={styles.qtyBtn} onClick={onPlus} aria-label="増やす">＋</button>
           <span className={styles.unit}>{item.unit}</span>
         </div>
-        <div className={styles.cardActions}>
-          <button className={styles.editBtn} onClick={onEdit}>編集</button>
-          <button className={styles.delBtn} onClick={onDelete}>削除</button>
-        </div>
+        <button className={`${styles.qtyBtn} ${styles.qtyBtnPlus}`} onClick={onPlus} aria-label="増やす">＋</button>
       </div>
     </div>
   )
