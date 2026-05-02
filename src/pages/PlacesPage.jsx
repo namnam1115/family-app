@@ -115,10 +115,11 @@ export default function PlacesPage() {
     await fetchAll()
   }
 
-  // 都道府県抽出
+  // 都道府県抽出（「日本、〒100-0005 東京都…」形式にも対応）
   function extractPrefecture(address) {
     if (!address) return null
-    const m = address.match(/^(.+?[都道府県])/)
+    // 数字・〒・記号を除いた日本語文字列＋都道府県の組み合わせを探す
+    const m = address.match(/([^\s,、\d〒\-]+[都道府県])/)
     return m ? m[1] : null
   }
 
