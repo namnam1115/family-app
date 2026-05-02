@@ -115,10 +115,11 @@ export default function PlacesPage() {
     await fetchAll()
   }
 
-  // 都道府県抽出
+  // 都道府県抽出（「日本、〒100-0005 東京都…」形式にも対応）
   function extractPrefecture(address) {
     if (!address) return null
-    const m = address.match(/^(.+?[都道府県])/)
+    // 数字・〒・記号を除いた日本語文字列＋都道府県の組み合わせを探す
+    const m = address.match(/([^\s,、\d〒\-]+[都道府県])/)
     return m ? m[1] : null
   }
 
@@ -208,31 +209,33 @@ export default function PlacesPage() {
       )}
 
       {/* カテゴリチップ + ビュー切り替え */}
-      <div className={styles.categoryChips}>
-        <button
-          className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
-          onClick={() => setCategoryFilter('all')}
-        >すべて</button>
-        {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+      <div className={styles.filterRow}>
+        <div className={styles.categoryChips}>
           <button
-            key={key}
-            className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
-            onClick={() => setCategoryFilter(key)}
-          >{icon} {label}</button>
-        ))}
-        {availablePrefectures.length > 0 && (
-          <select
-            className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
-            value={prefectureFilter}
-            onChange={e => setPrefectureFilter(e.target.value)}
-            aria-label="都道府県で絞り込む"
-          >
-            <option value="">🗾 都道府県</option>
-            {availablePrefectures.map(pref => (
-              <option key={pref} value={pref}>{pref}</option>
-            ))}
-          </select>
-        )}
+            className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
+            onClick={() => setCategoryFilter('all')}
+          >すべて</button>
+          {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+            <button
+              key={key}
+              className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
+              onClick={() => setCategoryFilter(key)}
+            >{icon} {label}</button>
+          ))}
+          {availablePrefectures.length > 0 && (
+            <select
+              className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
+              value={prefectureFilter}
+              onChange={e => setPrefectureFilter(e.target.value)}
+              aria-label="都道府県で絞り込む"
+            >
+              <option value="">🗾 都道府県</option>
+              {availablePrefectures.map(pref => (
+                <option key={pref} value={pref}>{pref}</option>
+              ))}
+            </select>
+          )}
+        </div>
         <div className={styles.viewToggle}>
           <button
             className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
