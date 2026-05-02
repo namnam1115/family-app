@@ -208,31 +208,33 @@ export default function PlacesPage() {
       )}
 
       {/* カテゴリチップ + ビュー切り替え */}
-      <div className={styles.categoryChips}>
-        <button
-          className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
-          onClick={() => setCategoryFilter('all')}
-        >すべて</button>
-        {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+      <div className={styles.filterRow}>
+        <div className={styles.categoryChips}>
           <button
-            key={key}
-            className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
-            onClick={() => setCategoryFilter(key)}
-          >{icon} {label}</button>
-        ))}
-        {availablePrefectures.length > 0 && (
-          <select
-            className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
-            value={prefectureFilter}
-            onChange={e => setPrefectureFilter(e.target.value)}
-            aria-label="都道府県で絞り込む"
-          >
-            <option value="">🗾 都道府県</option>
-            {availablePrefectures.map(pref => (
-              <option key={pref} value={pref}>{pref}</option>
-            ))}
-          </select>
-        )}
+            className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
+            onClick={() => setCategoryFilter('all')}
+          >すべて</button>
+          {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+            <button
+              key={key}
+              className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
+              onClick={() => setCategoryFilter(key)}
+            >{icon} {label}</button>
+          ))}
+          {availablePrefectures.length > 0 && (
+            <select
+              className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
+              value={prefectureFilter}
+              onChange={e => setPrefectureFilter(e.target.value)}
+              aria-label="都道府県で絞り込む"
+            >
+              <option value="">🗾 都道府県</option>
+              {availablePrefectures.map(pref => (
+                <option key={pref} value={pref}>{pref}</option>
+              ))}
+            </select>
+          )}
+        </div>
         <div className={styles.viewToggle}>
           <button
             className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
