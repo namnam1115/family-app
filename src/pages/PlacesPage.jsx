@@ -13,6 +13,16 @@ const CATEGORIES = {
   other: { label: 'その他', icon: '📍' },
 }
 
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 export default function PlacesPage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
@@ -26,6 +36,10 @@ export default function PlacesPage() {
   const [visitTarget, setVisitTarget] = useState(null)      // place object
   const [editTarget, setEditTarget] = useState(null)        // place object
   const [view, setView] = useState('list')                  // 'list' | 'map'
+  const [showRadiusSearch, setShowRadiusSearch] = useState(false)
+  const [radiusCenter, setRadiusCenter] = useState(null)    // { lat, lng, address }
+  const [radiusKm, setRadiusKm] = useState(5)
+  const [prefectureFilter, setPrefectureFilter] = useState('')
 
   const fetchAll = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -101,8 +115,20 @@ export default function PlacesPage() {
     await fetchAll()
   }
 
+  // 都道府県抽出
+  function extractPrefecture(address) {
+    if (!address) return null
+    const m = address.match(/^(.+?[都道府県])/)
+    return m ? m[1] : null
+  }
+
+  const availablePrefectures = [...new Set(
+    places.map(p => extractPrefecture(p.address)).filter(Boolean)
+  )].sort()
+
   // フィルタリング
   const q = searchQuery.trim().toLowerCase()
+  const radiusActive = showRadiusSearch && radiusCenter != null
   const filtered = places.filter(p => {
     if (statusFilter !== 'all' && p.status !== statusFilter) return false
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false
@@ -111,6 +137,11 @@ export default function PlacesPage() {
       const inAddress = p.address?.toLowerCase().includes(q)
       const inMemo    = p.memo?.toLowerCase().includes(q)
       if (!inName && !inAddress && !inMemo) return false
+    }
+    if (prefectureFilter && extractPrefecture(p.address) !== prefectureFilter) return false
+    if (radiusActive) {
+      if (p.lat == null || p.lng == null) return false
+      if (haversineKm(radiusCenter.lat, radiusCenter.lng, p.lat, p.lng) > radiusKm) return false
     }
     return true
   })
@@ -151,7 +182,30 @@ export default function PlacesPage() {
             <button className={styles.searchClear} onClick={() => setSearchQuery('')} aria-label="クリア">×</button>
           )}
         </div>
+        <button
+          className={`${styles.radiusToggleBtn} ${showRadiusSearch ? styles.radiusToggleBtnActive : ''}`}
+          onClick={() => {
+            setShowRadiusSearch(v => !v)
+            if (showRadiusSearch) setRadiusCenter(null)
+          }}
+          aria-label="範囲で絞り込む"
+          title="範囲で絞り込む"
+        >
+          📡 範囲
+          {radiusActive && <span className={styles.radiusActiveDot} />}
+        </button>
       </div>
+
+      {/* 範囲検索パネル */}
+      {showRadiusSearch && (
+        <RadiusSearchPanel
+          center={radiusCenter}
+          radiusKm={radiusKm}
+          onCenterChange={setRadiusCenter}
+          onRadiusChange={setRadiusKm}
+          matchCount={radiusActive ? filtered.length : null}
+        />
+      )}
 
       {/* カテゴリチップ + ビュー切り替え */}
       <div className={styles.categoryChips}>
@@ -166,6 +220,19 @@ export default function PlacesPage() {
             onClick={() => setCategoryFilter(key)}
           >{icon} {label}</button>
         ))}
+        {availablePrefectures.length > 0 && (
+          <select
+            className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
+            value={prefectureFilter}
+            onChange={e => setPrefectureFilter(e.target.value)}
+            aria-label="都道府県で絞り込む"
+          >
+            <option value="">🗾 都道府県</option>
+            {availablePrefectures.map(pref => (
+              <option key={pref} value={pref}>{pref}</option>
+            ))}
+          </select>
+        )}
         <div className={styles.viewToggle}>
           <button
             className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
@@ -235,6 +302,108 @@ export default function PlacesPage() {
           onDelete={async () => { await handleDelete(editTarget.id); setEditTarget(null) }}
           onClose={() => setEditTarget(null)}
         />
+      )}
+    </div>
+  )
+}
+
+// ── 範囲検索パネル ────────────────────────────────────────
+const RADIUS_OPTIONS = [1, 3, 5, 10, 30]
+
+function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, matchCount }) {
+  const inputRef = useRef(null)
+  const [locating, setLocating] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    loadGoogleMapsScript().then(async () => {
+      if (!mounted || !inputRef.current) return
+      await window.google.maps.importLibrary('places')
+      const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
+        componentRestrictions: { country: 'jp' },
+        fields: ['formatted_address', 'geometry', 'name'],
+      })
+      ac.addListener('place_changed', () => {
+        if (!mounted) return
+        const place = ac.getPlace()
+        const loc = place.geometry?.location
+        if (loc) {
+          onCenterChange({
+            lat: loc.lat(),
+            lng: loc.lng(),
+            address: place.formatted_address || place.name || inputRef.current?.value || '',
+          })
+        }
+      })
+    }).catch(() => {})
+    return () => { mounted = false }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setLocating(false)
+        onCenterChange({ lat: pos.coords.latitude, lng: pos.coords.longitude, address: '現在地' })
+        if (inputRef.current) inputRef.current.value = '現在地'
+      },
+      () => setLocating(false),
+      { timeout: 8000 }
+    )
+  }
+
+  function handleClear() {
+    onCenterChange(null)
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  return (
+    <div className={styles.radiusPanel}>
+      <div className={styles.radiusInputRow}>
+        <div className={styles.radiusInputWrapper}>
+          <span className={styles.radiusInputIcon}>📍</span>
+          <input
+            ref={inputRef}
+            className={styles.radiusInput}
+            type="text"
+            placeholder="起点となる住所・場所名を入力..."
+            autoComplete="off"
+            defaultValue={center?.address === '現在地' ? '現在地' : (center?.address ?? '')}
+          />
+          {center && (
+            <button className={styles.searchClear} onClick={handleClear} aria-label="クリア">×</button>
+          )}
+        </div>
+        <button
+          className={`${styles.gpsBtn} ${locating ? styles.gpsBtnLoading : ''}`}
+          onClick={useCurrentLocation}
+          disabled={locating}
+          aria-label="現在地を使う"
+          title="現在地を使う"
+        >
+          {locating ? '...' : '📡'}
+        </button>
+      </div>
+
+      {center && (
+        <div className={styles.radiusKmRow}>
+          <span className={styles.radiusLabel}>半径</span>
+          {RADIUS_OPTIONS.map(km => (
+            <button
+              key={km}
+              className={`${styles.radiusKmBtn} ${radiusKm === km ? styles.radiusKmBtnActive : ''}`}
+              onClick={() => onRadiusChange(km)}
+            >{km}km</button>
+          ))}
+          {matchCount != null && (
+            <span className={styles.radiusMatchCount}>{matchCount}件</span>
+          )}
+        </div>
+      )}
+
+      {!center && (
+        <p className={styles.radiusHint}>住所を入力するか📡ボタンで現在地を起点に絞り込めます</p>
       )}
     </div>
   )

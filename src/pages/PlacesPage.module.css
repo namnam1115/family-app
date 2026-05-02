@@ -82,9 +82,13 @@
   background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .searchWrapper {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -93,6 +97,185 @@
   border-radius: var(--radius-full);
   padding: 0.4rem 0.75rem;
   transition: border-color 0.2s ease;
+}
+
+/* 範囲トグルボタン */
+.radiusToggleBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.75rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--gray-500);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  position: relative;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.radiusToggleBtn:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.radiusToggleBtnActive {
+  background: var(--grad-primary-soft);
+  border-color: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.radiusActiveDot {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+/* ── 範囲検索パネル ── */
+.radiusPanel {
+  flex-shrink: 0;
+  padding: 0.5rem 1.25rem 0.625rem;
+  background: rgba(240, 237, 252, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(142, 129, 181, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.radiusInputRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.radiusInputWrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border: 1.5px solid var(--primary-light);
+  border-radius: var(--radius-full);
+  padding: 0.38rem 0.75rem;
+  box-shadow: 0 0 0 3px rgba(142, 129, 181, 0.08);
+}
+
+.radiusInputIcon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.radiusInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--gray-800);
+  background: transparent;
+  min-width: 0;
+}
+
+.radiusInput::placeholder {
+  color: var(--gray-400);
+}
+
+.gpsBtn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--primary-light);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--primary);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gpsBtn:hover:not(:disabled) {
+  background: var(--grad-primary-soft);
+  transform: scale(1.08);
+}
+
+.gpsBtnLoading {
+  opacity: 0.6;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.radiusKmRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.radiusLabel {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  font-weight: 500;
+  margin-right: 0.125rem;
+}
+
+.radiusKmBtn {
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--gray-200);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--gray-500);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.radiusKmBtn:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.radiusKmBtnActive {
+  background: var(--grad-primary);
+  border-color: transparent;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(142, 129, 181, 0.35);
+}
+
+.radiusMatchCount {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  background: rgba(142, 129, 181, 0.12);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+}
+
+.radiusHint {
+  font-size: 0.78rem;
+  color: var(--gray-400);
+  margin: 0;
 }
 
 .searchWrapper:focus-within {
@@ -213,6 +396,41 @@
 
 .chipActive {
   background: var(--grad-primary-soft);
+  border-color: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+/* 都道府県セレクト */
+.prefectureSelect {
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0.35rem 1.5rem 0.35rem 0.6rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--gray-200);
+  background: rgba(255, 255, 255, 0.85) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 0.5rem center;
+  color: var(--gray-500);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  touch-action: manipulation;
+  outline: none;
+  min-width: 0;
+  max-width: 8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prefectureSelect:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.prefectureSelectActive {
+  background-color: #ede9fe;
   border-color: var(--primary-light);
   color: var(--primary-dark);
   font-weight: 600;
