@@ -192,7 +192,8 @@ export default function PlacesPage() {
           aria-label="範囲で絞り込む"
           title="範囲で絞り込む"
         >
-          📡 範囲
+          <span className={styles.radiusToggleIcon}>📡</span>
+          <span className={styles.radiusToggleLabel}>範囲</span>
           {radiusActive && <span className={styles.radiusActiveDot} />}
         </button>
       </div>
