@@ -72,10 +72,44 @@
 }
 .searchInput:focus { border-color: var(--primary); }
 
+/* ── Summary Bar ── */
+.summaryBar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex-shrink: 0;
+}
+.summaryBar::-webkit-scrollbar { display: none; }
+
+.summaryChip {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--gray-200);
+  background: var(--glass);
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.summaryChip:hover { border-color: var(--primary); color: var(--primary); }
+.summaryChipActive {
+  font-weight: 600;
+  border-width: 2px;
+}
+
 /* ── Category Tabs ── */
 .catTabs {
   flex-shrink: 0;
-  padding: 0.5rem 0 0.25rem;
+  padding: 0.25rem 0;
   overflow: hidden;
 }
 
@@ -209,6 +243,11 @@
   white-space: nowrap;
 }
 
+.expiryTag {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .itemNote {
   font-size: 0.75rem;
   color: var(--gray-400);
@@ -225,71 +264,22 @@
   flex-shrink: 0;
 }
 
-/* ── Quantity controls ── */
-.qtyRow {
+/* ── Status button ── */
+.statusBtn {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
-}
-
-.qtyBtn {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 50%;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-full);
   border: none;
-  background: var(--grad-primary);
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
   transition: opacity 0.15s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
   flex-shrink: 0;
 }
-.qtyBtn:active { transform: scale(0.9); opacity: 0.8; }
-
-.qtyValue {
-  min-width: 3.8rem;
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #2d2d2d;
-  background: none;
-  border: 1.5px dashed var(--gray-200);
-  border-radius: var(--radius);
-  padding: 0.2rem 0.5rem;
-  cursor: pointer;
-  transition: border-color 0.18s, background 0.18s;
-  -webkit-tap-highlight-color: transparent;
-}
-.qtyValue:hover {
-  border-color: var(--primary);
-  background: rgba(142,129,181,0.06);
-}
-
-.qtyInput {
-  width: 5rem;
-  text-align: center;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #2d2d2d;
-  border: 1.5px solid var(--primary);
-  border-radius: var(--radius);
-  padding: 0.2rem 0.5rem;
-  outline: none;
-  background: #fff;
-  box-sizing: border-box;
-}
-
-.unit {
-  font-size: 0.8rem;
-  color: var(--gray-400);
-  min-width: 1.5rem;
-}
+.statusBtn:active { transform: scale(0.95); opacity: 0.8; }
 
 /* ── Card action buttons ── */
 .cardActions {
@@ -422,21 +412,48 @@
 }
 .input:focus { border-color: var(--primary); }
 
-.qtyUnitRow {
+.statusSelectRow {
   display: flex;
   gap: 0.5rem;
-  align-items: center;
+  flex-wrap: wrap;
 }
 
-.qtyNumInput {
+.quickDateRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.quickDateBtn {
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--gray-200);
+  background: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.quickDateBtn:hover { border-color: var(--primary); color: var(--primary); }
+.quickDateBtnClear { border-color: var(--danger); color: var(--danger); }
+
+.statusSelectBtn {
   flex: 1;
-  min-width: 0;
-}
-
-.qtyUnitRow .select {
-  width: auto;
   min-width: 5.5rem;
-  flex-shrink: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--gray-200);
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.statusSelectBtn:hover { border-color: var(--primary); }
+.statusSelectActive {
+  border-width: 2px;
+  background: rgba(142,129,181,0.06);
 }
 
 .select {
@@ -526,6 +543,116 @@
 .cancelBtn:hover { opacity: 0.8; }
 .deleteBtn:hover { opacity: 0.88; }
 
+/* ── Floating button ── */
+.floatingBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.75rem 1rem 1rem;
+  background: linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0.8));
+  display: flex;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.addToShoppingBtn {
+  pointer-events: auto;
+  background: linear-gradient(135deg, #5A9E82, #4A8E72);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 0.8rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.18s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 12px rgba(90,158,130,0.3);
+}
+.addToShoppingBtn:hover { opacity: 0.9; }
+.addToShoppingBtn:active { transform: scale(0.95); }
+
+/* ── Shopping Modal ── */
+.shoppingModal {
+  width: 100%;
+  max-height: 92dvh;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow-y: auto;
+  animation: slideUp 0.32s cubic-bezier(0.34, 1.26, 0.64, 1);
+}
+
+@media (min-width: 480px) {
+  .shoppingModal {
+    max-width: 440px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    max-height: 90dvh;
+    animation: scaleIn 0.25s cubic-bezier(0.34, 1.26, 0.64, 1);
+  }
+}
+
+.itemCheckSection {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--gray-100);
+}
+
+.sectionTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  margin-bottom: 0.5rem;
+}
+
+.itemCheckList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.checkItem:hover { background: var(--gray-100); }
+
+.checkItem input[type="checkbox"] {
+  cursor: pointer;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.checkItem span {
+  font-size: 0.9rem;
+  color: #2d2d2d;
+}
+
+.modalBtns {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.modalBtns .cancelBtn {
+  flex: 1;
+}
+
+.modalBtns .saveBtn {
+  flex: 1;
+  margin-top: 0;
+}
+
 /* ── Desktop layout ── */
 @media (min-width: 1024px) {
   .main {
@@ -541,5 +668,19 @@
   }
   .group {
     break-inside: avoid;
+  }
+
+  .floatingBar {
+    position: static;
+    padding: 0;
+    background: none;
+  }
+
+  .addToShoppingBtn {
+    margin-top: 1rem;
+    width: 100%;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }

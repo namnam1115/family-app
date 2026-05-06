@@ -125,6 +125,14 @@ export default function HomePage() {
       available: true,
     },
     {
+      id: 'travels',
+      title: '旅行記録',
+      description: '旅の思い出と計画を記録。スケジュールと自動連携。',
+      icon: '✈️',
+      path: '/travels',
+      available: true,
+    },
+    {
       id: 'memo',
       title: '共有メモ',
       description: '大切な情報を家族でメモ（近日公開）',

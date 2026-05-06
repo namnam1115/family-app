@@ -26,6 +26,37 @@ function getCategoryInfo(value) {
   return CATEGORIES.find(c => c.value === value) ?? CATEGORIES[CATEGORIES.length - 1]
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${d.getMonth() + 1}/${d.getDate()}`
+}
+
+function addDays(n) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+function getExpiryInfo(dateStr) {
+  if (!dateStr) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const expiry = new Date(dateStr + 'T00:00:00')
+  const days = Math.round((expiry - today) / 86400000)
+
+  if (days < 0) {
+    return { label: `期限切れ (${formatDate(dateStr)})`, color: '#C45A5A', days, urgent: true }
+  }
+  if (days <= 3) {
+    return { label: `${formatDate(dateStr)}まで（あと${days}日）`, color: '#C2826A', days, urgent: true }
+  }
+  if (days <= 7) {
+    return { label: `${formatDate(dateStr)}まで（あと${days}日）`, color: '#C49A5A', days, urgent: false }
+  }
+  return { label: `${formatDate(dateStr)}まで（あと${days}日）`, color: '#aaa', days, urgent: false }
+}
+
 export default function InventoryPage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
@@ -34,11 +65,16 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
-  const [editingQtyId, setEditingQtyId] = useState(null)
-  const [tempQty, setTempQty] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [showAddToShoppingModal, setShowAddToShoppingModal] = useState(false)
+  const [addingToShopping, setAddingToShopping] = useState(false)
+  const [shoppingLists, setShoppingLists] = useState([])
+  const [selectedForShopping, setSelectedForShopping] = useState(new Set())
+  const [targetListId, setTargetListId] = useState(null)
+  const [shoppingError, setShoppingError] = useState('')
 
   const fid = familyMember?.family_id
 
@@ -72,23 +108,22 @@ export default function InventoryPage() {
     return () => supabase.removeChannel(channel)
   }, [fid, fetchItems])
 
-  async function updateQuantity(item, delta) {
-    const next = Math.max(0, Number(item.quantity) + delta)
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, quantity: next } : i))
+  const cycleStatus = (current) => {
+    const cycle = { ok: 'low', low: 'out', out: 'ok' }
+    return cycle[current] ?? 'ok'
+  }
+
+  async function updateStatus(item, nextStatus) {
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, stock_status: nextStatus } : i))
     await supabase
       .from('inventory_items')
-      .update({ quantity: next, updated_by: familyMember.name, updated_at: new Date().toISOString() })
+      .update({ stock_status: nextStatus, updated_by: familyMember.name, updated_at: new Date().toISOString() })
       .eq('id', item.id)
   }
 
-  async function commitQtyEdit(item) {
-    const next = Math.max(0, Number(tempQty))
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, quantity: next } : i))
-    setEditingQtyId(null)
-    await supabase
-      .from('inventory_items')
-      .update({ quantity: next, updated_by: familyMember.name, updated_at: new Date().toISOString() })
-      .eq('id', item.id)
+  async function handleStatusCycle(item) {
+    const nextStatus = cycleStatus(item.stock_status ?? 'ok')
+    await updateStatus(item, nextStatus)
   }
 
   async function deleteItem(id) {
@@ -99,9 +134,24 @@ export default function InventoryPage() {
 
   const filtered = items.filter(item => {
     const matchCat = categoryFilter === 'all' || item.category === categoryFilter
+    const matchStatus = statusFilter === 'all' || item.stock_status === statusFilter
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase())
-    return matchCat && matchSearch
+    return matchCat && matchStatus && matchSearch
   })
+
+  const summary = {
+    out: items.filter(i => i.stock_status === 'out').length,
+    low: items.filter(i => i.stock_status === 'low').length,
+    ok: items.filter(i => i.stock_status === 'ok').length,
+  }
+
+  const needsBuyingItems = items.filter(i => {
+    const byStatus = i.stock_status === 'out' || i.stock_status === 'low'
+    const expInfo = getExpiryInfo(i.expiry_date)
+    const byExpiry = expInfo !== null && expInfo.days <= 7
+    return byStatus || byExpiry
+  })
+  const needsBuyingCount = needsBuyingItems.length
 
   const grouped = filtered.reduce((acc, item) => {
     const key = item.category
@@ -131,6 +181,23 @@ export default function InventoryPage() {
           onChange={e => setSearch(e.target.value)}
           className={styles.searchInput}
         />
+      </div>
+
+      <div className={styles.summaryBar}>
+        {[
+          { key: 'out', label: '切れ', color: '#C45A5A' },
+          { key: 'low', label: '少ない', color: '#C49A5A' },
+          { key: 'ok', label: '十分', color: '#5A9E82' },
+        ].map(s => (
+          <button
+            key={s.key}
+            className={`${styles.summaryChip} ${statusFilter === s.key ? styles.summaryChipActive : ''}`}
+            style={statusFilter === s.key ? { borderColor: s.color, color: s.color } : {}}
+            onClick={() => setStatusFilter(prev => prev === s.key ? 'all' : s.key)}
+          >
+            <span style={{ color: s.color }}>●</span> {s.label} {summary[s.key]}件
+          </button>
+        ))}
       </div>
 
       <div className={styles.catTabs}>
@@ -174,14 +241,7 @@ export default function InventoryPage() {
                     <InventoryCard
                       key={item.id}
                       item={item}
-                      editingQtyId={editingQtyId}
-                      tempQty={tempQty}
-                      onMinus={() => updateQuantity(item, -1)}
-                      onPlus={() => updateQuantity(item, 1)}
-                      onQtyTap={() => { setEditingQtyId(item.id); setTempQty(String(item.quantity)) }}
-                      onQtyChange={v => setTempQty(v)}
-                      onQtyCommit={() => commitQtyEdit(item)}
-                      onQtyBlur={() => commitQtyEdit(item)}
+                      onStatusCycle={() => handleStatusCycle(item)}
                       onEdit={() => { setEditingItem(item); setShowModal(true) }}
                       onDelete={() => setDeleteConfirmId(item.id)}
                     />
@@ -192,6 +252,21 @@ export default function InventoryPage() {
           </div>
         )}
       </main>
+
+      {needsBuyingCount > 0 && (
+        <div className={styles.floatingBar}>
+          <button
+            className={styles.addToShoppingBtn}
+            onClick={() => {
+              setShowAddToShoppingModal(true)
+              setSelectedForShopping(new Set(needsBuyingItems.map(i => i.id)))
+              fetchShoppingLists()
+            }}
+          >
+            🛒 切れ・少ないを買い物リストに追加（{needsBuyingCount}件）
+          </button>
+        </div>
+      )}
 
       {showModal && (
         <ItemModal
@@ -213,13 +288,82 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
+      {showAddToShoppingModal && (
+        <AddToShoppingModal
+          items={needsBuyingItems}
+          selectedIds={selectedForShopping}
+          onToggle={id => {
+            const next = new Set(selectedForShopping)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            setSelectedForShopping(next)
+          }}
+          shoppingLists={shoppingLists}
+          targetListId={targetListId}
+          onListChange={setTargetListId}
+          onAddToShopping={handleAddToShopping}
+          onClose={() => setShowAddToShoppingModal(false)}
+          loading={addingToShopping}
+          error={shoppingError}
+        />
+      )}
     </div>
   )
+
+  async function fetchShoppingLists() {
+    if (!fid) return
+    const { data } = await supabase
+      .from('shopping_lists')
+      .select('id, name')
+      .eq('family_id', fid)
+      .order('name')
+    setShoppingLists(data ?? [])
+    if (data && data.length > 0 && !targetListId) {
+      setTargetListId(data[0].id)
+    }
+  }
+
+  async function handleAddToShopping() {
+    if (!targetListId || selectedForShopping.size === 0) return
+    setAddingToShopping(true)
+    setShoppingError('')
+
+    const selectedItems = needsBuyingItems.filter(i => selectedForShopping.has(i.id))
+    const insertRows = selectedItems.map(item => ({
+      list_id: targetListId,
+      name: item.name,
+      memo: item.note || null,
+      added_by: familyMember.name,
+      checked: false,
+    }))
+
+    const { error } = await supabase
+      .from('shopping_items')
+      .insert(insertRows)
+
+    if (error) {
+      setShoppingError('買い物リストへの追加に失敗しました')
+    } else {
+      setShowAddToShoppingModal(false)
+      setSelectedForShopping(new Set())
+      setTargetListId(null)
+    }
+    setAddingToShopping(false)
+  }
 }
 
-function InventoryCard({ item, editingQtyId, tempQty, onMinus, onPlus, onQtyTap, onQtyChange, onQtyCommit, onQtyBlur, onEdit, onDelete }) {
+const STATUS_CONFIG = {
+  ok: { label: '十分', color: '#5A9E82' },
+  low: { label: '少ない', color: '#C49A5A' },
+  out: { label: '切れ', color: '#C45A5A' },
+}
+
+function InventoryCard({ item, onStatusCycle, onEdit, onDelete }) {
   const cat = getCategoryInfo(item.category)
-  const isEditing = editingQtyId === item.id
+  const status = item.stock_status ?? 'ok'
+  const statusConf = STATUS_CONFIG[status]
+  const expiryInfo = getExpiryInfo(item.expiry_date)
 
   return (
     <div className={styles.card}>
@@ -228,29 +372,18 @@ function InventoryCard({ item, editingQtyId, tempQty, onMinus, onPlus, onQtyTap,
           {cat.label}
         </span>
         <span className={styles.itemName}>{item.name}</span>
+        {expiryInfo && <span className={styles.expiryTag} style={{ color: expiryInfo.color }}>📅 {expiryInfo.label}</span>}
         {item.note && <span className={styles.itemNote}>{item.note}</span>}
       </div>
       <div className={styles.cardRight}>
-        <div className={styles.qtyRow}>
-          <button className={styles.qtyBtn} onClick={onMinus} aria-label="減らす">－</button>
-          {isEditing ? (
-            <input
-              type="number"
-              className={styles.qtyInput}
-              value={tempQty}
-              onChange={e => onQtyChange(e.target.value)}
-              onBlur={onQtyBlur}
-              onKeyDown={e => { if (e.key === 'Enter') onQtyCommit(); if (e.key === 'Escape') onQtyBlur() }}
-              autoFocus
-            />
-          ) : (
-            <button className={styles.qtyValue} onClick={onQtyTap} title="タップして数量を入力">
-              {Number(item.quantity) % 1 === 0 ? Number(item.quantity) : item.quantity}
-            </button>
-          )}
-          <button className={styles.qtyBtn} onClick={onPlus} aria-label="増やす">＋</button>
-          <span className={styles.unit}>{item.unit}</span>
-        </div>
+        <button
+          className={styles.statusBtn}
+          style={{ background: statusConf.color + '22', color: statusConf.color }}
+          onClick={onStatusCycle}
+          aria-label="ストック状態を変更"
+        >
+          <span>●</span> {statusConf.label}
+        </button>
         <div className={styles.cardActions}>
           <button className={styles.editBtn} onClick={onEdit}>編集</button>
           <button className={styles.delBtn} onClick={onDelete}>削除</button>
@@ -263,10 +396,10 @@ function InventoryCard({ item, editingQtyId, tempQty, onMinus, onPlus, onQtyTap,
 function ItemModal({ item, familyMember, onClose, onSaved }) {
   const isEdit = !!item
   const [name, setName] = useState(item?.name ?? '')
-  const [quantity, setQuantity] = useState(item?.quantity ?? 0)
-  const [unit, setUnit] = useState(item?.unit ?? '個')
+  const [stockStatus, setStockStatus] = useState(item?.stock_status ?? 'ok')
   const [category, setCategory] = useState(item?.category ?? 'other')
   const [note, setNote] = useState(item?.note ?? '')
+  const [expiryDate, setExpiryDate] = useState(item?.expiry_date ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -276,10 +409,10 @@ function ItemModal({ item, familyMember, onClose, onSaved }) {
     const payload = {
       family_id: familyMember.family_id,
       name: name.trim(),
-      quantity: Math.max(0, Number(quantity)),
-      unit,
       category,
+      stock_status: stockStatus,
       note: note.trim() || null,
+      expiry_date: expiryDate || null,
       updated_by: familyMember.name,
       updated_at: new Date().toISOString(),
     }
@@ -317,27 +450,62 @@ function ItemModal({ item, familyMember, onClose, onSaved }) {
             autoFocus
           />
 
-          <label className={styles.label}>数量・単位</label>
-          <div className={styles.qtyUnitRow}>
-            <input
-              className={`${styles.input} ${styles.qtyNumInput}`}
-              type="number"
-              min="0"
-              step="0.1"
-              value={quantity}
-              onChange={e => setQuantity(e.target.value)}
-            />
-            <select className={styles.select} value={unit} onChange={e => setUnit(e.target.value)}>
-              {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-            </select>
-          </div>
-
           <label className={styles.label}>カテゴリ</label>
           <select className={styles.select} value={category} onChange={e => setCategory(e.target.value)}>
             {CATEGORIES.filter(c => c.value !== 'all').map(c => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
+
+          <label className={styles.label}>初期ストック状態</label>
+          <div className={styles.statusSelectRow}>
+            {['ok', 'low', 'out'].map(s => (
+              <button
+                key={s}
+                className={`${styles.statusSelectBtn} ${stockStatus === s ? styles.statusSelectActive : ''}`}
+                style={stockStatus === s ? { borderColor: STATUS_CONFIG[s].color, color: STATUS_CONFIG[s].color } : {}}
+                onClick={() => setStockStatus(s)}
+              >
+                {STATUS_CONFIG[s].label}
+              </button>
+            ))}
+          </div>
+
+          <label className={styles.label}>賞味期限（任意）</label>
+          <div className={styles.quickDateRow}>
+            {[
+              { label: '今日', days: 0 },
+              { label: '+3日', days: 3 },
+              { label: '+1週間', days: 7 },
+              { label: '+2週間', days: 14 },
+              { label: '+1ヶ月', days: 30 },
+              { label: '+3ヶ月', days: 90 },
+              { label: '+半年', days: 180 },
+              { label: '+1年', days: 365 },
+            ].map(({ label, days }) => (
+              <button
+                key={label}
+                type="button"
+                className={styles.quickDateBtn}
+                onClick={() => setExpiryDate(addDays(days))}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`${styles.quickDateBtn} ${styles.quickDateBtnClear}`}
+              onClick={() => setExpiryDate('')}
+            >
+              なし
+            </button>
+          </div>
+          <input
+            className={styles.input}
+            type="date"
+            value={expiryDate}
+            onChange={e => setExpiryDate(e.target.value)}
+          />
 
           <label className={styles.label}>メモ（任意）</label>
           <input
@@ -357,6 +525,107 @@ function ItemModal({ item, familyMember, onClose, onSaved }) {
           >
             {saving ? '保存中…' : isEdit ? '更新する' : '追加する'}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AddToShoppingModal({ items, selectedIds, onToggle, shoppingLists, targetListId, onListChange, onAddToShopping, onClose, loading, error }) {
+  const selectedCount = selectedIds.size
+  const outItems = items.filter(i => i.stock_status === 'out')
+  const lowItems = items.filter(i => i.stock_status === 'low')
+  const expiryItems = items.filter(i => {
+    const expInfo = getExpiryInfo(i.expiry_date)
+    return expInfo && expInfo.days <= 7 && i.stock_status !== 'out' && i.stock_status !== 'low'
+  })
+
+  return (
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.shoppingModal} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <span className={styles.modalTitle}>買い物リストに追加</span>
+          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+        </div>
+
+        <div className={styles.formBody}>
+          <label className={styles.label}>追加先リスト</label>
+          <select className={styles.select} value={targetListId || ''} onChange={e => onListChange(e.target.value)}>
+            <option value="">リストを選択してください</option>
+            {shoppingLists.map(list => (
+              <option key={list.id} value={list.id}>{list.name}</option>
+            ))}
+          </select>
+
+          {outItems.length > 0 && (
+            <div className={styles.itemCheckSection}>
+              <div className={styles.sectionTitle}>🔴 切れ ({outItems.length}件)</div>
+              <div className={styles.itemCheckList}>
+                {outItems.map(item => (
+                  <label key={item.id} className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => onToggle(item.id)}
+                    />
+                    <span>{item.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {lowItems.length > 0 && (
+            <div className={styles.itemCheckSection}>
+              <div className={styles.sectionTitle}>🟡 少ない ({lowItems.length}件)</div>
+              <div className={styles.itemCheckList}>
+                {lowItems.map(item => (
+                  <label key={item.id} className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => onToggle(item.id)}
+                    />
+                    <span>{item.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {expiryItems.length > 0 && (
+            <div className={styles.itemCheckSection}>
+              <div className={styles.sectionTitle}>⚠️ 期限切れ・期限間近 ({expiryItems.length}件)</div>
+              <div className={styles.itemCheckList}>
+                {expiryItems.map(item => {
+                  const expInfo = getExpiryInfo(item.expiry_date)
+                  return (
+                    <label key={item.id} className={styles.checkItem}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => onToggle(item.id)}
+                      />
+                      <span>{item.name} <span style={{ fontSize: '0.75rem', color: expInfo.color }}>📅 {expInfo.label}</span></span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {error && <p className={styles.formError}>{error}</p>}
+
+          <div className={styles.modalBtns}>
+            <button className={styles.cancelBtn} onClick={onClose} disabled={loading}>キャンセル</button>
+            <button
+              className={styles.saveBtn}
+              onClick={onAddToShopping}
+              disabled={loading || selectedCount === 0 || !targetListId}
+            >
+              {loading ? '追加中…' : `${selectedCount}件を追加`}
+            </button>
+          </div>
         </div>
       </div>
     </div>

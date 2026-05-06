@@ -8,6 +8,7 @@ import PlacesPage from './pages/PlacesPage'
 import DishesPage from './pages/DishesPage'
 import SchedulePage from './pages/SchedulePage'
 import InventoryPage from './pages/InventoryPage'
+import TravelPage from './pages/TravelPage'
 import JoinPage from './pages/JoinPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -71,6 +72,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <InventoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/travels"
+            element={
+              <ProtectedRoute>
+                <TravelPage />
               </ProtectedRoute>
             }
           />
