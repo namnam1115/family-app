@@ -30,7 +30,7 @@
   border: none;
   font-size: 1.25rem;
   line-height: 1;
-  color: var(--gray-300);
+  color: var(--ink-3);
   flex-shrink: 0;
   padding: 0.1rem 0.2rem;
   transition: transform 0.22s cubic-bezier(0.34, 1.5, 0.64, 1), color 0.15s ease;
@@ -40,7 +40,7 @@
 }
 
 .favBtn.favOn {
-  color: #f59e0b;
+  color: var(--warning);
   filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.45));
 }
 
@@ -56,8 +56,8 @@
   -webkit-backdrop-filter: var(--glass-blur);
   padding: 0.875rem 1rem;
   padding-bottom: max(0.875rem, env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(255, 255, 255, 0.65);
-  box-shadow: 0 -4px 24px rgba(142, 129, 181, 0.07);
+  border-top: 1px solid var(--glass-border);
+  box-shadow: 0 -4px 24px rgba(124, 113, 168, 0.07);
 }
 
 .inputRow {
@@ -69,12 +69,12 @@
 .nameInput,
 .memoInput {
   padding: 0.75rem 1rem;
-  border: 1.5px solid rgba(181, 170, 202, 0.4); /* ← 紫寄りのボーダー */
+  border: 1.5px solid rgba(183, 175, 211, 0.4); /* ← 紫寄りのボーダー */
   border-radius: var(--radius);
   outline: none;
   transition: all 0.2s ease;
   touch-action: manipulation;
-  background: rgba(255, 255, 255, 0.82);         /* ← 少し透過させる */
+  background: var(--surface);         /* ← 少し透過させる */
 }
 
 .nameInput {
@@ -88,8 +88,8 @@
 .nameInput:focus,
 .memoInput:focus {
   border-color: var(--primary);
-  background: white;
-  box-shadow: 0 0 0 3px rgba(142, 129, 181, 0.1);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
 }
 
 .addBtn {
@@ -103,12 +103,12 @@
   white-space: nowrap;
   transition: all 0.22s ease;
   touch-action: manipulation;
-  box-shadow: 0 2px 10px rgba(142, 129, 181, 0.3);
+  box-shadow: 0 2px 10px rgba(124, 113, 168, 0.3);
 }
 
 .addBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 18px rgba(142, 129, 181, 0.42);
+  box-shadow: 0 4px 18px rgba(124, 113, 168, 0.42);
 }
 
 .addBtn:active:not(:disabled) {
@@ -178,7 +178,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--gray-100);
   padding: 0.75rem 0.875rem;
   transition: all 0.2s ease;
@@ -188,7 +188,7 @@
 
 .item:hover {
   box-shadow: var(--shadow-md);
-  border-color: rgba(181, 170, 202, 0.35);
+  border-color: rgba(183, 175, 211, 0.35);
 }
 
 .item.itemChecked {
@@ -202,7 +202,7 @@
   min-height: 28px;
   border-radius: 50%;
   border: 2px solid var(--gray-300);
-  background: white;
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -216,7 +216,7 @@
 .itemChecked .checkbox {
   background: var(--grad-primary);
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(142, 129, 181, 0.3);
+  box-shadow: 0 2px 8px rgba(124, 113, 168, 0.3);
   animation: checkPop 0.3s ease;
 }
 
@@ -267,7 +267,7 @@
   border: none;
   font-size: 1rem;
   line-height: 1;
-  color: var(--gray-300);
+  color: var(--ink-3);
   flex-shrink: 0;
   transition: transform 0.22s cubic-bezier(0.34, 1.5, 0.64, 1);
   touch-action: manipulation;
@@ -275,7 +275,7 @@
 }
 
 .starBtn.starOn {
-  color: #f59e0b;
+  color: var(--warning);
   filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.45));
 }
 
@@ -303,7 +303,7 @@
 
 .deleteBtn:hover {
   color: var(--danger);
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
 /* ── 購入済み履歴 ── */
