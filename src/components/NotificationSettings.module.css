@@ -13,7 +13,7 @@
 }
 
 .modal {
-  background: white;
+  background: var(--surface);
   border-radius: 1rem 1rem 0 0;
   width: 100%;
   max-width: 480px;
@@ -124,8 +124,8 @@
 }
 
 .badgeOn {
-  background: #dcfce7;
-  color: #16a34a;
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+  color: var(--success);
 }
 
 .badgeOff {
@@ -191,7 +191,7 @@
   border: 1.5px solid var(--gray-300);
   border-radius: var(--radius);
   font-size: 16px;
-  background: white;
+  background: var(--surface);
   color: var(--gray-800);
   outline: none;
   touch-action: manipulation;
@@ -213,8 +213,8 @@
   font-size: 0.875rem;
 }
 
-.msg.success { background: #dcfce7; color: #16a34a; }
-.msg.error { background: #fee2e2; color: var(--danger); }
+.msg.success { background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); }
+.msg.error { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
 .msg.info { background: var(--gray-100); color: var(--gray-600); }
 
 /* ── 保存ボタン ── */

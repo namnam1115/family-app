@@ -35,7 +35,7 @@
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 600;
-  color: #2d2d2d;
+  color: var(--ink);
 }
 
 .addBtn {
@@ -237,7 +237,7 @@
 .itemName {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #2d2d2d;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -302,12 +302,12 @@
   border-color: var(--primary);
   color: var(--primary);
 }
-.editBtn:hover { background: rgba(142,129,181,0.1); }
+.editBtn:hover { background: rgba(124, 113, 168,0.1); }
 .delBtn {
   border-color: var(--danger);
   color: var(--danger);
 }
-.delBtn:hover { background: rgba(196,90,90,0.08); }
+.delBtn:hover { background: rgba(193, 92, 84,0.08); }
 
 /* ── Modal overlay ── */
 .overlay {
@@ -404,7 +404,7 @@
   padding: 0.65rem 0.9rem;
   border-radius: var(--radius);
   border: 1.5px solid var(--gray-200);
-  background: #fff;
+  background: var(--surface);
   font-size: 0.95rem;
   outline: none;
   box-sizing: border-box;
@@ -429,7 +429,7 @@
   padding: 0.3rem 0.6rem;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--gray-200);
-  background: #fff;
+  background: var(--surface);
   font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -444,7 +444,7 @@
   padding: 0.55rem 0.75rem;
   border-radius: var(--radius);
   border: 1.5px solid var(--gray-200);
-  background: #fff;
+  background: var(--surface);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -453,7 +453,7 @@
 .statusSelectBtn:hover { border-color: var(--primary); }
 .statusSelectActive {
   border-width: 2px;
-  background: rgba(142,129,181,0.06);
+  background: rgba(124, 113, 168,0.06);
 }
 
 .select {
@@ -461,7 +461,7 @@
   padding: 0.65rem 0.9rem;
   border-radius: var(--radius);
   border: 1.5px solid var(--gray-200);
-  background: #fff;
+  background: var(--surface);
   font-size: 0.95rem;
   outline: none;
   box-sizing: border-box;
@@ -511,7 +511,7 @@
 
 .confirmMsg {
   font-size: 0.95rem;
-  color: #2d2d2d;
+  color: var(--ink);
   text-align: center;
   margin: 0 0 1.25rem;
 }
@@ -550,7 +550,7 @@
   left: 0;
   right: 0;
   padding: 0.75rem 1rem 1rem;
-  background: linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0.8));
+  background: linear-gradient(to top, var(--surface), var(--surface));
   display: flex;
   justify-content: center;
   z-index: 50;
@@ -559,7 +559,7 @@
 
 .addToShoppingBtn {
   pointer-events: auto;
-  background: linear-gradient(135deg, #5A9E82, #4A8E72);
+  background: linear-gradient(135deg, var(--success), var(--success));
   color: #fff;
   border: none;
   border-radius: var(--radius-full);
@@ -569,7 +569,7 @@
   cursor: pointer;
   transition: opacity 0.18s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 4px 12px rgba(90,158,130,0.3);
+  box-shadow: 0 4px 12px rgba(78, 154, 120,0.3);
 }
 .addToShoppingBtn:hover { opacity: 0.9; }
 .addToShoppingBtn:active { transform: scale(0.95); }
@@ -635,7 +635,7 @@
 
 .checkItem span {
   font-size: 0.9rem;
-  color: #2d2d2d;
+  color: var(--ink);
 }
 
 .modalBtns {
