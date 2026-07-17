@@ -13,6 +13,26 @@ const CATEGORIES = {
   other: { label: 'その他', icon: '📍' },
 }
 
+// 「今日はどこ行く？」で使う目的別タグのプリセット
+const PRESET_TAGS = [
+  { label: 'ラーメン', icon: '🍜' },
+  { label: 'カフェ', icon: '☕' },
+  { label: '夜景', icon: '🌃' },
+  { label: 'デート', icon: '💑' },
+  { label: '子供と遊べる', icon: '🧒' },
+  { label: '雨の日', icon: '☔' },
+  { label: 'ドライブ', icon: '🚗' },
+  { label: '焼肉', icon: '🥩' },
+  { label: 'スイーツ', icon: '🍰' },
+  { label: '公園', icon: '🌳' },
+  { label: '温泉', icon: '♨️' },
+  { label: '記念日', icon: '🎂' },
+]
+
+function tagIcon(label) {
+  return PRESET_TAGS.find(t => t.label === label)?.icon ?? '#'
+}
+
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -31,6 +51,7 @@ export default function PlacesPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')   // 'all'|'want'|'visited'
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [selectedTags, setSelectedTags] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [visitTarget, setVisitTarget] = useState(null)      // place object
@@ -40,6 +61,7 @@ export default function PlacesPage() {
   const [radiusCenter, setRadiusCenter] = useState(null)    // { lat, lng, address }
   const [radiusKm, setRadiusKm] = useState(5)
   const [prefectureFilter, setPrefectureFilter] = useState('')
+  const [recommendPlace, setRecommendPlace] = useState(null)
 
   const fetchAll = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -74,7 +96,17 @@ export default function PlacesPage() {
     return () => supabase.removeChannel(ch)
   }, [familyMember?.family_id, fetchAll])
 
-  async function handleAdd({ name, category, memo, address, lat, lng }) {
+  // 「今日はここ！」のおすすめ場所を維持・再抽選
+  useEffect(() => {
+    setRecommendPlace(prev => {
+      const pool = places.filter(p => p.status === 'want')
+      if (prev && pool.some(p => p.id === prev.id)) return prev
+      if (pool.length === 0) return null
+      return pool[Math.floor(Math.random() * pool.length)]
+    })
+  }, [places])
+
+  async function handleAdd({ name, category, memo, address, lat, lng, tags }) {
     await supabase.from('wish_places').insert({
       family_id: familyMember.family_id,
       name: name.trim(),
@@ -83,6 +115,7 @@ export default function PlacesPage() {
       address: address?.trim() || null,
       lat: lat ?? null,
       lng: lng ?? null,
+      tags: tags ?? [],
       added_by: familyMember.id,
     })
     await fetchAll()
@@ -98,7 +131,7 @@ export default function PlacesPage() {
     await fetchAll()
   }
 
-  async function handleEdit(id, { name, category, memo, address, lat, lng }) {
+  async function handleEdit(id, { name, category, memo, address, lat, lng, tags }) {
     await supabase.from('wish_places').update({
       name: name.trim(),
       category,
@@ -106,6 +139,7 @@ export default function PlacesPage() {
       address: address?.trim() || null,
       lat: lat ?? null,
       lng: lng ?? null,
+      tags: tags ?? [],
     }).eq('id', id)
     await fetchAll()
   }
@@ -127,6 +161,12 @@ export default function PlacesPage() {
     places.map(p => extractPrefecture(p.address)).filter(Boolean)
   )].sort()
 
+  // タグ頻度からよく使うタグ上位を抽出（絞り込みチップ用）
+  const tagFrequency = {}
+  places.forEach(p => (p.tags || []).forEach(t => { tagFrequency[t] = (tagFrequency[t] || 0) + 1 }))
+  const topTags = Object.entries(tagFrequency).sort((a, b) => b[1] - a[1]).map(([t]) => t).slice(0, 16)
+  const tagSuggestions = [...new Set([...PRESET_TAGS.map(t => t.label), ...topTags])]
+
   // フィルタリング
   const q = searchQuery.trim().toLowerCase()
   const radiusActive = showRadiusSearch && radiusCenter != null
@@ -137,7 +177,12 @@ export default function PlacesPage() {
       const inName    = p.name?.toLowerCase().includes(q)
       const inAddress = p.address?.toLowerCase().includes(q)
       const inMemo    = p.memo?.toLowerCase().includes(q)
-      if (!inName && !inAddress && !inMemo) return false
+      const inTags    = (p.tags || []).some(t => t.toLowerCase().includes(q))
+      if (!inName && !inAddress && !inMemo && !inTags) return false
+    }
+    if (selectedTags.length > 0) {
+      const tags = p.tags || []
+      if (!selectedTags.every(t => tags.includes(t))) return false
     }
     if (prefectureFilter && extractPrefecture(p.address) !== prefectureFilter) return false
     if (radiusActive) {
@@ -146,6 +191,31 @@ export default function PlacesPage() {
     }
     return true
   })
+
+  // 検索・絞り込みが何も効いていない「ブラウズ中」かどうか（探索導線を出す条件）
+  const isBrowsing = statusFilter !== 'visited' && !q && selectedTags.length === 0 &&
+    categoryFilter === 'all' && !prefectureFilter && !radiusActive
+
+  const wantPlaces = places.filter(p => p.status === 'want')
+  const wantPlacesWithCoords = wantPlaces.filter(p => p.lat != null && p.lng != null)
+  const recentPlaces = places.slice(0, 6)
+
+  function toggleTag(t) {
+    setSelectedTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  }
+
+  function handleDiscoverTagSelect(label) {
+    setSelectedTags(prev => (prev.length === 1 && prev[0] === label) ? [] : [label])
+  }
+
+  function handleReroll() {
+    setRecommendPlace(prev => {
+      const others = wantPlaces.filter(p => p.id !== prev?.id)
+      const pool = others.length ? others : wantPlaces
+      if (!pool.length) return null
+      return pool[Math.floor(Math.random() * pool.length)]
+    })
+  }
 
   return (
     <div className={styles.page}>
@@ -175,7 +245,7 @@ export default function PlacesPage() {
           <input
             className={styles.searchInput}
             type="search"
-            placeholder="場所名・住所・メモで検索..."
+            placeholder="場所名・タグ・住所で検索（ラーメン、夜景など）"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -197,6 +267,22 @@ export default function PlacesPage() {
           {radiusActive && <span className={styles.radiusActiveDot} />}
         </button>
       </div>
+
+      {/* タグで絞り込む */}
+      {topTags.length > 0 && (
+        <div className={styles.tagFilterRow}>
+          {topTags.map(t => (
+            <button
+              key={t}
+              className={`${styles.chip} ${selectedTags.includes(t) ? styles.chipActive : ''}`}
+              onClick={() => toggleTag(t)}
+            >{tagIcon(t)} {t}</button>
+          ))}
+          {selectedTags.length > 0 && (
+            <button className={styles.chipClear} onClick={() => setSelectedTags([])}>タグ解除 ×</button>
+          )}
+        </div>
+      )}
 
       {/* 範囲検索パネル */}
       {showRadiusSearch && (
@@ -258,34 +344,57 @@ export default function PlacesPage() {
           <MapView places={filtered} />
         ) : loading ? (
           <p className={styles.hint}>読み込み中...</p>
-        ) : filtered.length === 0 ? (
-          <div className={styles.empty}>
-            <span className={styles.emptyIcon}>
-              {statusFilter === 'visited' ? '✅' : '📍'}
-            </span>
-            <p>{statusFilter === 'visited' ? 'まだ行った場所がありません' : '行きたい場所を追加しましょう'}</p>
-            {statusFilter !== 'visited' && (
-              <button className={styles.emptyBtn} onClick={() => setShowAdd(true)}>
-                場所を追加する
-              </button>
-            )}
-          </div>
         ) : (
-          <ul className={styles.placeList}>
-            {filtered.map(place => (
-              <PlaceCard
-                key={place.id}
-                place={place}
-                onEdit={() => setEditTarget(place)}
-                onVisit={() => setVisitTarget(place)}
-              />
-            ))}
-          </ul>
+          <>
+            {isBrowsing && (
+              <div className={styles.discoverArea}>
+                <RecommendCard place={recommendPlace} onReroll={handleReroll} onOpen={setEditTarget} />
+                <DiscoverStrip activeTags={selectedTags} onSelectTag={handleDiscoverTagSelect} />
+                {recentPlaces.length > 0 && (
+                  <RecentRow places={recentPlaces} onOpen={setEditTarget} />
+                )}
+                <NearbySection places={wantPlacesWithCoords} onOpen={setEditTarget} />
+              </div>
+            )}
+
+            {filtered.length === 0 ? (
+              <div className={styles.empty}>
+                <span className={styles.emptyIcon}>
+                  {statusFilter === 'visited' ? '✅' : '📍'}
+                </span>
+                <p>{statusFilter === 'visited' ? 'まだ行った場所がありません' : '行きたい場所を追加しましょう'}</p>
+                {statusFilter !== 'visited' && (
+                  <button className={styles.emptyBtn} onClick={() => setShowAdd(true)}>
+                    場所を追加する
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                {isBrowsing && (
+                  <h2 className={styles.sectionTitle}>
+                    すべての場所 <span className={styles.sectionCount}>{filtered.length}</span>
+                  </h2>
+                )}
+                <ul className={styles.placeList}>
+                  {filtered.map(place => (
+                    <PlaceCard
+                      key={place.id}
+                      place={place}
+                      onEdit={() => setEditTarget(place)}
+                      onVisit={() => setVisitTarget(place)}
+                    />
+                  ))}
+                </ul>
+              </>
+            )}
+          </>
         )}
       </main>
 
       {showAdd && (
         <AddPlaceModal
+          tagSuggestions={tagSuggestions}
           onSubmit={async data => { await handleAdd(data); setShowAdd(false) }}
           onClose={() => setShowAdd(false)}
         />
@@ -302,12 +411,148 @@ export default function PlacesPage() {
       {editTarget && (
         <EditPlaceModal
           place={editTarget}
+          tagSuggestions={tagSuggestions}
           onSubmit={async data => { await handleEdit(editTarget.id, data); setEditTarget(null) }}
           onDelete={async () => { await handleDelete(editTarget.id); setEditTarget(null) }}
           onClose={() => setEditTarget(null)}
         />
       )}
     </div>
+  )
+}
+
+// ── 「今日はここ！」おすすめカード ──────────────────────
+function RecommendCard({ place, onReroll, onOpen }) {
+  if (!place) return null
+  const cat = CATEGORIES[place.category] ?? CATEGORIES.other
+  return (
+    <section className={styles.recommendCard} onClick={() => onOpen(place)}>
+      <div className={styles.recommendHeader}>
+        <span className={styles.recommendBadge}>✨ 今日はここ！</span>
+        <button
+          type="button"
+          className={styles.rerollBtn}
+          onClick={e => { e.stopPropagation(); onReroll() }}
+          aria-label="別の場所を提案"
+          title="別の場所を提案"
+        >🎲</button>
+      </div>
+      <p className={styles.recommendName}>{cat.icon} {place.name}</p>
+      {place.address && <p className={styles.recommendAddress}>📍 {place.address}</p>}
+      {place.memo && <p className={styles.recommendMemo}>{place.memo}</p>}
+      {place.tags?.length > 0 && (
+        <div className={styles.cardTags}>
+          {place.tags.slice(0, 4).map(t => <span key={t} className={styles.tagPill}>#{t}</span>)}
+        </div>
+      )}
+    </section>
+  )
+}
+
+// ── 「今日はどこ行く？」目的別ディスカバー ──────────────
+function DiscoverStrip({ activeTags, onSelectTag }) {
+  return (
+    <section className={styles.discoverSection}>
+      <h2 className={styles.sectionTitle}>今日はどこ行く？</h2>
+      <div className={styles.discoverStrip}>
+        {PRESET_TAGS.map(({ label, icon }) => (
+          <button
+            key={label}
+            className={`${styles.discoverCard} ${activeTags.includes(label) ? styles.discoverCardActive : ''}`}
+            onClick={() => onSelectTag(label)}
+          >
+            <span className={styles.discoverIcon}>{icon}</span>
+            <span className={styles.discoverLabel}>{label}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ── 最近追加した場所 ──────────────────────────────────────
+function RecentRow({ places, onOpen }) {
+  return (
+    <section className={styles.horizontalSection}>
+      <h2 className={styles.sectionTitle}>最近追加した場所</h2>
+      <div className={styles.horizontalScroll}>
+        {places.map(p => (
+          <MiniPlaceCard key={p.id} place={p} onClick={() => onOpen(p)} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ── 近くの場所（現在地ベース） ────────────────────────────
+function NearbySection({ places, onOpen }) {
+  const [location, setLocation] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+
+  function locate() {
+    if (!navigator.geolocation) { setError(true); return }
+    setLoading(true)
+    setError(false)
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setLoading(false)
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      },
+      () => { setLoading(false); setError(true) },
+      { timeout: 8000 }
+    )
+  }
+
+  const nearby = location
+    ? places
+        .map(p => ({ ...p, _distance: haversineKm(location.lat, location.lng, p.lat, p.lng) }))
+        .filter(p => p._distance <= 50)
+        .sort((a, b) => a._distance - b._distance)
+        .slice(0, 6)
+    : []
+
+  return (
+    <section className={styles.horizontalSection}>
+      <div className={styles.sectionHeaderRow}>
+        <h2 className={styles.sectionTitle}>近くの場所</h2>
+        {location && (
+          <button type="button" className={styles.sectionLinkBtn} onClick={locate}>再取得</button>
+        )}
+      </div>
+
+      {!location && (
+        <button type="button" className={styles.nearbyPromptBtn} onClick={locate} disabled={loading}>
+          {loading ? '取得中...' : '📍 現在地から近い場所を探す'}
+        </button>
+      )}
+      {!location && error && (
+        <p className={styles.hintSmall}>位置情報を取得できませんでした</p>
+      )}
+      {location && (
+        nearby.length === 0 ? (
+          <p className={styles.hintSmall}>50km圏内に住所付きの「行きたい」場所がありません</p>
+        ) : (
+          <div className={styles.horizontalScroll}>
+            {nearby.map(p => (
+              <MiniPlaceCard key={p.id} place={p} subtitle={`${p._distance.toFixed(1)}km`} onClick={() => onOpen(p)} />
+            ))}
+          </div>
+        )
+      )}
+    </section>
+  )
+}
+
+// ── 横スクロール用ミニカード（最近追加／近くの場所で共用） ──
+function MiniPlaceCard({ place, subtitle, onClick }) {
+  const cat = CATEGORIES[place.category] ?? CATEGORIES.other
+  return (
+    <button type="button" className={styles.miniCard} onClick={onClick}>
+      <span className={styles.miniCardIcon}>{cat.icon}</span>
+      <span className={styles.miniCardName}>{place.name}</span>
+      <span className={styles.miniCardSubtitle}>{subtitle ?? (place.address || cat.label)}</span>
+    </button>
   )
 }
 
@@ -452,6 +697,13 @@ function PlaceCard({ place, onEdit, onVisit }) {
       )}
       {isVisited && place.review && <p className={styles.placeReview}>💬 {place.review}</p>}
 
+      {place.tags?.length > 0 && (
+        <div className={styles.cardTags}>
+          {place.tags.slice(0, 4).map(t => <span key={t} className={styles.tagPill}>#{t}</span>)}
+          {place.tags.length > 4 && <span className={styles.tagPillMore}>+{place.tags.length - 4}</span>}
+        </div>
+      )}
+
       <div className={styles.cardBottom}>
         <div className={styles.cardMeta}>
           {place.added_by_member && (
@@ -482,8 +734,70 @@ function PlaceCard({ place, onEdit, onVisit }) {
   )
 }
 
+// ── タグ選択UI（追加・編集モーダル共通） ──────────────────
+function TagPicker({ tags, onChange, suggestions }) {
+  const [input, setInput] = useState('')
+
+  function addTag(raw) {
+    const t = raw.trim()
+    if (!t || tags.includes(t) || tags.length >= 8) { setInput(''); return }
+    onChange([...tags, t])
+    setInput('')
+  }
+
+  function removeTag(t) {
+    onChange(tags.filter(x => x !== t))
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addTag(input)
+    } else if (e.key === 'Backspace' && !input && tags.length > 0) {
+      removeTag(tags[tags.length - 1])
+    }
+  }
+
+  const remainingSuggestions = suggestions.filter(s => !tags.includes(s))
+
+  return (
+    <div className={styles.tagPicker}>
+      {tags.length > 0 && (
+        <div className={styles.tagPickerSelected}>
+          {tags.map(t => (
+            <span key={t} className={styles.tagPickerChip}>
+              #{t}
+              <button type="button" onClick={() => removeTag(t)} aria-label={`${t}を削除`}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input
+        className={styles.input}
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="タグを入力してEnter（例: 夜景、デート）"
+        maxLength={20}
+      />
+      {remainingSuggestions.length > 0 && (
+        <div className={styles.tagPickerSuggestions}>
+          {remainingSuggestions.slice(0, 10).map(s => (
+            <button
+              key={s}
+              type="button"
+              className={styles.tagSuggestionChip}
+              onClick={() => addTag(s)}
+            >{tagIcon(s)} {s}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── 場所追加モーダル ──────────────────────────────────────
-function AddPlaceModal({ onSubmit, onClose }) {
+function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('food')
   const [memo, setMemo] = useState('')
@@ -491,6 +805,7 @@ function AddPlaceModal({ onSubmit, onClose }) {
   const [selectedName, setSelectedName] = useState('')
   const [lat, setLat] = useState(null)
   const [lng, setLng] = useState(null)
+  const [tags, setTags] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const inputRef = useRef(null)
 
@@ -520,7 +835,7 @@ function AddPlaceModal({ onSubmit, onClose }) {
     if (!name.trim()) return
     setSubmitting(true)
     const finalAddress = address || inputRef.current?.value || ''
-    await onSubmit({ name, category, memo, address: finalAddress, lat, lng })
+    await onSubmit({ name, category, memo, address: finalAddress, lat, lng, tags })
     setSubmitting(false)
   }
 
@@ -573,6 +888,10 @@ function AddPlaceModal({ onSubmit, onClose }) {
                 {selectedName && address && <span className={styles.acAddress}>{address}</span>}
               </p>
             )}
+          </label>
+          <label className={styles.label}>
+            タグ（任意・複数可）
+            <TagPicker tags={tags} onChange={setTags} suggestions={tagSuggestions} />
           </label>
           <label className={styles.label}>
             メモ（任意）
@@ -669,7 +988,7 @@ function VisitModal({ place, onSubmit, onClose }) {
 }
 
 // ── 場所編集モーダル ──────────────────────────────────────
-function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
+function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) {
   const [name, setName] = useState(place.name)
   const [category, setCategory] = useState(place.category)
   const [memo, setMemo] = useState(place.memo ?? '')
@@ -677,6 +996,7 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
   const [selectedName, setSelectedName] = useState('')
   const [lat, setLat] = useState(place.lat ?? null)
   const [lng, setLng] = useState(place.lng ?? null)
+  const [tags, setTags] = useState(place.tags ?? [])
   const [submitting, setSubmitting] = useState(false)
   const inputRef = useRef(null)
 
@@ -706,7 +1026,7 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
     if (!name.trim()) return
     setSubmitting(true)
     const finalAddress = address || inputRef.current?.value || ''
-    await onSubmit({ name, category, memo, address: finalAddress, lat, lng })
+    await onSubmit({ name, category, memo, address: finalAddress, lat, lng, tags })
     setSubmitting(false)
   }
 
@@ -757,6 +1077,10 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose }) {
                 {selectedName && address && <span className={styles.acAddress}>{address}</span>}
               </p>
             )}
+          </label>
+          <label className={styles.label}>
+            タグ（任意・複数可）
+            <TagPicker tags={tags} onChange={setTags} suggestions={tagSuggestions} />
           </label>
           <label className={styles.label}>
             メモ（任意）
