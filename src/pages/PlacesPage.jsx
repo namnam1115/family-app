@@ -1257,6 +1257,7 @@ function MapView({ places }) {
   const AdvancedMarkerElementRef = useRef(null)
   const markersRef = useRef([])
   const [selectedPlace, setSelectedPlace] = useState(null)
+  const [mapReady, setMapReady] = useState(false)
 
   const placesWithCoords = places.filter(p => p.lat != null && p.lng != null)
 
@@ -1270,6 +1271,7 @@ function MapView({ places }) {
         window.google.maps.importLibrary('maps'),
         window.google.maps.importLibrary('marker'),
       ])
+      if (!mounted) return
       AdvancedMarkerElementRef.current = AdvancedMarkerElement
       mapInstanceRef.current = new Map(mapRef.current, {
         center: { lat: 36.2048, lng: 138.2529 },
@@ -1279,12 +1281,16 @@ function MapView({ places }) {
         mapTypeControl: false,
         fullscreenControl: false,
       })
+      // マップ生成完了を通知し、下のピン配置エフェクトを起動させる
+      // （非同期初期化のため、先に走っていたピン配置エフェクトは map が
+      //   まだ null の状態で何もせず終了してしまっている）
+      setMapReady(true)
     }
     init().catch(() => {})
     return () => { mounted = false }
   }, []) // マウント時1回のみ
 
-  // フィルター変更時はマーカーだけ更新（API呼び出しなし）
+  // フィルター変更時・マップ準備完了時にマーカーを更新（API呼び出しなし）
   useEffect(() => {
     const map = mapInstanceRef.current
     const AdvancedMarkerElement = AdvancedMarkerElementRef.current
@@ -1320,7 +1326,7 @@ function MapView({ places }) {
       placesWithCoords.forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }))
       map.fitBounds(bounds, { top: 60, right: 20, bottom: 80, left: 20 })
     }
-  }, [placesWithCoords.length, places]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [placesWithCoords.length, places, mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (placesWithCoords.length === 0) {
     return (
