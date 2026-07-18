@@ -26,6 +26,7 @@ import { PiCow, PiShrimp, PiOrange, PiLeaf, PiAvocado, PiPepper, PiCheese } from
 import { GiChicken } from 'react-icons/gi'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import BottomNav from '../components/BottomNav'
 import styles from './PricePage.module.css'
 
 function formatPrice(p) {
@@ -383,6 +384,8 @@ export default function PricePage() {
           onClose={() => setShowStoreModal(false)}
         />
       )}
+
+      <BottomNav />
     </div>
   )
 }

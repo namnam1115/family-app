@@ -28,8 +28,8 @@
   border: none;
   color: var(--primary);
   font-size: 1.1rem;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -147,19 +147,31 @@
 }
 
 .tabDelete {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   line-height: 1;
   transition: all 0.15s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
   color: rgba(255, 255, 255, 0.65);
+}
+
+/* 見た目は小さめのまま、当たり判定を約44pxまで拡張して誤タップと押し損ねを防ぐ */
+.tabDelete::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 .tab:not(.tabActive) .tabDelete {

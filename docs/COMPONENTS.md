@@ -20,6 +20,11 @@
 | `ShoppingListPanel` | 買い物リストのパネル | Shopping 系 |
 | `ShoppingItemList` | アイテム一覧・追加・チェック | ShoppingPage |
 | `LoadingSpinner` | ローディング表示 | 各所 |
+| `BottomNav` | アプリ横断のグローバルナビ（下部タブバー） | 全ページ（`.page` の最後の子として配置） |
+| `ConfirmDialog` | 破壊的操作の確認ダイアログ（削除など） | Shopping / Places / Inventory / Travel ほか |
+| `EmptyState` | 空データ時の「アイコン＋一言＋主アクション」 | ShoppingPage ほか |
+| `Toast` | 画面下部の一時通知（失敗通知・任意アクション） | ShoppingPage ほか |
+| `OfflineBanner` | オフライン時の上部バナー（アプリ全体で 1 つ） | `App.jsx` |
 
 ## 共通化ロードマップ
 

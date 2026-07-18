@@ -11,11 +11,13 @@ import InventoryPage from './pages/InventoryPage'
 import TravelPage from './pages/TravelPage'
 import JoinPage from './pages/JoinPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import OfflineBanner from './components/OfflineBanner'
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <OfflineBanner />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/join/:familyId" element={<JoinPage />} />

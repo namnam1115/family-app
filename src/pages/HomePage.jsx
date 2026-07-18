@@ -6,6 +6,7 @@ import GroupSetup from '../components/GroupSetup'
 import AppCard from '../components/AppCard'
 import FamilyInfo from '../components/FamilyInfo'
 import TodaySchedule from '../components/TodaySchedule'
+import BottomNav from '../components/BottomNav'
 import styles from './HomePage.module.css'
 
 export default function HomePage() {
@@ -168,6 +169,7 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+      <BottomNav />
     </div>
   )
 }

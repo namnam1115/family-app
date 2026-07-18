@@ -1,0 +1,95 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 20, 50, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 200;
+  animation: fadeIn 0.18s ease both;
+}
+
+@media (min-width: 480px) {
+  .overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+}
+
+.dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 1.5rem 1.25rem 1.25rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.24s ease;
+}
+
+@media (min-width: 480px) {
+  .dialog {
+    border-radius: var(--radius-lg);
+    animation: scaleIn 0.2s ease;
+  }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
+.message {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-align: center;
+  margin: 0 0 1.25rem;
+}
+
+.btns {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.cancelBtn,
+.confirmBtn {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 1rem;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.cancelBtn {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+}
+
+.cancelBtn:active {
+  filter: brightness(0.96);
+}
+
+.confirmBtn {
+  background: var(--primary);
+  color: #fff;
+}
+
+.confirmBtn.danger {
+  background: var(--danger);
+}
+
+.confirmBtn:active {
+  filter: brightness(0.94);
+}
