@@ -4,6 +4,8 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--grad-bg);
+  /* 画面下固定の BottomNav 分の余白を確保 */
+  padding-bottom: var(--bottomnav-h);
 }
 
 /* ── Header ── */
