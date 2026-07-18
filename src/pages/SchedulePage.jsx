@@ -106,6 +106,9 @@ export default function SchedulePage() {
   // メンバーフィルタ（空配列 = 全員表示）
   const [selectedMemberIds, setSelectedMemberIds] = useState([])
 
+  // ヘッダーの「⋯」メニュー開閉
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
+
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate])
   const monthGrid = useMemo(() => getMonthGrid(baseDate), [baseDate])
 
@@ -343,19 +346,45 @@ export default function SchedulePage() {
         </button>
         <h1 className={styles.headerTitle}>📅 スケジュール</h1>
 
-        {/* 看護師モードボタン：モバイルはアイコンのみ */}
-        <button
-          className={`${styles.nurseBtn} ${nurseMode ? styles.nurseBtnActive : ''}`}
-          onClick={nurseMode ? cancelNurseMode : enableNurseMode}
-          aria-label={nurseMode ? '勤務入力モードを終了' : '勤務入力モード'}
-          title={nurseMode ? '勤務入力モードを終了' : '勤務入力モード'}
-        >
-          <span className={styles.nurseBtnIcon}>{nurseMode ? '✕' : '👩‍⚕️'}</span>
-          <span className={styles.nurseBtnLabel}>{nurseMode ? '終了' : '勤務'}</span>
-        </button>
+        {nurseMode ? (
+          /* 勤務入力モード中：終了ボタンを明示 */
+          <button
+            className={styles.nurseExitBtn}
+            onClick={cancelNurseMode}
+            aria-label="勤務入力モードを終了"
+          >
+            <span aria-hidden="true">✕</span> 勤務モード終了
+          </button>
+        ) : (
+          <>
+            {/* その他メニュー（勤務入力モードなど、頻度の低い操作を格納） */}
+            <div className={styles.headerMenuWrap}>
+              <button
+                className={styles.menuBtn}
+                onClick={() => setHeaderMenuOpen(v => !v)}
+                aria-label="その他のメニュー"
+                aria-haspopup="menu"
+                aria-expanded={headerMenuOpen}
+              >⋯</button>
+              {headerMenuOpen && (
+                <>
+                  <div className={styles.menuBackdrop} onClick={() => setHeaderMenuOpen(false)} />
+                  <div className={styles.headerMenu} role="menu">
+                    <button
+                      className={styles.headerMenuItem}
+                      role="menuitem"
+                      onClick={() => { setHeaderMenuOpen(false); enableNurseMode() }}
+                    >
+                      <span className={styles.headerMenuIcon} aria-hidden="true">👩‍⚕️</span>
+                      勤務入力モード
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
 
-        {!nurseMode && (
-          <button className={styles.addHeaderBtn} onClick={() => { setAddDefaultDate(null); setShowAdd(true) }} aria-label="予定を追加">＋</button>
+            <button className={styles.addHeaderBtn} onClick={() => { setAddDefaultDate(null); setShowAdd(true) }} aria-label="予定を追加">＋</button>
+          </>
         )}
       </header>
 
