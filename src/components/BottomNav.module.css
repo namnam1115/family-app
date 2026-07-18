@@ -1,5 +1,8 @@
 .nav {
-  flex-shrink: 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
@@ -11,7 +14,8 @@
   -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--glass-border);
   box-shadow: 0 -1px 16px rgba(124, 113, 168, 0.06);
-  z-index: 20;
+  /* モーダルのオーバーレイ（z-index 100 以上）より下、ページ内容より上 */
+  z-index: 50;
 }
 
 .tab {

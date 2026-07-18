@@ -82,6 +82,10 @@
   /* === Layout === */
   --max-w: 1140px;
 
+  /* 画面下部に固定するグローバルナビ（BottomNav）の高さ。
+     各ページのスクロール領域はこの分だけ下部に余白を確保する。 */
+  --bottomnav-h: calc(4rem + env(safe-area-inset-bottom));
+
   /* === Shadows — minimal, not flat === */
   --shadow: 0 1px 2px rgba(33, 30, 27, 0.05);
   --shadow-md: 0 1px 2px rgba(33, 30, 27, 0.05), 0 6px 20px rgba(33, 30, 27, 0.06);
