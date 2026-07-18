@@ -8,6 +8,13 @@
   background: var(--grad-bg);
 }
 
+/* ページ内の一部に埋め込む場合（フルスクリーン化しない） */
+.inline {
+  min-height: 0;
+  padding: 3rem 1rem;
+  background: none;
+}
+
 .spinner {
   width: 44px;
   height: 44px;
@@ -16,7 +23,7 @@
   border-top-color: var(--primary);
   border-right-color: var(--accent);
   animation: spin 0.75s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(124, 113, 168, 0.3));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--primary) 30%, transparent));
 }
 
 .message {

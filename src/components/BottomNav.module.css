@@ -13,7 +13,7 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--glass-border);
-  box-shadow: 0 -1px 16px rgba(124, 113, 168, 0.06);
+  box-shadow: 0 -1px 16px color-mix(in srgb, var(--primary) 6%, transparent);
   /* モーダルのオーバーレイ（z-index 100 以上）より下、ページ内容より上 */
   z-index: 50;
 }

@@ -21,7 +21,7 @@
 }
 
 .backBtn {
-  background: rgba(124, 113, 168, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   border: none;
   color: var(--primary);
   font-size: 1.1rem;
@@ -39,7 +39,7 @@
 }
 
 .backBtn:active {
-  background: rgba(124, 113, 168, 0.16);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
 }
 
 .title {
@@ -314,7 +314,7 @@
   border-color: var(--primary);
   color: var(--primary);
 }
-.editBtn:hover { background: rgba(124, 113, 168,0.1); }
+.editBtn:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
 .delBtn {
   border-color: var(--danger);
   color: var(--danger);
@@ -465,7 +465,7 @@
 .statusSelectBtn:hover { border-color: var(--primary); }
 .statusSelectActive {
   border-width: 2px;
-  background: rgba(124, 113, 168,0.06);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
 }
 
 .select {

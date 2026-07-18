@@ -4,6 +4,7 @@ import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
+import LoadingSpinner from '../components/LoadingSpinner'
 import styles from './DishesPage.module.css'
 
 // ── ユーティリティ ────────────────────────────────────────
@@ -214,7 +215,7 @@ export default function DishesPage() {
 
       <main className={styles.main}>
         {loading ? (
-          <p className={styles.hint}>読み込み中...</p>
+          <LoadingSpinner inline />
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>🍳</span>

@@ -57,7 +57,7 @@
   padding: 0.875rem 1rem;
   padding-bottom: max(0.875rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--glass-border);
-  box-shadow: 0 -4px 24px rgba(124, 113, 168, 0.07);
+  box-shadow: 0 -4px 24px color-mix(in srgb, var(--primary) 7%, transparent);
 }
 
 .inputRow {
@@ -89,7 +89,7 @@
 .memoInput:focus {
   border-color: var(--primary);
   background: var(--surface);
-  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .addBtn {
@@ -103,12 +103,12 @@
   white-space: nowrap;
   transition: all 0.22s ease;
   touch-action: manipulation;
-  box-shadow: 0 2px 10px rgba(124, 113, 168, 0.3);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .addBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 18px rgba(124, 113, 168, 0.42);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--primary) 42%, transparent);
 }
 
 .addBtn:active:not(:disabled) {
@@ -216,7 +216,7 @@
 .itemChecked .checkbox {
   background: var(--grad-primary);
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(124, 113, 168, 0.3);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
   animation: checkPop 0.3s ease;
 }
 

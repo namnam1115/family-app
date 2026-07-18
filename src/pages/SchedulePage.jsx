@@ -4,6 +4,7 @@ import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
+import LoadingSpinner from '../components/LoadingSpinner'
 import styles from './SchedulePage.module.css'
 
 // ── 定数 ─────────────────────────────────────────────────────
@@ -447,7 +448,7 @@ export default function SchedulePage() {
       {/* ── カレンダー本体 ── */}
       <main className={`${styles.main} ${viewMode === 'week' ? styles.mainWeekView : ''}`}>
         {loading ? (
-          <p className={styles.hint}>読み込み中...</p>
+          <LoadingSpinner inline />
         ) : viewMode === 'week' ? (
           <WeekTimeGrid
             weekDates={weekDates}

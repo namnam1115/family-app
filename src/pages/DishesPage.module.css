@@ -19,12 +19,12 @@
   -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
-  box-shadow: 0 1px 16px rgba(124, 113, 168, 0.06);
+  box-shadow: 0 1px 16px color-mix(in srgb, var(--primary) 6%, transparent);
   z-index: 5;
 }
 
 .backBtn {
-  background: rgba(124, 113, 168, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   border: none;
   color: var(--primary);
   font-size: 1.1rem;
@@ -41,7 +41,7 @@
 }
 
 .backBtn:hover {
-  background: rgba(124, 113, 168, 0.16);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
   transform: scale(1.08);
 }
 
@@ -65,7 +65,7 @@
   font-weight: 600;
   padding: 0.5rem 1rem;
   border-radius: var(--radius-full);
-  box-shadow: 0 2px 10px rgba(124, 113, 168, 0.3);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
   transition: all 0.2s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -74,7 +74,7 @@
 
 .addBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 18px rgba(124, 113, 168, 0.42);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--primary) 42%, transparent);
 }
 
 /* ── 検索バー ── */
@@ -112,7 +112,7 @@
 .searchInput:focus {
   border-color: var(--primary);
   background: var(--surface);
-  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .searchInput::placeholder {
@@ -180,7 +180,7 @@
   border-color: transparent;
   color: white;
   font-weight: 700;
-  box-shadow: 0 2px 10px rgba(124, 113, 168, 0.3);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .chipManage {
@@ -252,14 +252,14 @@
   font-size: 0.875rem;
   font-weight: 600;
   border-radius: var(--radius-full);
-  box-shadow: 0 2px 10px rgba(124, 113, 168, 0.3);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
   transition: all 0.2s ease;
   touch-action: manipulation;
 }
 
 .emptyBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 18px rgba(124, 113, 168, 0.42);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--primary) 42%, transparent);
 }
 
 /* ── 料理リスト ── */
@@ -424,7 +424,7 @@
   color: white;
   font-size: 0.82rem;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(124, 113, 168, 0.28);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 28%, transparent);
   transition: all 0.18s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -432,7 +432,7 @@
 
 .cookedBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(124, 113, 168, 0.42);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 42%, transparent);
 }
 
 .editBtn {
@@ -493,7 +493,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 -8px 48px rgba(124, 113, 168, 0.14);
+  box-shadow: 0 -8px 48px color-mix(in srgb, var(--primary) 14%, transparent);
   animation: slideUp 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both;
   position: relative;
   max-height: 90dvh;
@@ -601,7 +601,7 @@
 .input:focus {
   border-color: var(--primary);
   background: var(--surface);
-  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .inputHint {
@@ -658,7 +658,7 @@
 .textarea:focus {
   border-color: var(--primary);
   background: var(--surface);
-  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 /* ── 星評価 ── */
@@ -733,14 +733,14 @@
   background: var(--grad-primary);
   border: none;
   color: white;
-  box-shadow: 0 2px 10px rgba(124, 113, 168, 0.3);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent);
   transition: all 0.2s ease;
   touch-action: manipulation;
 }
 
 .saveBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 18px rgba(124, 113, 168, 0.42);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--primary) 42%, transparent);
 }
 
 .saveBtn:disabled {

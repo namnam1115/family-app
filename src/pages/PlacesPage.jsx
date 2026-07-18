@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { loadGoogleMapsScript } from '../utils/googleMaps'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
+import LoadingSpinner from '../components/LoadingSpinner'
 import styles from './PlacesPage.module.css'
 
 
@@ -51,6 +52,26 @@ function getSubcategoryLabel(category, subcategory) {
   return sub?.label ?? null
 }
 
+// 「今日はどこ行く？」で使う目的別タグのプリセット
+const PRESET_TAGS = [
+  { label: 'ラーメン', icon: '🍜' },
+  { label: 'カフェ', icon: '☕' },
+  { label: '夜景', icon: '🌃' },
+  { label: 'デート', icon: '💑' },
+  { label: '子供と遊べる', icon: '🧒' },
+  { label: '雨の日', icon: '☔' },
+  { label: 'ドライブ', icon: '🚗' },
+  { label: '焼肉', icon: '🥩' },
+  { label: 'スイーツ', icon: '🍰' },
+  { label: '公園', icon: '🌳' },
+  { label: '温泉', icon: '♨️' },
+  { label: '記念日', icon: '🎂' },
+]
+
+function tagIcon(label) {
+  return PRESET_TAGS.find(t => t.label === label)?.icon ?? '#'
+}
+
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -70,6 +91,7 @@ export default function PlacesPage() {
   const [statusFilter, setStatusFilter] = useState('all')   // 'all'|'want'|'visited'
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [subcategoryFilter, setSubcategoryFilter] = useState('all')
+  const [selectedTags, setSelectedTags] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [visitTarget, setVisitTarget] = useState(null)      // place object
@@ -314,84 +336,94 @@ export default function PlacesPage() {
         </div>
       </div>
 
-      {/* 範囲検索パネル */}
-      {showRadiusSearch && (
-        <RadiusSearchPanel
-          center={radiusCenter}
-          radiusKm={radiusKm}
-          onCenterChange={setRadiusCenter}
-          onRadiusChange={setRadiusKm}
-          matchCount={radiusActive ? filtered.length : null}
-        />
-      )}
-
-      {/* カテゴリチップ + ビュー切り替え */}
-      <div className={styles.filterRow}>
-        <div className={styles.categoryChips}>
-          <button
-            className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
-            onClick={() => { setCategoryFilter('all'); setSubcategoryFilter('all') }}
-          >すべて</button>
-          {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
-            <button
-              key={key}
-              className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
-              onClick={() => { setCategoryFilter(key); setSubcategoryFilter('all') }}
-            >{icon} {label}</button>
-          ))}
-          {availablePrefectures.length > 0 && (
-            <select
-              className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
-              value={prefectureFilter}
-              onChange={e => setPrefectureFilter(e.target.value)}
-              aria-label="都道府県で絞り込む"
-            >
-              <option value="">🗾 都道府県</option>
-              {availablePrefectures.map(pref => (
-                <option key={pref} value={pref}>{pref}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* Subcategory chips (only show when a category is selected) */}
-        {categoryFilter !== 'all' && CATEGORIES[categoryFilter]?.subs.length > 0 && (
-          <div className={styles.subcategoryChips}>
-            <button
-              className={`${styles.chip} ${subcategoryFilter === 'all' ? styles.chipActive : ''}`}
-              onClick={() => setSubcategoryFilter('all')}
-            >すべての{CATEGORIES[categoryFilter].label}</button>
-            {CATEGORIES[categoryFilter].subs.map(sub => (
-              <button
-                key={sub.key}
-                className={`${styles.chip} ${subcategoryFilter === sub.key ? styles.chipActive : ''}`}
-                onClick={() => setSubcategoryFilter(sub.key)}
-              >{sub.label}</button>
-            ))}
+      {/* 絞り込みパネル（「絞り込み」ボタンで開閉） */}
+      {showFilters && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterPanelHeader}>
+            <span className={styles.filterPanelTitle}>絞り込み条件</span>
+            {activeFilterCount > 0 && (
+              <button type="button" className={styles.filterClearBtn} onClick={clearAllFilters}>
+                すべて解除
+              </button>
+            )}
           </div>
-        )}
 
-        <div className={styles.viewToggle}>
-          <button
-            className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
-            onClick={() => setView('list')}
-            aria-label="リスト表示"
-            title="リスト"
-          >📋</button>
-          <button
-            className={`${styles.viewBtn} ${view === 'map' ? styles.viewBtnActive : ''}`}
-            onClick={() => setView('map')}
-            aria-label="地図表示"
-            title="地図"
-          >🗺</button>
+          <div className={styles.filterPanelActions}>
+            <button
+              type="button"
+              className={`${styles.radiusToggleBtn} ${showRadiusSearch ? styles.radiusToggleBtnActive : ''}`}
+              onClick={() => setShowRadiusSearch(v => !v)}
+              aria-expanded={showRadiusSearch}
+            >
+              <span className={styles.radiusToggleIcon}>📍</span>
+              <span className={styles.radiusToggleLabel}>範囲で探す</span>
+              {radiusActive && <span className={styles.radiusActiveDot} />}
+            </button>
+          </div>
+
+          {showRadiusSearch && (
+            <RadiusSearchPanel
+              center={radiusCenter}
+              radiusKm={radiusKm}
+              onCenterChange={setRadiusCenter}
+              onRadiusChange={setRadiusKm}
+              matchCount={radiusActive ? filtered.length : null}
+            />
+          )}
+
+          <div className={styles.categoryChips}>
+            <button
+              className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
+              onClick={() => { setCategoryFilter('all'); setSubcategoryFilter('all') }}
+            >すべて</button>
+            {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+              <button
+                key={key}
+                className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
+                onClick={() => { setCategoryFilter(key); setSubcategoryFilter('all') }}
+              >{icon} {label}</button>
+            ))}
+            {availablePrefectures.length > 0 && (
+              <select
+                className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
+                value={prefectureFilter}
+                onChange={e => setPrefectureFilter(e.target.value)}
+                aria-label="都道府県で絞り込む"
+              >
+                <option value="">🗾 都道府県</option>
+                {availablePrefectures.map(pref => (
+                  <option key={pref} value={pref}>{pref}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Subcategory chips (only show when a category is selected) */}
+          {categoryFilter !== 'all' && CATEGORIES[categoryFilter]?.subs.length > 0 && (
+            <div className={styles.subcategoryChips}>
+              <button
+                className={`${styles.chip} ${subcategoryFilter === 'all' ? styles.chipActive : ''}`}
+                onClick={() => setSubcategoryFilter('all')}
+              >すべての{CATEGORIES[categoryFilter].label}</button>
+              {CATEGORIES[categoryFilter].subs.map(sub => (
+                <button
+                  key={sub.key}
+                  className={`${styles.chip} ${subcategoryFilter === sub.key ? styles.chipActive : ''}`}
+                  onClick={() => setSubcategoryFilter(sub.key)}
+                >{sub.label}</button>
+              ))}
+            </div>
+          )}
+
+          <TagFilterRow selected={selectedTags} suggestions={tagSuggestions} onToggle={toggleTag} />
         </div>
-      </div>
+      )}
 
       <main className={`${styles.main} ${view === 'map' ? styles.mainMap : ''}`}>
         {view === 'map' ? (
           <MapView places={filtered} />
         ) : loading ? (
-          <p className={styles.hint}>読み込み中...</p>
+          <LoadingSpinner inline />
         ) : (
           <>
             {isBrowsing && (
@@ -782,6 +814,59 @@ function PlaceCard({ place, onEdit, onVisit }) {
         </div>
       </div>
     </li>
+  )
+}
+
+// ── タグ絞り込み欄（絞り込みパネル内） ────────────────────
+// よく使われているタグ・プリセットタグをチップで選べるほか、
+// まだどの場所にも付いていない新しいタグ名を入力して絞り込み条件に追加することもできる。
+function TagFilterRow({ selected, suggestions, onToggle }) {
+  const [input, setInput] = useState('')
+
+  function handleAdd() {
+    const t = input.trim()
+    if (!t) return
+    onToggle(t)
+    setInput('')
+  }
+
+  return (
+    <div className={styles.tagFilterRow}>
+      <span className={styles.tagFilterLabel}>タグ</span>
+      <div className={styles.categoryChips}>
+        {selected.filter(t => !suggestions.includes(t)).map(t => (
+          <button
+            key={t}
+            type="button"
+            className={`${styles.chip} ${styles.chipActive}`}
+            onClick={() => onToggle(t)}
+          >#{t}</button>
+        ))}
+        {suggestions.map(t => (
+          <button
+            key={t}
+            type="button"
+            className={`${styles.chip} ${selected.includes(t) ? styles.chipActive : ''}`}
+            onClick={() => onToggle(t)}
+          >#{t}</button>
+        ))}
+      </div>
+      <div className={styles.tagFilterAddRow}>
+        <div className={styles.tagFilterInputWrapper}>
+          <input
+            className={styles.tagFilterInput}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
+            placeholder="タグを入力して絞り込みに追加..."
+            maxLength={20}
+          />
+        </div>
+        <button type="button" className={styles.tagFilterAddBtn} onClick={handleAdd} disabled={!input.trim()}>
+          追加
+        </button>
+      </div>
+    </div>
   )
 }
 

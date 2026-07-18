@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
+import LoadingSpinner from '../components/LoadingSpinner'
 import styles from './InventoryPage.module.css'
 
 const CATEGORIES = [
@@ -220,7 +221,7 @@ export default function InventoryPage() {
 
       <main className={styles.main}>
         {loading ? (
-          <div className={styles.empty}>読み込み中…</div>
+          <LoadingSpinner inline />
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>📦</span>

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
+import LoadingSpinner from '../components/LoadingSpinner'
 import styles from './TravelPage.module.css'
 
 const PREFECTURES = [
@@ -213,7 +214,7 @@ export default function TravelPage() {
 
       <main className={styles.main}>
         {loading ? (
-          <div className={styles.empty}>読み込み中…</div>
+          <LoadingSpinner inline />
         ) : trips.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>✈️</span>
