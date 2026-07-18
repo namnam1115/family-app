@@ -64,6 +64,7 @@ export default function PlacesPage() {
   const [radiusKm, setRadiusKm] = useState(5)
   const [prefectureFilter, setPrefectureFilter] = useState('')
   const [recommendPlace, setRecommendPlace] = useState(null)
+  const [showFilters, setShowFilters] = useState(false)
 
   const fetchAll = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -198,6 +199,21 @@ export default function PlacesPage() {
   const isBrowsing = statusFilter !== 'visited' && !q && selectedTags.length === 0 &&
     categoryFilter === 'all' && !prefectureFilter && !radiusActive
 
+  // 折りたたみ絞り込みパネルの中で有効になっている条件の数（バッジ表示用）
+  const activeFilterCount =
+    (categoryFilter !== 'all' ? 1 : 0) +
+    (prefectureFilter ? 1 : 0) +
+    selectedTags.length +
+    (radiusActive ? 1 : 0)
+
+  function clearAllFilters() {
+    setCategoryFilter('all')
+    setPrefectureFilter('')
+    setSelectedTags([])
+    setShowRadiusSearch(false)
+    setRadiusCenter(null)
+  }
+
   const wantPlaces = places.filter(p => p.status === 'want')
   const wantPlacesWithCoords = wantPlaces.filter(p => p.lat != null && p.lng != null)
   const recentPlaces = places.slice(0, 6)
@@ -240,14 +256,14 @@ export default function PlacesPage() {
         ))}
       </div>
 
-      {/* 検索バー */}
+      {/* 検索 + 絞り込みトグル + ビュー切り替え（1 行に集約） */}
       <div className={styles.searchBar}>
         <div className={styles.searchWrapper}>
           <span className={styles.searchIcon}>🔍</span>
           <input
             className={styles.searchInput}
             type="search"
-            placeholder="場所名・タグ・住所で検索（ラーメン、夜景など）"
+            placeholder="場所名・タグ・住所で検索"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -256,75 +272,15 @@ export default function PlacesPage() {
           )}
         </div>
         <button
-          className={`${styles.radiusToggleBtn} ${showRadiusSearch ? styles.radiusToggleBtnActive : ''}`}
-          onClick={() => {
-            setShowRadiusSearch(v => !v)
-            if (showRadiusSearch) setRadiusCenter(null)
-          }}
-          aria-label="範囲で絞り込む"
-          title="範囲で絞り込む"
+          className={`${styles.filterToggleBtn} ${(showFilters || activeFilterCount > 0) ? styles.filterToggleBtnActive : ''}`}
+          onClick={() => setShowFilters(v => !v)}
+          aria-expanded={showFilters}
+          aria-label="絞り込み"
         >
-          <span className={styles.radiusToggleIcon}>📡</span>
-          <span className={styles.radiusToggleLabel}>範囲</span>
-          {radiusActive && <span className={styles.radiusActiveDot} />}
+          <span className={styles.filterToggleIcon}>⚙️</span>
+          <span className={styles.filterToggleLabel}>絞り込み</span>
+          {activeFilterCount > 0 && <span className={styles.filterCountBadge}>{activeFilterCount}</span>}
         </button>
-      </div>
-
-      {/* タグで絞り込む */}
-      {topTags.length > 0 && (
-        <div className={styles.tagFilterRow}>
-          {topTags.map(t => (
-            <button
-              key={t}
-              className={`${styles.chip} ${selectedTags.includes(t) ? styles.chipActive : ''}`}
-              onClick={() => toggleTag(t)}
-            >{tagIcon(t)} {t}</button>
-          ))}
-          {selectedTags.length > 0 && (
-            <button className={styles.chipClear} onClick={() => setSelectedTags([])}>タグ解除 ×</button>
-          )}
-        </div>
-      )}
-
-      {/* 範囲検索パネル */}
-      {showRadiusSearch && (
-        <RadiusSearchPanel
-          center={radiusCenter}
-          radiusKm={radiusKm}
-          onCenterChange={setRadiusCenter}
-          onRadiusChange={setRadiusKm}
-          matchCount={radiusActive ? filtered.length : null}
-        />
-      )}
-
-      {/* カテゴリチップ + ビュー切り替え */}
-      <div className={styles.filterRow}>
-        <div className={styles.categoryChips}>
-          <button
-            className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
-            onClick={() => setCategoryFilter('all')}
-          >すべて</button>
-          {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
-            <button
-              key={key}
-              className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
-              onClick={() => setCategoryFilter(key)}
-            >{icon} {label}</button>
-          ))}
-          {availablePrefectures.length > 0 && (
-            <select
-              className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
-              value={prefectureFilter}
-              onChange={e => setPrefectureFilter(e.target.value)}
-              aria-label="都道府県で絞り込む"
-            >
-              <option value="">🗾 都道府県</option>
-              {availablePrefectures.map(pref => (
-                <option key={pref} value={pref}>{pref}</option>
-              ))}
-            </select>
-          )}
-        </div>
         <div className={styles.viewToggle}>
           <button
             className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
@@ -340,6 +296,85 @@ export default function PlacesPage() {
           >🗺</button>
         </div>
       </div>
+
+      {/* 絞り込みパネル（折りたたみ） */}
+      {showFilters && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterPanelHeader}>
+            <span className={styles.filterPanelTitle}>絞り込み</span>
+            {activeFilterCount > 0 && (
+              <button className={styles.filterClearBtn} onClick={clearAllFilters}>すべて解除</button>
+            )}
+          </div>
+
+          <div className={styles.categoryChips}>
+            <button
+              className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
+              onClick={() => setCategoryFilter('all')}
+            >すべて</button>
+            {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+              <button
+                key={key}
+                className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
+                onClick={() => setCategoryFilter(key)}
+              >{icon} {label}</button>
+            ))}
+            {availablePrefectures.length > 0 && (
+              <select
+                className={`${styles.prefectureSelect} ${prefectureFilter ? styles.prefectureSelectActive : ''}`}
+                value={prefectureFilter}
+                onChange={e => setPrefectureFilter(e.target.value)}
+                aria-label="都道府県で絞り込む"
+              >
+                <option value="">🗾 都道府県</option>
+                {availablePrefectures.map(pref => (
+                  <option key={pref} value={pref}>{pref}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {topTags.length > 0 && (
+            <div className={styles.tagFilterRow}>
+              {topTags.map(t => (
+                <button
+                  key={t}
+                  className={`${styles.chip} ${selectedTags.includes(t) ? styles.chipActive : ''}`}
+                  onClick={() => toggleTag(t)}
+                >{tagIcon(t)} {t}</button>
+              ))}
+              {selectedTags.length > 0 && (
+                <button className={styles.chipClear} onClick={() => setSelectedTags([])}>タグ解除 ×</button>
+              )}
+            </div>
+          )}
+
+          <div className={styles.filterPanelActions}>
+            <button
+              className={`${styles.radiusToggleBtn} ${showRadiusSearch ? styles.radiusToggleBtnActive : ''}`}
+              onClick={() => {
+                setShowRadiusSearch(v => !v)
+                if (showRadiusSearch) setRadiusCenter(null)
+              }}
+              aria-label="範囲で絞り込む"
+            >
+              <span className={styles.radiusToggleIcon}>📡</span>
+              <span className={styles.radiusToggleLabel}>範囲で絞り込む</span>
+              {radiusActive && <span className={styles.radiusActiveDot} />}
+            </button>
+          </div>
+
+          {showRadiusSearch && (
+            <RadiusSearchPanel
+              center={radiusCenter}
+              radiusKm={radiusKm}
+              onCenterChange={setRadiusCenter}
+              onRadiusChange={setRadiusKm}
+              matchCount={radiusActive ? filtered.length : null}
+            />
+          )}
+        </div>
+      )}
 
       <main className={`${styles.main} ${view === 'map' ? styles.mainMap : ''}`}>
         {view === 'map' ? (
