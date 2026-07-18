@@ -109,7 +109,7 @@
 }
 
 .listItem.selected {
-  background: #ede9fe;
+  background: var(--accent-soft);
 }
 
 .listBtn {
@@ -138,7 +138,7 @@
 }
 
 .listItem.selected .listBtn:hover {
-  background: #ddd6fe;
+  background: var(--accent-soft);
 }
 
 .listIcon {
@@ -169,5 +169,5 @@
 
 .deleteListBtn:hover {
   color: var(--danger);
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }

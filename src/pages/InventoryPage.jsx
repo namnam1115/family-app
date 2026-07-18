@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BsHouseFill } from 'react-icons/bs'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import ConfirmDialog from '../components/ConfirmDialog'
+import BottomNav from '../components/BottomNav'
 import styles from './InventoryPage.module.css'
 
 const CATEGORIES = [
@@ -168,8 +171,8 @@ export default function InventoryPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => navigate('/')}>←</button>
-        <span className={styles.title}>在庫管理</span>
+        <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
+        <span className={styles.title}>📦 在庫管理</span>
         <button className={styles.addBtn} onClick={() => { setEditingItem(null); setShowModal(true) }}>＋ 追加</button>
       </header>
 
@@ -277,17 +280,16 @@ export default function InventoryPage() {
         />
       )}
 
-      {deleteConfirmId && (
-        <div className={styles.overlay} onClick={() => setDeleteConfirmId(null)}>
-          <div className={styles.confirmDialog} onClick={e => e.stopPropagation()}>
-            <p className={styles.confirmMsg}>この品目を削除しますか？</p>
-            <div className={styles.confirmBtns}>
-              <button className={styles.cancelBtn} onClick={() => setDeleteConfirmId(null)}>キャンセル</button>
-              <button className={styles.deleteBtn} onClick={() => deleteItem(deleteConfirmId)}>削除</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        title="品目を削除しますか？"
+        message="この品目を削除します。この操作は取り消せません。"
+        confirmLabel="削除する"
+        onConfirm={() => { const id = deleteConfirmId; setDeleteConfirmId(null); deleteItem(id) }}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
+
+      <BottomNav />
 
       {showAddToShoppingModal && (
         <AddToShoppingModal

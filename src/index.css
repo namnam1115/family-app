@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+/* Web フォントは index.html で <link rel="preconnect"> と併せて読み込む
+   （CSS @import はレンダリングをブロックするため index.html 側に移設） */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -6,87 +7,166 @@
   padding: 0;
 }
 
-:root {
-  /* === Primary - 鈍色花 Noshimehana (muted lavender-purple) === */
-  --primary: #8E81B5;
-  --primary-light: #B4AACF;
-  --primary-mid: #9E92C0;
-  --primary-dark: #6B5F96;
-  --primary-glow: rgba(142, 129, 181, 0.18);
+/* =============================================================
+   灯 Akari — Design System tokens
+   Apple HIG に準拠したミニマルで温かなデザイン言語。
+   変数名は既存ページとの互換のため維持し、値のみ刷新。
+   ============================================================= */
 
-  /* === Accent - 紅鳶 Benitobi-inspired warm rose-earth === */
-  --accent: #C2826A;
-  --accent-light: #E5B9A8;
+:root {
+  color-scheme: light dark;
+
+  /* === Primary - 鈍色花 Noshimehana (muted lavender-purple) === */
+  --primary: #7C71A8;
+  --primary-light: #B7AFD3;
+  --primary-mid: #948AC0;
+  --primary-dark: #5F5590;
+  --primary-glow: rgba(124, 113, 168, 0.16);
+
+  /* === Accent - 紅鳶 Benitobi (warm clay-rose) === */
+  --accent: #C0806A;
+  --accent-light: #E0B6A5;
+
+  /* === Soft brand fills (minimal, single-hue) === */
+  --accent-soft: #EFEBF5;
+  --accent-soft-2: #F4E9E3;
 
   /* === Status === */
-  --success: #5A9E82;
-  --danger: #C45A5A;
-  --warning: #C49A5A;
+  --success: #4E9A78;
+  --danger: #C15C54;
+  --warning: #C69645;
 
-  /* === Neutrals (warm-toned earth) === */
-  --gray-50: #FAFAF9;
-  --gray-100: #F4F2EF;
-  --gray-200: #E8E4E0;
-  --gray-300: #D4CFCA;
-  --gray-400: #A09A94;
-  --gray-500: #756E67;
-  --gray-600: #544E48;
-  --gray-700: #3A3530;
-  --gray-800: #221E1A;
+  /* === Neutrals — warm greige, light ramp === */
+  --gray-50: #FBFAF8;
+  --gray-100: #F5F2EE;
+  --gray-200: #ECE8E3;
+  --gray-300: #D8D2CA;
+  --gray-400: #9A938B;
+  --gray-500: #6E6862;
+  --gray-600: #514B45;
+  --gray-700: #38332F;
+  --gray-800: #211E1B;
   --gray-900: #131210;
 
-  /* === Glass (warm washi paper feel) === */
-  --glass: rgba(252, 250, 247, 0.86);
-  --glass-light: rgba(252, 250, 247, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.75);
-  --glass-blur: blur(20px) saturate(160%);
+  /* === Semantic surfaces (prefer these going forward) === */
+  --bg: #FBFAF8;
+  --surface: #FFFFFF;
+  --surface-2: #F5F2EE;
+  --ink: #211E1B;
+  --ink-2: #6E6862;
+  --ink-3: #9A938B;
+  --border: #ECE8E3;
+  --border-strong: #E2DCD4;
 
-  /* === Gradients === */
-  --grad-primary: linear-gradient(135deg, #8E81B5 0%, #C2826A 100%);
-  --grad-primary-rev: linear-gradient(135deg, #C2826A 0%, #8E81B5 100%);
-  --grad-primary-soft: linear-gradient(135deg, #EDE9F6 0%, #F5E8E2 100%);
-  --grad-bg: linear-gradient(160deg, #FAF8FC 0%, #F5F1F9 50%, #FAF5F3 100%);
+  /* === Glass — restrained, hairline border === */
+  --glass: rgba(255, 255, 255, 0.85);
+  --glass-light: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(33, 30, 27, 0.06);
+  --glass-blur: blur(12px) saturate(140%);
 
-  /* === Display Font (see out-of-box Japanese elegance) === */
-  --font-display: 'Shippori Mincho B1', 'Noto Serif JP', Georgia, serif;
+  /* === Gradients (calm) === */
+  --grad-primary: linear-gradient(135deg, #7C71A8 0%, #C0806A 100%);
+  --grad-primary-rev: linear-gradient(135deg, #C0806A 0%, #7C71A8 100%);
+  --grad-primary-soft: linear-gradient(135deg, #EFEBF5 0%, #F4E9E3 100%);
+  --grad-bg: linear-gradient(180deg, #FBFAF8 0%, #F7F4F0 100%);
+
+  /* === Display Font — Japanese serif warmth === */
+  --font-display: 'Shippori Mincho B1', 'Hiragino Mincho ProN', 'Yu Mincho', Georgia, serif;
 
   /* === Radii === */
   --radius: 0.75rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 1.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.375rem;
   --radius-full: 9999px;
 
   /* === Layout === */
   --max-w: 1140px;
 
-  /* === Shadows === */
-  --shadow: 0 2px 8px rgba(142, 129, 181, 0.07), 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 16px rgba(142, 129, 181, 0.11), 0 2px 6px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 32px rgba(142, 129, 181, 0.15), 0 4px 12px rgba(0,0,0,0.05);
-  --shadow-glow: 0 0 0 3px rgba(142, 129, 181, 0.16), 0 4px 20px rgba(142, 129, 181, 0.28);
+  /* === Shadows — minimal, not flat === */
+  --shadow: 0 1px 2px rgba(33, 30, 27, 0.05);
+  --shadow-md: 0 1px 2px rgba(33, 30, 27, 0.05), 0 6px 20px rgba(33, 30, 27, 0.06);
+  --shadow-lg: 0 2px 6px rgba(33, 30, 27, 0.06), 0 14px 40px rgba(33, 30, 27, 0.09);
+  --shadow-glow: 0 0 0 3px rgba(124, 113, 168, 0.16);
 }
 
-/* ===== Keyframes ===== */
+/* =============================================================
+   Dark mode — follows system preference.
+   Neutral ramp is inverted so existing pages that use
+   --gray-800 for text / --gray-100 for surfaces adapt cleanly.
+   ============================================================= */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #ADA1D6;
+    --primary-light: #6E639A;
+    --primary-mid: #9286C4;
+    --primary-dark: #C7BEE6;
+    --primary-glow: rgba(173, 161, 214, 0.20);
+
+    --accent: #D69C84;
+    --accent-light: #8A5544;
+
+    --accent-soft: #2A2637;
+    --accent-soft-2: #332720;
+
+    --success: #6FB79A;
+    --danger: #D97B72;
+    --warning: #D9B063;
+
+    /* inverted warm ramp */
+    --gray-50: #1B1A17;
+    --gray-100: #221F1C;
+    --gray-200: #2E2A26;
+    --gray-300: #3A362F;
+    --gray-400: #8E877E;
+    --gray-500: #A9A29A;
+    --gray-600: #C3BCB3;
+    --gray-700: #DAD4CC;
+    --gray-800: #F1EDE7;
+    --gray-900: #FBF8F3;
+
+    --bg: #141311;
+    --surface: #1E1C19;
+    --surface-2: #262320;
+    --ink: #F1EDE7;
+    --ink-2: #ABA49B;
+    --ink-3: #7E776E;
+    --border: #2E2A26;
+    --border-strong: #383430;
+
+    --glass: rgba(30, 28, 25, 0.72);
+    --glass-light: rgba(30, 28, 25, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.07);
+
+    --grad-primary-soft: linear-gradient(135deg, #2A2637 0%, #332720 100%);
+    --grad-bg: linear-gradient(180deg, #141311 0%, #100F0D 100%);
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.40);
+    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.40), 0 8px 26px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.45), 0 16px 44px rgba(0, 0, 0, 0.45);
+    --shadow-glow: 0 0 0 3px rgba(173, 161, 214, 0.22);
+  }
+}
+
+/* ===== Keyframes (kept for compatibility; used sparingly) ===== */
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(18px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.94); }
+  from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  40%  { transform: translateY(-9px) rotate(2deg); }
-  70%  { transform: translateY(-5px) rotate(-1deg); }
+  0%, 100% { transform: translateY(0px); }
+  50%  { transform: translateY(-5px); }
 }
 
 @keyframes floatSlow {
   0%, 100% { transform: translateY(0px); }
-  50%  { transform: translateY(-14px); }
+  50%  { transform: translateY(-8px); }
 }
 
 @keyframes gradientShift {
@@ -101,20 +181,20 @@
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(142, 129, 181, 0.25); }
-  50%  { box-shadow: 0 0 0 8px rgba(142, 129, 181, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 113, 168, 0.22); }
+  50%  { box-shadow: 0 0 0 7px rgba(124, 113, 168, 0); }
 }
 
 @keyframes blobFloat1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33%  { transform: translate(24px, -32px) scale(1.06); }
-  66%  { transform: translate(-16px, 18px) scale(0.96); }
+  33%  { transform: translate(18px, -22px) scale(1.04); }
+  66%  { transform: translate(-12px, 14px) scale(0.98); }
 }
 
 @keyframes blobFloat2 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33%  { transform: translate(-28px, 22px) scale(1.05); }
-  66%  { transform: translate(20px, -24px) scale(0.97); }
+  33%  { transform: translate(-20px, 16px) scale(1.03); }
+  66%  { transform: translate(14px, -18px) scale(0.98); }
 }
 
 @keyframes slideUp {
@@ -133,7 +213,7 @@
 
 @keyframes checkPop {
   0%   { transform: scale(1); }
-  40%  { transform: scale(1.3); }
+  40%  { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
 
@@ -144,12 +224,14 @@ html, body {
 }
 
 body {
-  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Segoe UI', system-ui, sans-serif;
   background: var(--grad-bg);
   min-height: 100vh;
   color: var(--gray-800);
-  line-height: 1.5;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -172,4 +254,21 @@ button {
 input, select, textarea {
   font-family: inherit;
   font-size: 16px;
+}
+
+/* Visible keyboard focus for accessibility */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

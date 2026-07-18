@@ -15,7 +15,7 @@
   -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
-  box-shadow: 0 1px 16px rgba(142, 129, 181, 0.06);
+  box-shadow: 0 1px 16px rgba(124, 113, 168, 0.06);
 }
 
 /* 上段：戻るボタン + タイトル */
@@ -35,12 +35,12 @@
 }
 
 .backBtn {
-  background: rgba(142, 129, 181, 0.08);
+  background: rgba(124, 113, 168, 0.08);
   border: none;
   color: var(--primary);
   font-size: 1.1rem;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -51,7 +51,7 @@
 }
 
 .backBtn:hover {
-  background: rgba(142, 129, 181, 0.16);
+  background: rgba(124, 113, 168, 0.16);
   transform: scale(1.08);
 }
 
@@ -69,9 +69,9 @@
 
 .viewToggleBtn {
   padding: 0.4rem 0.875rem;
-  background: rgba(142, 129, 181, 0.07);
+  background: rgba(124, 113, 168, 0.07);
   color: var(--primary);
-  border: 1.5px solid rgba(142, 129, 181, 0.2);
+  border: 1.5px solid rgba(124, 113, 168, 0.2);
   border-radius: var(--radius-full);
   font-size: 0.8rem;
   font-weight: 600;
@@ -92,10 +92,10 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
 }
 
@@ -118,7 +118,7 @@
   padding: 0.5rem 2rem 0.5rem 0.5rem;
   border: 1.5px solid var(--gray-200);
   border-radius: var(--radius-full);
-  background: white;
+  background: var(--surface);
   font-size: 0.9rem;
   color: var(--gray-800);
   outline: none;
@@ -128,7 +128,7 @@
 
 .searchInput:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(142, 129, 181, 0.1);
+  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
 }
 
 .searchInput::placeholder {
@@ -174,7 +174,7 @@
   padding: 0.35rem 0.875rem;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--gray-200);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--surface);
   color: var(--gray-500);
   font-size: 0.82rem;
   font-weight: 500;
@@ -235,8 +235,8 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.4rem 0.875rem;
-  background: rgba(142, 129, 181, 0.07);
-  border: 1.5px solid rgba(142, 129, 181, 0.15);
+  background: rgba(124, 113, 168, 0.07);
+  border: 1.5px solid rgba(124, 113, 168, 0.15);
   border-radius: var(--radius-full);
   font-size: 0.875rem;
   font-weight: 600;
@@ -247,7 +247,7 @@
 }
 
 .storeBtn:hover {
-  background: rgba(142, 129, 181, 0.15);
+  background: rgba(124, 113, 168, 0.15);
 }
 
 .storeBtnLabel {
@@ -266,12 +266,12 @@
   white-space: nowrap;
   transition: all 0.2s ease;
   touch-action: manipulation;
-  box-shadow: 0 2px 8px rgba(142, 129, 181, 0.3);
+  box-shadow: 0 2px 8px rgba(124, 113, 168, 0.3);
 }
 
 .addBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(142, 129, 181, 0.4);
+  box-shadow: 0 4px 14px rgba(124, 113, 168, 0.4);
 }
 
 .addBtn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
@@ -323,13 +323,13 @@
   font-size: 0.875rem;
   font-weight: 600;
   touch-action: manipulation;
-  box-shadow: 0 2px 10px rgba(142, 129, 181, 0.3);
+  box-shadow: 0 2px 10px rgba(124, 113, 168, 0.3);
   transition: all 0.2s ease;
 }
 
 .emptyBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 18px rgba(142, 129, 181, 0.4);
+  box-shadow: 0 4px 18px rgba(124, 113, 168, 0.4);
 }
 
 /* ════════════════════════════════════
@@ -361,7 +361,7 @@
   background: var(--glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: 1rem 1.125rem;
   cursor: pointer;
@@ -373,7 +373,7 @@
 .productListItem:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
-  border-color: rgba(181, 170, 202, 0.4);
+  border-color: rgba(183, 175, 211, 0.4);
 }
 
 .productListItem:active {
@@ -427,7 +427,7 @@
 }
 
 .chevron {
-  color: var(--gray-300);
+  color: var(--ink-3);
   font-size: 1.3rem;
   line-height: 1;
   transition: transform 0.2s ease, color 0.2s ease;
@@ -456,14 +456,14 @@
 }
 
 .sheet {
-  background: white;
+  background: var(--surface);
   border-radius: 1.75rem 1.75rem 0 0;
   width: 100%;
   max-width: 560px;
   max-height: 85dvh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -8px 48px rgba(142, 129, 181, 0.15);
+  box-shadow: 0 -8px 48px rgba(124, 113, 168, 0.15);
   animation: slideUp 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both;
   overflow: hidden;
 }
@@ -501,8 +501,8 @@
   width: 3.25rem;
   height: 3.25rem;
   border-radius: 0.875rem;
-  background: rgba(142, 129, 181, 0.08);
-  border: 1.5px solid rgba(142, 129, 181, 0.15);
+  background: rgba(124, 113, 168, 0.08);
+  border: 1.5px solid rgba(124, 113, 168, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -511,7 +511,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .iconDisplay:hover {
-  background: rgba(142, 129, 181, 0.15);
+  background: rgba(124, 113, 168, 0.15);
   transform: scale(1.05);
 }
 
@@ -535,7 +535,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid white;
+  border: 1.5px solid var(--border-strong);
 }
 
 .sheetTitle {
@@ -573,27 +573,27 @@
 
 .compareRow:last-child { border-bottom: none; }
 
-.compareRow:hover { background: #faf5ff; }
+.compareRow:hover { background: var(--surface-2); }
 
 .compareRowBest {
-  background: linear-gradient(135deg, rgba(237, 233, 248, 0.5), rgba(245, 232, 226, 0.3));
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
 }
 
 .compareRowBest:hover {
-  background: linear-gradient(135deg, rgba(237, 233, 248, 0.8), rgba(245, 232, 226, 0.5));
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
 }
 
 .compareRowEmpty { opacity: 0.75; }
 
 .compareRowEditing {
-  background: #faf5ff;
+  background: var(--surface-2);
   cursor: default;
   flex-direction: column;
   align-items: stretch;
   gap: 0.5rem;
 }
 
-.compareRowEditing:hover { background: #faf5ff; }
+.compareRowEditing:hover { background: var(--surface-2); }
 
 .compareLeft {
   flex: 1;
@@ -663,7 +663,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
   border: none;
   color: var(--danger);
   font-size: 0.8rem;
@@ -699,13 +699,13 @@
   outline: none;
   font-size: 0.9rem;
   transition: border-color 0.2s ease;
-  background: white;
+  background: var(--surface);
 }
 
 .compareInput:focus,
 .compareNoteInput:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(142, 129, 181, 0.1);
+  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
 }
 
 .compareEditBtns {
@@ -728,7 +728,7 @@
 .compareEditSave {
   background: var(--grad-primary);
   color: white;
-  box-shadow: 0 2px 8px rgba(142, 129, 181, 0.28);
+  box-shadow: 0 2px 8px rgba(124, 113, 168, 0.28);
 }
 
 .compareEditSave:hover:not(:disabled) { transform: translateY(-1px); }
@@ -747,7 +747,7 @@
   margin-bottom: calc(0.75rem + env(safe-area-inset-bottom));
   padding: 0.75rem;
   background: transparent;
-  border: 1.5px solid #fca5a5;
+  border: 1.5px solid color-mix(in srgb, var(--danger) 45%, transparent);
   border-radius: var(--radius-full);
   color: var(--danger);
   font-size: 0.875rem;
@@ -758,7 +758,7 @@
 }
 
 .deleteProductSheetBtn:hover {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
 /* モバイルでは削除ボタンを常時表示 */
@@ -790,12 +790,12 @@
 
 .matrix th,
 .matrix td {
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--glass-border);
 }
 
 .productHeader {
   padding: 0.625rem 0.875rem;
-  background: rgba(237, 233, 248, 0.7);
+  background: var(--accent-soft);
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--primary);
@@ -809,7 +809,7 @@
 
 .storeHeader {
   padding: 0.625rem 1rem;
-  background: rgba(237, 233, 248, 0.5);
+  background: var(--accent-soft);
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--gray-700);
@@ -823,7 +823,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--gray-800);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--surface);
   position: sticky;
   left: 0;
   z-index: 1;
@@ -858,7 +858,7 @@
   border-radius: 50%;
   background: transparent;
   border: none;
-  color: var(--gray-300);
+  color: var(--ink-3);
   font-size: 0.85rem;
   display: flex;
   align-items: center;
@@ -870,7 +870,7 @@
 }
 
 .productCell:hover .deleteProductBtn { opacity: 1; }
-.deleteProductBtn:hover { color: var(--danger); background: #fee2e2; }
+.deleteProductBtn:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 
 /* ── 価格セル ── */
 .priceCell {
@@ -881,12 +881,12 @@
   padding: 0.5rem 0.75rem;
 }
 
-.priceCell:hover { background: rgba(237, 233, 248, 0.5); }
+.priceCell:hover { background: var(--accent-soft); }
 
-.priceCell.cheapest { background: rgba(209, 250, 229, 0.5); }
-.priceCell.cheapest:hover { background: rgba(167, 243, 208, 0.6); }
-.priceCell.emptyCell { background: rgba(249, 250, 251, 0.5); }
-.priceCell.emptyCell:hover { background: rgba(237, 233, 248, 0.3); }
+.priceCell.cheapest { background: color-mix(in srgb, var(--success) 20%, transparent); }
+.priceCell.cheapest:hover { background: color-mix(in srgb, var(--success) 26%, transparent); }
+.priceCell.emptyCell { background: var(--surface-2); }
+.priceCell.emptyCell:hover { background: var(--accent-soft); }
 
 .priceContent {
   display: flex;
@@ -912,7 +912,7 @@
 .cheapest .price::before {
   content: '★ ';
   font-size: 0.6rem;
-  -webkit-text-fill-color: #10b981;
+  -webkit-text-fill-color: var(--success);
 }
 
 .note {
@@ -921,7 +921,7 @@
 }
 
 .noData {
-  color: var(--gray-300);
+  color: var(--ink-3);
   font-size: 1.1rem;
 }
 
@@ -932,7 +932,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
   border: none;
   color: var(--danger);
   font-size: 0.65rem;
@@ -950,7 +950,7 @@
 /* ── インライン編集（グリッド） ── */
 .editingCell {
   padding: 0.375rem !important;
-  background: rgba(237, 233, 248, 0.7) !important;
+  background: var(--accent-soft) !important;
   cursor: default;
   min-width: 130px;
 }
@@ -970,7 +970,7 @@
   font-weight: 600;
   text-align: center;
   outline: none;
-  background: white;
+  background: var(--surface);
 }
 
 .cellNoteInput {
@@ -979,7 +979,7 @@
   border: 1.5px solid var(--gray-200);
   border-radius: calc(var(--radius) / 2);
   outline: none;
-  background: white;
+  background: var(--surface);
 }
 
 .cellNoteInput:focus { border-color: var(--primary); }
@@ -1034,7 +1034,7 @@
 }
 
 .modal {
-  background: white;
+  background: var(--surface);
   border-radius: 1.75rem 1.75rem 0 0;
   width: 100%;
   max-width: 480px;
@@ -1044,7 +1044,7 @@
   gap: 1rem;
   max-height: 90dvh;
   overflow-y: auto;
-  box-shadow: 0 -8px 40px rgba(142, 129, 181, 0.12);
+  box-shadow: 0 -8px 40px rgba(124, 113, 168, 0.12);
   animation: slideUp 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both;
 }
 
@@ -1085,7 +1085,7 @@
   touch-action: manipulation;
 }
 
-.closeBtn:hover { background: #fee2e2; color: var(--danger); transform: rotate(90deg); }
+.closeBtn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); transform: rotate(90deg); }
 
 /* ── フォーム ── */
 .form {
@@ -1117,14 +1117,14 @@
 
 .input:focus {
   border-color: var(--primary);
-  background: white;
-  box-shadow: 0 0 0 3px rgba(142, 129, 181, 0.1);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(124, 113, 168, 0.1);
 }
 
 .errorMsg {
   font-size: 0.85rem;
   color: var(--danger);
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius);
 }
@@ -1158,12 +1158,12 @@
   background: var(--grad-primary);
   border: none;
   color: white;
-  box-shadow: 0 2px 8px rgba(142, 129, 181, 0.3);
+  box-shadow: 0 2px 8px rgba(124, 113, 168, 0.3);
 }
 
 .saveBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(142, 129, 181, 0.4);
+  box-shadow: 0 4px 16px rgba(124, 113, 168, 0.4);
 }
 
 .saveBtn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -1174,16 +1174,16 @@
   align-items: center;
   gap: 0.625rem;
   padding: 0.5rem 0.875rem;
-  border: 1.5px solid rgba(142, 129, 181, 0.3);
+  border: 1.5px solid rgba(124, 113, 168, 0.3);
   border-radius: var(--radius);
-  background: rgba(142, 129, 181, 0.05);
+  background: rgba(124, 113, 168, 0.05);
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s;
   width: fit-content;
   -webkit-tap-highlight-color: transparent;
 }
 .iconSelectBtn:hover {
-  background: rgba(142, 129, 181, 0.1);
+  background: rgba(124, 113, 168, 0.1);
   border-color: var(--primary);
 }
 
@@ -1218,11 +1218,11 @@
   width: 100%;
   max-width: 560px;
   max-height: 72dvh;
-  background: white;
+  background: var(--surface);
   border-radius: 1.75rem 1.75rem 0 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -8px 40px rgba(142, 129, 181, 0.15);
+  box-shadow: 0 -8px 40px rgba(124, 113, 168, 0.15);
   animation: slideUp 0.32s cubic-bezier(0.34, 1.26, 0.64, 1) both;
 }
 
@@ -1286,14 +1286,14 @@
   -webkit-tap-highlight-color: transparent;
 }
 .iconBtn:hover {
-  background: rgba(142, 129, 181, 0.1);
+  background: rgba(124, 113, 168, 0.1);
   color: var(--primary);
   transform: scale(1.1);
 }
 .iconBtn:active { transform: scale(0.9); }
 .iconBtnActive {
   border-color: var(--primary);
-  background: rgba(142, 129, 181, 0.12);
+  background: rgba(124, 113, 168, 0.12);
   color: var(--primary);
 }
 
@@ -1323,7 +1323,7 @@
 }
 
 .storeItem:last-child { border-bottom: none; }
-.storeItem:hover { background: #faf5ff; }
+.storeItem:hover { background: var(--surface-2); }
 
 .storeName {
   flex: 1;
@@ -1346,8 +1346,8 @@
 
 .storeDeleteBtn:hover {
   color: var(--danger);
-  border-color: #fca5a5;
-  background: #fee2e2;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
 .storeAddForm {
@@ -1374,7 +1374,7 @@
 }
 
 .confirmDialog {
-  background: white;
+  background: var(--surface);
   border-radius: 1.25rem;
   padding: 1.5rem 1.5rem 1.25rem;
   max-width: 320px;
@@ -1404,7 +1404,7 @@
 }
 
 .deleteDangerBtn:hover {
-  background: #dc2626;
+  background: var(--danger);
   transform: translateY(-1px);
   box-shadow: 0 3px 12px rgba(220, 38, 38, 0.3);
 }

@@ -1,51 +1,16 @@
 .card {
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
   position: relative;
-  overflow: hidden;
-  transition: all 0.25s cubic-bezier(0.34, 1.3, 0.64, 1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   box-shadow: var(--shadow);
-  animation: fadeInUp 0.45s ease both;
-  min-height: 120px;
-}
-
-/* Shimmer sweep */
-.card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    108deg,
-    transparent 38%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 62%
-  );
-  background-size: 220% 100%;
-  background-position: -200% center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-
-/* Gradient top accent bar */
-.card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--grad-primary);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  opacity: 0;
-  transition: opacity 0.25s ease;
+  animation: fadeInUp 0.4s ease both;
+  min-height: 122px;
 }
 
 .card:not(.disabled) {
@@ -53,40 +18,30 @@
 }
 
 .card:not(.disabled):hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: rgba(181, 170, 202, 0.5);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
 }
 
-.card:not(.disabled):hover::before {
-  opacity: 1;
-  animation: shimmer 0.85s ease;
-}
-
-.card:not(.disabled):hover::after {
-  opacity: 1;
+.card:not(.disabled):active {
+  transform: translateY(0);
 }
 
 .card.disabled {
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
-/* Icon badge */
+/* Icon tile */
 .icon {
-  font-size: 1.625rem;
+  font-size: 1.5rem;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--grad-primary-soft);
+  background: var(--accent-soft);
   border-radius: var(--radius);
   flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.34, 1.5, 0.64, 1);
-}
-
-.card:not(.disabled):hover .icon {
-  transform: scale(1.1) rotate(-4deg);
 }
 
 .body {
@@ -94,9 +49,9 @@
 }
 
 .title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--gray-800);
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--ink);
   margin-bottom: 0.25rem;
   letter-spacing: -0.01em;
   line-height: 1.3;
@@ -104,7 +59,7 @@
 
 .desc {
   font-size: 0.75rem;
-  color: var(--gray-400);
+  color: var(--ink-3);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -115,10 +70,10 @@
 .comingSoon {
   display: inline-block;
   padding: 0.2rem 0.5rem;
-  background: var(--gray-100);
-  color: var(--gray-400);
+  background: var(--surface-2);
+  color: var(--ink-3);
   border-radius: var(--radius-full);
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   align-self: flex-start;
@@ -130,28 +85,24 @@
   bottom: 0.875rem;
   width: 24px;
   height: 24px;
-  background: var(--grad-primary-soft);
-  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
-  font-size: 0.75rem;
-  transition: all 0.25s cubic-bezier(0.34, 1.5, 0.64, 1);
+  color: var(--ink-3);
+  font-size: 0.85rem;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .card:not(.disabled):hover .arrow {
-  background: var(--grad-primary);
-  color: white;
-  transform: translate(2px, -1px) scale(1.1);
-  box-shadow: 0 2px 10px rgba(142, 129, 181, 0.35);
+  color: var(--primary);
+  transform: translateX(2px);
 }
 
-/* Stagger animation delay for grid items */
+/* Gentle stagger */
 .card:nth-child(1) { animation-delay: 0s; }
-.card:nth-child(2) { animation-delay: 0.05s; }
-.card:nth-child(3) { animation-delay: 0.1s; }
-.card:nth-child(4) { animation-delay: 0.15s; }
-.card:nth-child(5) { animation-delay: 0.2s; }
-.card:nth-child(6) { animation-delay: 0.25s; }
-.card:nth-child(7) { animation-delay: 0.3s; }
+.card:nth-child(2) { animation-delay: 0.04s; }
+.card:nth-child(3) { animation-delay: 0.08s; }
+.card:nth-child(4) { animation-delay: 0.12s; }
+.card:nth-child(5) { animation-delay: 0.16s; }
+.card:nth-child(6) { animation-delay: 0.2s; }
+.card:nth-child(7) { animation-delay: 0.24s; }

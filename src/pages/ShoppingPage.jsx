@@ -5,6 +5,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ShoppingItemList from '../components/ShoppingItemList'
 import NotificationSettings from '../components/NotificationSettings'
+import ConfirmDialog from '../components/ConfirmDialog'
+import BottomNav from '../components/BottomNav'
+import EmptyState from '../components/EmptyState'
+import Toast from '../components/Toast'
 import styles from './ShoppingPage.module.css'
 
 export default function ShoppingPage() {
@@ -15,6 +19,8 @@ export default function ShoppingPage() {
   const [loadingLists, setLoadingLists] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [showNotifSettings, setShowNotifSettings] = useState(false)
+  const [confirmDeleteList, setConfirmDeleteList] = useState(null) // list object
+  const [toast, setToast] = useState(null) // { message, variant }
 
   const fetchLists = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -90,6 +96,7 @@ export default function ShoppingPage() {
     const { error } = await supabase.from('shopping_lists').update({ is_favorite }).eq('id', listId)
     if (error) {
       console.error('お気に入り更新エラー:', error)
+      setToast({ message: 'お気に入りの更新に失敗しました。通信環境を確認してください。', variant: 'error' })
       // ロールバック
       setLists(prev => {
         const rolled = prev.map(l => l.id === listId ? { ...l, is_favorite: !is_favorite } : l)
@@ -140,7 +147,7 @@ export default function ShoppingPage() {
                   <span className={styles.tabName}>{l.name}</span>
                   <span
                     className={styles.tabDelete}
-                    onClick={e => { e.stopPropagation(); handleDeleteList(l.id) }}
+                    onClick={e => { e.stopPropagation(); setConfirmDeleteList(l) }}
                     role="button"
                     aria-label={`${l.name}を削除`}
                   >×</span>
@@ -165,10 +172,13 @@ export default function ShoppingPage() {
             />
           ) : (
             !loadingLists && (
-              <div className={styles.empty}>
-                <span className={styles.emptyIcon}>🛒</span>
-                <p>「＋ 新しいリスト」からリストを作成してください</p>
-              </div>
+              <EmptyState
+                icon="🛒"
+                title="買い物リストを作りましょう"
+                description="家族で共有できる買い物リストです。チェックするだけで即時に同期されます。"
+                actionLabel="＋ 最初のリストを作成"
+                onAction={() => setShowCreate(true)}
+              />
             )
           )}
         </main>
@@ -187,6 +197,31 @@ export default function ShoppingPage() {
           onClose={() => setShowCreate(false)}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteList}
+        title="リストを削除しますか？"
+        message={confirmDeleteList
+          ? `「${confirmDeleteList.name}」とリスト内のアイテムがすべて削除されます。この操作は取り消せません。`
+          : ''}
+        confirmLabel="削除する"
+        onConfirm={async () => {
+          const id = confirmDeleteList.id
+          setConfirmDeleteList(null)
+          await handleDeleteList(id)
+        }}
+        onCancel={() => setConfirmDeleteList(null)}
+      />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      <BottomNav />
     </div>
   )
 }
