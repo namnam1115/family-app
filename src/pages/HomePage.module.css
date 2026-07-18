@@ -92,9 +92,11 @@
 /* ===== Home Page ===== */
 
 .page {
+  height: 100dvh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--grad-bg);
 }
 
@@ -151,6 +153,9 @@
 
 .main {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 1.25rem;
   max-width: var(--max-w);
   width: 100%;

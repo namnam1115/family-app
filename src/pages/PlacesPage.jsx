@@ -4,6 +4,8 @@ import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { loadGoogleMapsScript } from '../utils/googleMaps'
+import ConfirmDialog from '../components/ConfirmDialog'
+import BottomNav from '../components/BottomNav'
 import styles from './PlacesPage.module.css'
 
 
@@ -417,6 +419,8 @@ export default function PlacesPage() {
           onClose={() => setEditTarget(null)}
         />
       )}
+
+      <BottomNav />
     </div>
   )
 }
@@ -989,6 +993,7 @@ function VisitModal({ place, onSubmit, onClose }) {
 
 // ── 場所編集モーダル ──────────────────────────────────────
 function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [name, setName] = useState(place.name)
   const [category, setCategory] = useState(place.category)
   const [memo, setMemo] = useState(place.memo ?? '')
@@ -1092,7 +1097,7 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
             />
           </label>
           <div className={styles.formBtns}>
-            <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>
+            <button type="button" className={styles.deleteBtn} onClick={() => setConfirmDelete(true)}>削除</button>
             <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
             <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
               {submitting ? '保存中...' : '保存'}
@@ -1100,6 +1105,15 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
           </div>
         </form>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="場所を削除しますか？"
+        message={`「${place.name}」を削除します。この操作は取り消せません。`}
+        confirmLabel="削除する"
+        onConfirm={() => { setConfirmDelete(false); onDelete() }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   )
 }

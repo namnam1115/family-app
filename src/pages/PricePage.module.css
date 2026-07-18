@@ -39,8 +39,8 @@
   border: none;
   color: var(--primary);
   font-size: 1.1rem;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;

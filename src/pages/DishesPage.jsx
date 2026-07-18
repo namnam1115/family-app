@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import BottomNav from '../components/BottomNav'
 import styles from './DishesPage.module.css'
 
 // ── ユーティリティ ────────────────────────────────────────
@@ -270,6 +271,8 @@ export default function DishesPage() {
           onClose={() => setShowManageCategories(false)}
         />
       )}
+
+      <BottomNav />
     </div>
   )
 }

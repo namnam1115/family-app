@@ -1,13 +1,33 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './GroupSetup.module.css'
 
+// 招待リンク（例: https://.../join/<id>）や貼り付けた文字列から family_id を取り出す
+function extractFamilyId(raw) {
+  const s = raw.trim()
+  if (!s) return null
+  const m = s.match(/join\/([^/?#\s]+)/)
+  if (m) return m[1]
+  // URL でなければ、そのまま ID とみなす
+  return s
+}
+
 export default function GroupSetup() {
   const { user, createFamily } = useAuth()
-  const [mode, setMode] = useState(null) // 'create' | null
+  const navigate = useNavigate()
+  const [mode, setMode] = useState(null) // 'create' | 'join' | null
   const [familyName, setFamilyName] = useState('')
+  const [inviteLink, setInviteLink] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  function handleJoin(e) {
+    e.preventDefault()
+    const id = extractFamilyId(inviteLink)
+    if (!id) { setError('招待リンクを入力してください。'); return }
+    navigate(`/join/${id}`)
+  }
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -38,10 +58,44 @@ export default function GroupSetup() {
             <button className={styles.primaryBtn} onClick={() => setMode('create')}>
               新しいグループを作成
             </button>
-            <p className={styles.hint}>
-              招待リンクをお持ちの場合は、そのリンクを開いてください。
-            </p>
+            <button className={styles.cancelBtn} onClick={() => { setMode('join'); setError('') }}>
+              招待リンクで参加
+            </button>
           </div>
+        )}
+
+        {mode === 'join' && (
+          <form onSubmit={handleJoin} className={styles.form}>
+            <label className={styles.label} htmlFor="inviteLink">
+              招待リンク
+            </label>
+            <input
+              id="inviteLink"
+              className={styles.input}
+              type="text"
+              value={inviteLink}
+              onChange={e => setInviteLink(e.target.value)}
+              placeholder="家族から届いた招待リンクを貼り付け"
+              autoFocus
+            />
+            {error && <p className={styles.error}>{error}</p>}
+            <div className={styles.btnRow}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => { setMode(null); setError('') }}
+              >
+                戻る
+              </button>
+              <button
+                type="submit"
+                className={styles.primaryBtn}
+                disabled={!inviteLink.trim()}
+              >
+                参加する
+              </button>
+            </div>
+          </form>
         )}
 
         {mode === 'create' && (

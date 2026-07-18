@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import BottomNav from '../components/BottomNav'
 import styles from './SchedulePage.module.css'
 
 // ── 定数 ─────────────────────────────────────────────────────
@@ -493,6 +494,8 @@ export default function SchedulePage() {
           onClose={() => setEditTarget(null)}
         />
       )}
+
+      <BottomNav />
     </div>
   )
 }

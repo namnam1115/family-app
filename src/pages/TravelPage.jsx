@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import ConfirmDialog from '../components/ConfirmDialog'
+import BottomNav from '../components/BottomNav'
 import styles from './TravelPage.module.css'
 
 const PREFECTURES = [
@@ -188,8 +191,8 @@ export default function TravelPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => navigate('/')}>←</button>
-        <span className={styles.title}>旅行記録</span>
+        <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
+        <span className={styles.title}>✈️ 旅行記録</span>
         <button className={styles.addBtn} onClick={() => { setEditingTrip(null); setShowTripModal(true) }}>＋ 新しい旅行</button>
       </header>
 
@@ -269,17 +272,16 @@ export default function TravelPage() {
         />
       )}
 
-      {deleteConfirmId && (
-        <div className={styles.overlay} onClick={() => setDeleteConfirmId(null)}>
-          <div className={styles.confirmDialog} onClick={e => e.stopPropagation()}>
-            <p className={styles.confirmMsg}>この旅行を削除しますか？</p>
-            <div className={styles.confirmBtns}>
-              <button className={styles.cancelBtn} onClick={() => setDeleteConfirmId(null)}>キャンセル</button>
-              <button className={styles.deleteBtn} onClick={() => deleteTrip(deleteConfirmId)}>削除</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        title="旅行を削除しますか？"
+        message="この旅行と記録した活動がすべて削除されます。この操作は取り消せません。"
+        confirmLabel="削除する"
+        onConfirm={() => { const id = deleteConfirmId; setDeleteConfirmId(null); deleteTrip(id) }}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
+
+      <BottomNav />
     </div>
   )
 }

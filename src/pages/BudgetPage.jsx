@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import BottomNav from '../components/BottomNav'
 import styles from './BudgetPage.module.css'
 
 export default function BudgetPage() {
@@ -187,6 +188,8 @@ export default function BudgetPage() {
           onClose={() => setEditEntry(null)}
         />
       )}
+
+      <BottomNav />
     </div>
   )
 }
