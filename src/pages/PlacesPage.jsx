@@ -8,9 +8,45 @@ import styles from './PlacesPage.module.css'
 
 
 const CATEGORIES = {
-  food:  { label: 'グルメ', icon: '🍽️' },
-  play:  { label: '遊び',   icon: '🎡' },
-  other: { label: 'その他', icon: '📍' },
+  food: {
+    label: 'グルメ',
+    icon: '🍽️',
+    subs: [
+      { key: 'yakiniku', label: '焼肉・焼き鳥' },
+      { key: 'ramen', label: 'ラーメン・麺類' },
+      { key: 'sushi', label: '寿司・海鮮' },
+      { key: 'izakaya', label: '居酒屋・和食' },
+      { key: 'cafe', label: 'カフェ・喫茶' },
+      { key: 'sweets', label: 'スイーツ・パン' },
+      { key: 'italian', label: 'イタリアン・洋食' },
+      { key: 'chinese', label: '中華・アジア料理' },
+      { key: 'other_food', label: 'その他グルメ' },
+    ],
+  },
+  play: {
+    label: '遊び',
+    icon: '🎡',
+    subs: [
+      { key: 'nature', label: '自然・公園' },
+      { key: 'shopping', label: 'ショッピング' },
+      { key: 'amusement', label: '遊園地・レジャー' },
+      { key: 'culture', label: '文化・観光' },
+      { key: 'sports', label: 'スポーツ・体験' },
+      { key: 'other_play', label: 'その他遊び' },
+    ],
+  },
+  other: {
+    label: 'その他',
+    icon: '📍',
+    subs: [],
+  },
+}
+
+function getSubcategoryLabel(category, subcategory) {
+  const cat = CATEGORIES[category]
+  if (!cat || !subcategory) return null
+  const sub = cat.subs.find(s => s.key === subcategory)
+  return sub?.label ?? null
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -31,6 +67,7 @@ export default function PlacesPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')   // 'all'|'want'|'visited'
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [subcategoryFilter, setSubcategoryFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [visitTarget, setVisitTarget] = useState(null)      // place object
@@ -133,6 +170,7 @@ export default function PlacesPage() {
   const filtered = places.filter(p => {
     if (statusFilter !== 'all' && p.status !== statusFilter) return false
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false
+    if (subcategoryFilter !== 'all' && p.subcategory !== subcategoryFilter) return false
     if (q) {
       const inName    = p.name?.toLowerCase().includes(q)
       const inAddress = p.address?.toLowerCase().includes(q)
@@ -214,13 +252,13 @@ export default function PlacesPage() {
         <div className={styles.categoryChips}>
           <button
             className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
-            onClick={() => setCategoryFilter('all')}
+            onClick={() => { setCategoryFilter('all'); setSubcategoryFilter('all') }}
           >すべて</button>
           {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
             <button
               key={key}
               className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
-              onClick={() => setCategoryFilter(key)}
+              onClick={() => { setCategoryFilter(key); setSubcategoryFilter('all') }}
             >{icon} {label}</button>
           ))}
           {availablePrefectures.length > 0 && (
@@ -237,6 +275,24 @@ export default function PlacesPage() {
             </select>
           )}
         </div>
+
+        {/* Subcategory chips (only show when a category is selected) */}
+        {categoryFilter !== 'all' && CATEGORIES[categoryFilter]?.subs.length > 0 && (
+          <div className={styles.subcategoryChips}>
+            <button
+              className={`${styles.chip} ${subcategoryFilter === 'all' ? styles.chipActive : ''}`}
+              onClick={() => setSubcategoryFilter('all')}
+            >すべての{CATEGORIES[categoryFilter].label}</button>
+            {CATEGORIES[categoryFilter].subs.map(sub => (
+              <button
+                key={sub.key}
+                className={`${styles.chip} ${subcategoryFilter === sub.key ? styles.chipActive : ''}`}
+                onClick={() => setSubcategoryFilter(sub.key)}
+              >{sub.label}</button>
+            ))}
+          </div>
+        )}
+
         <div className={styles.viewToggle}>
           <button
             className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
@@ -416,6 +472,7 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
 // ── 場所カード ────────────────────────────────────────────
 function PlaceCard({ place, onEdit, onVisit }) {
   const cat = CATEGORIES[place.category] ?? CATEGORIES.other
+  const subLabel = getSubcategoryLabel(place.category, place.subcategory)
   const isVisited = place.status === 'visited'
 
   function openMap(e) {
