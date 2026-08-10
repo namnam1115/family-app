@@ -4,7 +4,7 @@ import { BsHouseFill } from 'react-icons/bs'
 import {
   IconPlaces, IconSearch, IconFilter, IconList, IconMap, IconPin, IconPinFill,
   IconSparkle, IconDice, IconStar, IconStarFill, IconCheckCircle, IconReview,
-  IconBroadcast, IconFood, IconPlay, IconMore, IconClose,
+  IconBroadcast, IconFood, IconPlay, IconMore, IconClose, IconExternal,
   IconRamen, IconCafe, IconNightview, IconDate, IconKids, IconRainy,
   IconDrive, IconYakiniku, IconSweets, IconPark, IconOnsen, IconAnniversary,
 } from '../lib/icons'
@@ -122,6 +122,7 @@ export default function PlacesPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [visitTarget, setVisitTarget] = useState(null)      // place object
   const [editTarget, setEditTarget] = useState(null)        // place object
+  const [searchTitle, setSearchTitle] = useState(null)      // タイトルの簡易Web検索（文字列）
   const [view, setView] = useState('list')                  // 'list' | 'map'
   const [showRadiusSearch, setShowRadiusSearch] = useState(false)
   const [radiusCenter, setRadiusCenter] = useState(null)    // { lat, lng, address }
@@ -477,7 +478,7 @@ export default function PlacesPage() {
           <>
             {isBrowsing && (
               <div className={styles.discoverArea}>
-                <RecommendCard place={recommendPlace} onReroll={handleReroll} onOpen={setEditTarget} />
+                <RecommendCard place={recommendPlace} onReroll={handleReroll} onOpen={setEditTarget} onSearchTitle={() => setSearchTitle(recommendPlace?.name)} />
                 <DiscoverStrip activeTags={selectedTags} onSelectTag={handleDiscoverTagSelect} />
                 {recentPlaces.length > 0 && (
                   <RecentRow places={recentPlaces} onOpen={setEditTarget} />
@@ -526,6 +527,7 @@ export default function PlacesPage() {
                       place={place}
                       onEdit={() => setEditTarget(place)}
                       onVisit={() => setVisitTarget(place)}
+                      onSearchTitle={() => setSearchTitle(place.name)}
                     />
                   ))}
                 </ul>
@@ -561,13 +563,17 @@ export default function PlacesPage() {
         />
       )}
 
+      {searchTitle && (
+        <WebSearchModal query={searchTitle} onClose={() => setSearchTitle(null)} />
+      )}
+
       <BottomNav />
     </div>
   )
 }
 
 // ── 「今日はここ！」おすすめカード ──────────────────────
-function RecommendCard({ place, onReroll, onOpen }) {
+function RecommendCard({ place, onReroll, onOpen, onSearchTitle }) {
   if (!place) return null
   const cat = CATEGORIES[place.category] ?? CATEGORIES.other
   return (
@@ -582,7 +588,15 @@ function RecommendCard({ place, onReroll, onOpen }) {
           title="別の場所を提案"
         ><IconDice /></button>
       </div>
-      <p className={styles.recommendName}><cat.icon className={styles.recommendNameIcon} /> {place.name}</p>
+      <button
+        type="button"
+        className={styles.recommendName}
+        onClick={e => { e.stopPropagation(); onSearchTitle?.() }}
+        title="この場所をWeb検索"
+      >
+        <cat.icon className={styles.recommendNameIcon} /> {place.name}
+        <IconSearch className={styles.placeNameSearchIcon} aria-hidden="true" />
+      </button>
       {place.address && <p className={styles.recommendAddress}><IconPin /> {place.address}</p>}
       {place.memo && <p className={styles.recommendMemo}>{place.memo}</p>}
       {place.tags?.length > 0 && (
@@ -776,7 +790,7 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
 }
 
 // ── 場所カード ────────────────────────────────────────────
-function PlaceCard({ place, onEdit, onVisit }) {
+function PlaceCard({ place, onEdit, onVisit, onSearchTitle }) {
   const cat = CATEGORIES[place.category] ?? CATEGORIES.other
   const subLabel = getSubcategoryLabel(place.category, place.subcategory)
   const isVisited = place.status === 'visited'
@@ -806,7 +820,15 @@ function PlaceCard({ place, onEdit, onVisit }) {
         {isVisited && <span className={styles.visitedBadge}><IconCheckCircle /> 行った</span>}
       </div>
 
-      <p className={styles.placeName}>{place.name}</p>
+      <button
+        type="button"
+        className={styles.placeName}
+        onClick={e => { e.stopPropagation(); onSearchTitle?.() }}
+        title="この場所をWeb検索"
+      >
+        {place.name}
+        <IconSearch className={styles.placeNameSearchIcon} aria-hidden="true" />
+      </button>
 
       {place.memo && <p className={styles.placeMemo}>{place.memo}</p>}
       {place.address && (
@@ -1410,6 +1432,68 @@ function MapPopup({ place, onClose }) {
         }
       </div>
       {place.memo && <p className={styles.mapPopupMemo}>{place.memo}</p>}
+    </div>
+  )
+}
+
+// ── タイトルの簡易Web検索モーダル（モーダル内にブラウザを表示） ──
+function WebSearchModal({ query, onClose }) {
+  const [input, setInput] = useState(query ?? '')
+  const [submitted, setSubmitted] = useState(query ?? '')
+  const [loading, setLoading] = useState(true)
+
+  // Google 検索を iframe 埋め込み可能な形（igu=1）で表示。ブロックされた場合は外部リンクで開く
+  const frameSrc = `https://www.google.com/search?igu=1&q=${encodeURIComponent(submitted)}`
+  const externalUrl = `https://www.google.com/search?q=${encodeURIComponent(submitted)}`
+
+  function runSearch(e) {
+    e.preventDefault()
+    const q = input.trim()
+    if (!q || q === submitted) return
+    setLoading(true)
+    setSubmitted(q)
+  }
+
+  return (
+    <div className={styles.searchOverlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.searchModal}>
+        <div className={styles.searchModalBar}>
+          <form className={styles.searchModalForm} onSubmit={runSearch}>
+            <span className={styles.searchModalIcon}><IconSearch /></span>
+            <input
+              className={styles.searchModalInput}
+              type="search"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              aria-label="検索キーワード"
+              placeholder="キーワードを検索"
+            />
+          </form>
+          <a
+            className={styles.searchModalExternal}
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="ブラウザで開く"
+            title="ブラウザで開く"
+          ><IconExternal /></a>
+          <button className={styles.searchModalClose} onClick={onClose} aria-label="閉じる"><IconClose /></button>
+        </div>
+        <div className={styles.searchModalBody}>
+          {loading && <div className={styles.searchModalLoading}><LoadingSpinner inline /></div>}
+          <iframe
+            key={submitted}
+            className={styles.searchModalFrame}
+            src={frameSrc}
+            title={`「${submitted}」の検索結果`}
+            onLoad={() => setLoading(false)}
+            referrerPolicy="no-referrer"
+          />
+        </div>
+        <p className={styles.searchModalHint}>
+          うまく表示されないときは右上の <IconExternal /> からブラウザで開けます
+        </p>
+      </div>
     </div>
   )
 }
