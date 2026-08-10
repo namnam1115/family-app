@@ -47,6 +47,9 @@
 
 .headerTitle {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
@@ -55,6 +58,27 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: 0.01em;
+}
+
+.headerTitleIcon {
+  color: var(--primary);
+  -webkit-text-fill-color: var(--primary);
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+/* インラインアイコンの縦位置をテキストに馴染ませる */
+.chipIcon,
+.recommendNameIcon {
+  vertical-align: -0.125em;
+}
+
+/* 評価の星 */
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05em;
+  color: var(--warning);
 }
 
 .addBtn {
@@ -505,19 +529,20 @@
 
 /* ── 地図ピン ── */
 .mapPin {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   line-height: 1;
   cursor: pointer;
+  color: var(--primary);
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
   transition: transform 0.15s ease;
 }
 
 .mapPin:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
 .mapPinVisited {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)) saturate(0.8);
+  color: var(--success);
 }
 
 /* ── 地図ポップアップ ── */

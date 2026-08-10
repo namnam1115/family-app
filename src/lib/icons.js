@@ -1,0 +1,76 @@
+/**
+ * アプリ共通アイコン（Bootstrap Icons / react-icons/bs）。
+ *
+ * 派手な絵文字をやめ、単色・線画で統一した「灯 Akari」トーンのアイコン集。
+ * すべて currentColor を継承するため、text-color を指定すれば配色・ダークモードに追従する。
+ * 画面側では必ずこのモジュール経由で参照し、react-icons から直接 import しないこと
+ * （アイコンの意味と見た目を一箇所で管理するため）。
+ */
+export {
+  // ── ナビ・アプリ ──────────────────────────────
+  BsHouseDoor as IconHome,
+  BsCart3 as IconShopping,
+  BsCalendar3 as IconSchedule,
+  BsBoxSeam as IconInventory,
+  BsGeoAlt as IconPlaces,
+  BsTag as IconPrice,
+  BsWallet2 as IconBudget,
+  BsEggFried as IconDishes,
+  BsAirplane as IconTravel,
+  BsJournalText as IconMemo,
+
+  // ── 操作・UI ─────────────────────────────────
+  BsPlusLg as IconAdd,
+  BsSearch as IconSearch,
+  BsSliders as IconFilter,
+  BsGear as IconGear,
+  BsListUl as IconList,
+  BsMap as IconMap,
+  BsXLg as IconClose,
+  BsCheck as IconCheck,
+  BsCheckLg as IconCheckBold,
+  BsCheckCircleFill as IconCheckCircle,
+  BsBell as IconBell,
+  BsDice5 as IconDice,
+  BsStars as IconSparkle,
+  BsStar as IconStar,
+  BsStarFill as IconStarFill,
+  BsLink as IconLink,
+  BsChatText as IconReview,
+  BsTrash as IconTrash,
+  BsPencil as IconEdit,
+  BsThreeDots as IconMore,
+  BsArrowRight as IconArrowRight,
+  BsChevronRight as IconChevronRight,
+  BsBroadcast as IconBroadcast,
+  BsExclamationTriangle as IconWarning,
+  BsCircleFill as IconDot,
+  BsPeople as IconPeople,
+  BsBriefcase as IconWork,
+  BsShop as IconShop,
+  BsGlobe2 as IconWeb,
+  BsYoutube as IconYoutube,
+  BsMusicNoteBeamed as IconMusic,
+  BsPieChart as IconChart,
+  BsBasket3 as IconGrocery,
+  BsDroplet as IconDaily,
+  BsBoxSeam as IconBox,
+  BsGeoAlt as IconPin,
+  BsGeoAltFill as IconPinFill,
+
+  // ── お出かけカテゴリ／目的タグ ──────────────────
+  BsEggFried as IconFood,
+  BsController as IconPlay,
+  BsCupHot as IconRamen,
+  BsCup as IconCafe,
+  BsMoonStars as IconNightview,
+  BsHeart as IconDate,
+  BsBalloon as IconKids,
+  BsUmbrella as IconRainy,
+  BsCarFront as IconDrive,
+  BsFire as IconYakiniku,
+  BsCake2 as IconSweets,
+  BsTree as IconPark,
+  BsDroplet as IconOnsen,
+  BsGift as IconAnniversary,
+} from 'react-icons/bs'

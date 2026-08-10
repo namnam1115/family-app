@@ -1370,3 +1370,11 @@
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ヘッダータイトル横のアイコン（グラデ文字の影響を受けないよう色を明示） */
+.headerTitleIcon {
+  color: var(--primary);
+  -webkit-text-fill-color: var(--primary);
+  font-size: 1rem;
+  flex-shrink: 0;
+}

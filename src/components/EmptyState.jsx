@@ -5,7 +5,7 @@ import styles from './EmptyState.module.css'
  * ユーザーが次に何をすればいいかを常に示す。
  *
  * props:
- *   icon        : 絵文字など（任意）
+ *   icon        : アイコン要素（<IconXxx /> など・任意）
  *   title       : 主メッセージ
  *   description : 補足（任意）
  *   actionLabel : 主アクションのラベル（任意）

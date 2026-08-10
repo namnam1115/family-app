@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import {
+  IconPrice, IconChart, IconList, IconShop, IconSearch,
+  IconGrocery, IconDaily, IconBox, IconEdit, IconCheckBold, IconClose,
+} from '../lib/icons'
 // Tabler Icons（線画・メイン）
 import {
   TbMeat, TbPig, TbSausage, TbGrill, TbChefHat,
@@ -248,7 +252,7 @@ export default function PricePage() {
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
-          <span className={styles.headerTitle}>💰 価格比較</span>
+          <span className={styles.headerTitle}><IconPrice className={styles.headerTitleIcon} /> 価格比較</span>
         </div>
         <div className={styles.headerActions}>
           {products.length > 0 && (
@@ -257,11 +261,11 @@ export default function PricePage() {
               onClick={() => setView(v => v === 'list' ? 'grid' : 'list')}
               title={view === 'list' ? '一覧表で見る' : 'リストで見る'}
             >
-              {view === 'list' ? '📊 一覧' : '📋 リスト'}
+              {view === 'list' ? <><IconChart /> 一覧</> : <><IconList /> リスト</>}
             </button>
           )}
           <button className={styles.storeBtn} onClick={() => setShowStoreModal(true)} title="店舗管理">
-            🏪 <span className={styles.storeBtnLabel}>店舗</span>
+            <IconShop /> <span className={styles.storeBtnLabel}>店舗</span>
           </button>
           <button
             className={styles.addBtn}
@@ -277,7 +281,7 @@ export default function PricePage() {
       {!loading && allProducts.length > 0 && (
         <div className={styles.filterBar}>
           <div className={styles.searchWrapper}>
-            <span className={styles.searchIcon}>🔍</span>
+            <span className={styles.searchIcon}><IconSearch /></span>
             <input
               className={styles.searchInput}
               type="search"
@@ -290,12 +294,17 @@ export default function PricePage() {
             )}
           </div>
           <div className={styles.categoryChips}>
-            {[['all', 'すべて'], ['food', '🥦 食材'], ['daily', '🧴 日用品'], ['other', '📦 その他']].map(([v, label]) => (
+            {[
+              { v: 'all', label: 'すべて', Icon: null },
+              { v: 'food', label: '食材', Icon: IconGrocery },
+              { v: 'daily', label: '日用品', Icon: IconDaily },
+              { v: 'other', label: 'その他', Icon: IconBox },
+            ].map(({ v, label, Icon }) => (
               <button
                 key={v}
                 className={`${styles.chip} ${categoryFilter === v ? styles.chipActive : ''}`}
                 onClick={() => setCategoryFilter(v)}
-              >{label}</button>
+              >{Icon && <Icon />} {label}</button>
             ))}
           </div>
         </div>
@@ -306,7 +315,7 @@ export default function PricePage() {
           <LoadingSpinner inline />
         ) : stores.length === 0 ? (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon}>🏪</span>
+            <span className={styles.emptyIcon}><IconShop /></span>
             <p>まず店舗を登録してください</p>
             <button className={styles.emptyBtn} onClick={() => setShowStoreModal(true)}>
               店舗を追加する
@@ -314,7 +323,7 @@ export default function PricePage() {
           </div>
         ) : isEmpty ? (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon}>💰</span>
+            <span className={styles.emptyIcon}><IconPrice /></span>
             <p>価格データがありません</p>
             <p className={styles.emptyDesc}>「＋ 追加」から商品と価格を登録しましょう</p>
             <button className={styles.emptyBtn} onClick={() => setShowAddModal(true)}>
@@ -323,7 +332,7 @@ export default function PricePage() {
           </div>
         ) : products.length === 0 ? (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon}>🔍</span>
+            <span className={styles.emptyIcon}><IconSearch /></span>
             <p>{searchQuery ? `「${searchQuery}」は見つかりません` : 'このカテゴリの商品はありません'}</p>
           </div>
         ) : view === 'list' ? (
@@ -445,7 +454,7 @@ function CompareSheet({ product, storeNames, lookup, cheapestInfo, productIcon, 
               <span className={styles.iconDisplayEmoji}>
                 <Icon name={icon || 'TbShoppingCart'} size={28} />
               </span>
-              <span className={styles.iconDisplayEditBadge}>✏</span>
+              <span className={styles.iconDisplayEditBadge}><IconEdit /></span>
             </button>
             <div>
               <h2 className={styles.sheetTitle}>{product}</h2>
@@ -720,8 +729,8 @@ function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
             maxLength={50}
           />
           <div className={styles.editBtns}>
-            <button className={styles.editSaveBtn} onClick={save} disabled={saving}>✓</button>
-            <button className={styles.editCancelBtn} onClick={cancel}>✕</button>
+            <button className={styles.editSaveBtn} onClick={save} disabled={saving} aria-label="保存"><IconCheckBold /></button>
+            <button className={styles.editCancelBtn} onClick={cancel} aria-label="キャンセル"><IconClose /></button>
           </div>
         </div>
       </td>
@@ -751,9 +760,9 @@ function PriceCell({ item, product, store, isCheapest, onSave, onDelete }) {
 }
 
 const PRICE_CATEGORIES = [
-  { value: 'food',  label: '🥦 食材' },
-  { value: 'daily', label: '🧴 日用品' },
-  { value: 'other', label: '📦 その他' },
+  { value: 'food',  label: '食材',   icon: IconGrocery },
+  { value: 'daily', label: '日用品', icon: IconDaily },
+  { value: 'other', label: 'その他', icon: IconBox },
 ]
 
 // ── 価格追加モーダル ──────────────────────────────────────
@@ -839,7 +848,7 @@ function AddModal({ stores, productNames, productCategory, productIcon, onSubmit
                   type="button"
                   className={`${styles.categoryBtn} ${category === c.value ? styles.categoryBtnActive : ''}`}
                   onClick={() => setCategory(c.value)}
-                >{c.label}</button>
+                ><c.icon /> {c.label}</button>
               ))}
             </div>
           </div>

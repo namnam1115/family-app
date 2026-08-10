@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { IconList } from '../lib/icons'
 import styles from './ShoppingListPanel.module.css'
 
 export default function ShoppingListPanel({
@@ -64,7 +65,7 @@ export default function ShoppingListPanel({
               className={`${styles.listItem} ${l.id === selectedListId ? styles.selected : ''}`}
             >
               <button className={styles.listBtn} onClick={() => onSelect(l.id)}>
-                <span className={styles.listIcon}>📋</span>
+                <span className={styles.listIcon}><IconList /></span>
                 <span className={styles.listName}>{l.name}</span>
               </button>
               <button

@@ -260,6 +260,12 @@ input, select, textarea {
   font-size: 16px;
 }
 
+/* react-icons（Bootstrap Icons など）をテキスト行に馴染ませる。
+   flex/grid 中央寄せのアイコンには影響しない（vertical-align はインライン専用）。 */
+svg {
+  vertical-align: -0.125em;
+}
+
 /* Visible keyboard focus for accessibility */
 :focus-visible {
   outline: 2px solid var(--primary);

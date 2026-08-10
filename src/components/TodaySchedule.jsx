@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { IconChevronRight } from '../lib/icons'
 import styles from './TodaySchedule.module.css'
 
 const MEMBER_COLORS = [
@@ -92,7 +93,7 @@ export default function TodaySchedule() {
         <h2 className={styles.title}>今日の予定</h2>
         <span className={styles.dateLabel}>{todayLabel}</span>
         <button className={styles.linkBtn} onClick={() => navigate('/schedule')}>
-          カレンダーを開く →
+          カレンダーを開く <IconChevronRight />
         </button>
       </div>
 

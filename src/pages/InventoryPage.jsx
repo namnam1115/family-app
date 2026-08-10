@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import {
+  IconInventory, IconShopping, IconClose, IconDot, IconWarning, IconSchedule,
+} from '../lib/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -173,7 +176,7 @@ export default function InventoryPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
-        <span className={styles.title}>📦 在庫管理</span>
+        <span className={styles.title}><IconInventory className={styles.titleIcon} /> 在庫管理</span>
         <button className={styles.addBtn} onClick={() => { setEditingItem(null); setShowModal(true) }}>＋ 追加</button>
       </header>
 
@@ -224,7 +227,7 @@ export default function InventoryPage() {
           <LoadingSpinner inline />
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon}>📦</span>
+            <span className={styles.emptyIcon}><IconInventory /></span>
             <p>在庫がありません</p>
             <button className={styles.emptyAddBtn} onClick={() => { setEditingItem(null); setShowModal(true) }}>
               最初の品目を追加する
@@ -267,7 +270,7 @@ export default function InventoryPage() {
               fetchShoppingLists()
             }}
           >
-            🛒 切れ・少ないを買い物リストに追加（{needsBuyingCount}件）
+            <IconShopping /> 切れ・少ないを買い物リストに追加（{needsBuyingCount}件）
           </button>
         </div>
       )}
@@ -375,7 +378,7 @@ function InventoryCard({ item, onStatusCycle, onEdit, onDelete }) {
           {cat.label}
         </span>
         <span className={styles.itemName}>{item.name}</span>
-        {expiryInfo && <span className={styles.expiryTag} style={{ color: expiryInfo.color }}>📅 {expiryInfo.label}</span>}
+        {expiryInfo && <span className={styles.expiryTag} style={{ color: expiryInfo.color }}><IconSchedule /> {expiryInfo.label}</span>}
         {item.note && <span className={styles.itemNote}>{item.note}</span>}
       </div>
       <div className={styles.cardRight}>
@@ -439,7 +442,7 @@ function ItemModal({ item, familyMember, onClose, onSaved }) {
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <span className={styles.modalTitle}>{isEdit ? '品目を編集' : '品目を追加'}</span>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
         </div>
 
         <div className={styles.formBody}>
@@ -548,7 +551,7 @@ function AddToShoppingModal({ items, selectedIds, onToggle, shoppingLists, targe
       <div className={styles.shoppingModal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <span className={styles.modalTitle}>買い物リストに追加</span>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
         </div>
 
         <div className={styles.formBody}>
@@ -562,7 +565,7 @@ function AddToShoppingModal({ items, selectedIds, onToggle, shoppingLists, targe
 
           {outItems.length > 0 && (
             <div className={styles.itemCheckSection}>
-              <div className={styles.sectionTitle}>🔴 切れ ({outItems.length}件)</div>
+              <div className={styles.sectionTitle}><IconDot style={{ color: 'var(--danger)' }} /> 切れ ({outItems.length}件)</div>
               <div className={styles.itemCheckList}>
                 {outItems.map(item => (
                   <label key={item.id} className={styles.checkItem}>
@@ -580,7 +583,7 @@ function AddToShoppingModal({ items, selectedIds, onToggle, shoppingLists, targe
 
           {lowItems.length > 0 && (
             <div className={styles.itemCheckSection}>
-              <div className={styles.sectionTitle}>🟡 少ない ({lowItems.length}件)</div>
+              <div className={styles.sectionTitle}><IconDot style={{ color: 'var(--warning)' }} /> 少ない ({lowItems.length}件)</div>
               <div className={styles.itemCheckList}>
                 {lowItems.map(item => (
                   <label key={item.id} className={styles.checkItem}>
@@ -598,7 +601,7 @@ function AddToShoppingModal({ items, selectedIds, onToggle, shoppingLists, targe
 
           {expiryItems.length > 0 && (
             <div className={styles.itemCheckSection}>
-              <div className={styles.sectionTitle}>⚠️ 期限切れ・期限間近 ({expiryItems.length}件)</div>
+              <div className={styles.sectionTitle}><IconWarning style={{ color: 'var(--warning)' }} /> 期限切れ・期限間近 ({expiryItems.length}件)</div>
               <div className={styles.itemCheckList}>
                 {expiryItems.map(item => {
                   const expInfo = getExpiryInfo(item.expiry_date)
@@ -609,7 +612,7 @@ function AddToShoppingModal({ items, selectedIds, onToggle, shoppingLists, targe
                         checked={selectedIds.has(item.id)}
                         onChange={() => onToggle(item.id)}
                       />
-                      <span>{item.name} <span style={{ fontSize: '0.75rem', color: expInfo.color }}>📅 {expInfo.label}</span></span>
+                      <span>{item.name} <span style={{ fontSize: '0.75rem', color: expInfo.color }}><IconSchedule /> {expInfo.label}</span></span>
                     </label>
                   )
                 })}

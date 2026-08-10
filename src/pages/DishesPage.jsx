@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import {
+  IconDishes, IconSearch, IconGear, IconCheck, IconCheckCircle, IconReview, IconLink,
+  IconEdit, IconTrash, IconStar, IconStarFill, IconYoutube, IconMusic, IconWeb,
+} from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
@@ -35,9 +39,20 @@ function getPlatform(url) {
 }
 
 const PLATFORM_LABELS = {
-  youtube: { icon: '🎬', label: 'YouTube' },
-  tiktok:  { icon: '🎵', label: 'TikTok' },
-  web:     { icon: '🌐', label: 'Web' },
+  youtube: { icon: IconYoutube, label: 'YouTube' },
+  tiktok:  { icon: IconMusic, label: 'TikTok' },
+  web:     { icon: IconWeb, label: 'Web' },
+}
+
+// 評価の星表示
+function DishStars({ value = 0, max = 5 }) {
+  return (
+    <span className={styles.stars} aria-label={`評価 ${value} / ${max}`}>
+      {Array.from({ length: max }, (_, i) =>
+        i < value ? <IconStarFill key={i} /> : <IconStar key={i} />
+      )}
+    </span>
+  )
 }
 
 // ── メインページ ──────────────────────────────────────────
@@ -173,13 +188,13 @@ export default function DishesPage() {
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る">
           <BsHouseFill />
         </button>
-        <h1 className={styles.headerTitle}>🍳 食べたいおかず</h1>
+        <h1 className={styles.headerTitle}><IconDishes className={styles.headerTitleIcon} /> 食べたいおかず</h1>
         <button className={styles.addBtn} onClick={() => setShowAdd(true)}>＋ 追加</button>
       </header>
 
       {/* 検索バー */}
       <div className={styles.searchBar}>
-        <span className={styles.searchIcon}>🔍</span>
+        <span className={styles.searchIcon}><IconSearch /></span>
         <input
           className={styles.searchInput}
           type="search"
@@ -210,7 +225,7 @@ export default function DishesPage() {
           className={styles.chipManage}
           onClick={() => setShowManageCategories(true)}
           aria-label="カテゴリを管理"
-        >⚙️</button>
+        ><IconGear /></button>
       </div>
 
       <main className={styles.main}>
@@ -218,7 +233,7 @@ export default function DishesPage() {
           <LoadingSpinner inline />
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon}>🍳</span>
+            <span className={styles.emptyIcon}><IconDishes /></span>
             <p>おかずを追加しましょう</p>
             <button className={styles.emptyBtn} onClick={() => setShowAdd(true)}>
               おかずを追加する
@@ -299,7 +314,7 @@ function DishCard({ dish, onReview, onEdit }) {
           />
           {platformInfo && (
             <span className={styles.platformBadge}>
-              {platformInfo.icon} {platformInfo.label}
+              <platformInfo.icon /> {platformInfo.label}
             </span>
           )}
         </div>
@@ -312,11 +327,11 @@ function DishCard({ dish, onReview, onEdit }) {
           )}
           {!thumbnailUrl && platformInfo && (
             <span className={styles.platformBadgeInline}>
-              {platformInfo.icon} {platformInfo.label}
+              <platformInfo.icon /> {platformInfo.label}
             </span>
           )}
           {hasReview && (
-            <span className={styles.cookedBadge}>✅ 作った</span>
+            <span className={styles.cookedBadge}><IconCheckCircle /> 作った</span>
           )}
         </div>
 
@@ -324,11 +339,11 @@ function DishCard({ dish, onReview, onEdit }) {
 
         {hasReview && dish.rating && (
           <p className={styles.ratingDisplay}>
-            {'★'.repeat(dish.rating)}{'☆'.repeat(5 - dish.rating)}
+            <DishStars value={dish.rating} />
           </p>
         )}
         {hasReview && dish.review && (
-          <p className={styles.reviewText}>💬 {dish.review}</p>
+          <p className={styles.reviewText}><IconReview /> {dish.review}</p>
         )}
 
         <div className={styles.cardBottom}>
@@ -341,7 +356,7 @@ function DishCard({ dish, onReview, onEdit }) {
                 className={styles.linkBtn}
                 onClick={e => e.stopPropagation()}
               >
-                🔗 レシピを見る
+                <IconLink /> レシピを見る
               </a>
             )}
             {!hasReview && (
@@ -354,7 +369,7 @@ function DishCard({ dish, onReview, onEdit }) {
             className={styles.editBtn}
             onClick={onEdit}
             aria-label="編集"
-          >✏️</button>
+          ><IconEdit /></button>
         </div>
       </div>
     </li>
@@ -490,7 +505,7 @@ function AddDishModal({ categories, onSubmit, onClose }) {
               {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
             </div>
             <span className={styles.inputHint}>
-              {thumbAutoFetched ? '✓ サムネイルを自動取得しました' : 'URLを入力すると自動でサムネイルを取得します'}
+              {thumbAutoFetched ? <><IconCheck /> サムネイルを自動取得しました</> : 'URLを入力すると自動でサムネイルを取得します'}
             </span>
           </label>
           {previewUrl && (
@@ -547,7 +562,7 @@ function ReviewModal({ dish, onSubmit, onClose }) {
                   className={`${styles.starBtn} ${n <= rating ? styles.starActive : ''}`}
                   onClick={() => setRating(n === rating ? 0 : n)}
                   aria-label={`${n}点`}
-                >★</button>
+                >{n <= rating ? <IconStarFill /> : <IconStar />}</button>
               ))}
               {rating > 0 && (
                 <button type="button" className={styles.clearRating} onClick={() => setRating(0)}>
@@ -685,7 +700,7 @@ function EditDishModal({ dish, categories, onSubmit, onDelete, onClose }) {
               {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
             </div>
             <span className={styles.inputHint}>
-              {thumbAutoFetched ? '✓ サムネイルを自動取得しました' : 'URLを入力すると自動でサムネイルを取得します'}
+              {thumbAutoFetched ? <><IconCheck /> サムネイルを自動取得しました</> : 'URLを入力すると自動でサムネイルを取得します'}
             </span>
           </label>
           {previewUrl && (
@@ -717,7 +732,7 @@ function EditDishModal({ dish, categories, onSubmit, onDelete, onClose }) {
           </div>
         ) : (
           <button className={styles.deleteOutlineBtn} onClick={() => setConfirmDelete(true)}>
-            🗑️ このおかずを削除
+            <IconTrash /> このおかずを削除
           </button>
         )}
       </div>

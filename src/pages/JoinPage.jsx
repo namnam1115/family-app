@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { IconHome } from '../lib/icons'
 import styles from './JoinPage.module.css'
 
 export default function JoinPage() {
@@ -56,7 +57,7 @@ export default function JoinPage() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <span className={styles.icon}>🏠</span>
+        <span className={styles.icon}><IconHome /></span>
         <h1 className={styles.title}>家族グループへの招待</h1>
 
         {status === 'done' && (

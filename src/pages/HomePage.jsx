@@ -7,6 +7,10 @@ import AppCard from '../components/AppCard'
 import FamilyInfo from '../components/FamilyInfo'
 import TodaySchedule from '../components/TodaySchedule'
 import BottomNav from '../components/BottomNav'
+import {
+  IconHome, IconShopping, IconPrice, IconPlaces, IconDishes,
+  IconBudget, IconSchedule, IconInventory, IconTravel, IconMemo,
+} from '../lib/icons'
 import styles from './HomePage.module.css'
 
 export default function HomePage() {
@@ -32,7 +36,7 @@ export default function HomePage() {
       <div className={styles.loginPage}>
         <div className={styles.loginCard}>
           <div className={styles.logoArea}>
-            <span className={styles.logoIcon}>🏠</span>
+            <span className={styles.logoIcon}><IconHome /></span>
             <h1 className={styles.appTitle}>家族プラットフォーム</h1>
             <p className={styles.appDesc}>家族みんなで使えるアプリをまとめてひとつに</p>
           </div>
@@ -56,7 +60,7 @@ export default function HomePage() {
     return (
       <div className={styles.page}>
         <header className={styles.header}>
-          <span className={styles.headerLogo}>🏠</span>
+          <span className={styles.headerLogo}><IconHome /></span>
           <span className={styles.headerTitle}>家族プラットフォーム</span>
           <button className={styles.signOutBtn} onClick={signOut}>ログアウト</button>
         </header>
@@ -73,7 +77,7 @@ export default function HomePage() {
       id: 'shopping',
       title: '買い物リスト',
       description: '家族で共有できる買い物リスト。チェックするだけで即時同期。',
-      icon: '🛒',
+      icon: IconShopping,
       path: '/shopping',
       available: true,
     },
@@ -81,7 +85,7 @@ export default function HomePage() {
       id: 'price',
       title: '価格比較',
       description: '複数スーパーの商品価格を比較。最安値を一目で確認。',
-      icon: '💰',
+      icon: IconPrice,
       path: '/price',
       available: true,
     },
@@ -89,7 +93,7 @@ export default function HomePage() {
       id: 'places',
       title: 'お出かけリスト',
       description: '行きたい場所をまとめて共有。行ったら評価を残せる。',
-      icon: '📍',
+      icon: IconPlaces,
       path: '/places',
       available: true,
     },
@@ -97,7 +101,7 @@ export default function HomePage() {
       id: 'dishes',
       title: '食べたいおかず',
       description: 'おかずのレシピを家族でストック。作ったら感想を残せる。',
-      icon: '🍳',
+      icon: IconDishes,
       path: '/dishes',
       available: true,
     },
@@ -105,7 +109,7 @@ export default function HomePage() {
       id: 'budget',
       title: '予算管理',
       description: '月々の固定費を家族で管理。カテゴリ・メンバー別に把握。',
-      icon: '📊',
+      icon: IconBudget,
       path: '/budget',
       available: true,
     },
@@ -113,7 +117,7 @@ export default function HomePage() {
       id: 'schedule',
       title: 'スケジュール',
       description: '家族の予定を週単位で共有。リアルタイムに同期。',
-      icon: '📅',
+      icon: IconSchedule,
       path: '/schedule',
       available: true,
     },
@@ -121,7 +125,7 @@ export default function HomePage() {
       id: 'inventory',
       title: '在庫管理',
       description: '食材・日用品のストックを家族で共有。数量をサクッと更新。',
-      icon: '📦',
+      icon: IconInventory,
       path: '/inventory',
       available: true,
     },
@@ -129,7 +133,7 @@ export default function HomePage() {
       id: 'travels',
       title: '旅行記録',
       description: '旅の思い出と計画を記録。スケジュールと自動連携。',
-      icon: '✈️',
+      icon: IconTravel,
       path: '/travels',
       available: true,
     },
@@ -137,7 +141,7 @@ export default function HomePage() {
       id: 'memo',
       title: '共有メモ',
       description: '大切な情報を家族でメモ（近日公開）',
-      icon: '📝',
+      icon: IconMemo,
       path: '/memo',
       available: false,
     },
@@ -146,7 +150,7 @@ export default function HomePage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <span className={styles.headerLogo}>🏠</span>
+        <span className={styles.headerLogo}><IconHome /></span>
         <span className={styles.headerTitle}>家族プラットフォーム</span>
         <button className={styles.signOutBtn} onClick={signOut}>ログアウト</button>
       </header>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import { IconTravel, IconClose, IconPin } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -193,7 +194,7 @@ export default function TravelPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
-        <span className={styles.title}>✈️ 旅行記録</span>
+        <span className={styles.title}><IconTravel className={styles.titleIcon} /> 旅行記録</span>
         <button className={styles.addBtn} onClick={() => { setEditingTrip(null); setShowTripModal(true) }}>＋ 新しい旅行</button>
       </header>
 
@@ -217,7 +218,7 @@ export default function TravelPage() {
           <LoadingSpinner inline />
         ) : trips.length === 0 ? (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon}>✈️</span>
+            <span className={styles.emptyIcon}><IconTravel /></span>
             <p>旅行記録がありません</p>
             <button className={styles.emptyAddBtn} onClick={() => { setEditingTrip(null); setShowTripModal(true) }}>
               最初の旅行を記録する
@@ -318,14 +319,14 @@ function TripDetailModal({ trip, activities, onAddActivity, onDeleteActivity, on
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <span className={styles.modalTitle}>{trip.title}</span>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
         </div>
 
         <div className={styles.modalBody}>
           <div className={styles.tripInfo}>
             <div className={styles.dateRange}>{dateRange(trip.start_date, trip.end_date)}</div>
-            {trip.prefecture && <div className={styles.tripPrefecture}>📍 {trip.prefecture}</div>}
-            <div className={styles.scheduleStatus}>✈ スケジュールに自動登録済み</div>
+            {trip.prefecture && <div className={styles.tripPrefecture}><IconPin /> {trip.prefecture}</div>}
+            <div className={styles.scheduleStatus}><IconTravel /> スケジュールに自動登録済み</div>
           </div>
 
           <div className={styles.activitiesSection}>
@@ -409,7 +410,7 @@ function TripFormModal({ trip, onClose, onSave }) {
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <span className={styles.modalTitle}>{isEdit ? '旅行を編集' : '新しい旅行を追加'}</span>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
         </div>
 
         <div className={styles.modalBody}>
