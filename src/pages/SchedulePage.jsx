@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import { IconSchedule, IconClose, IconWork } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
@@ -345,7 +346,7 @@ export default function SchedulePage() {
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る">
           <BsHouseFill />
         </button>
-        <h1 className={styles.headerTitle}>📅 スケジュール</h1>
+        <h1 className={styles.headerTitle}><IconSchedule className={styles.headerTitleIcon} /> スケジュール</h1>
 
         {nurseMode ? (
           /* 勤務入力モード中：終了ボタンを明示 */
@@ -354,7 +355,7 @@ export default function SchedulePage() {
             onClick={cancelNurseMode}
             aria-label="勤務入力モードを終了"
           >
-            <span aria-hidden="true">✕</span> 勤務モード終了
+            <span aria-hidden="true"><IconClose /></span> 勤務モード終了
           </button>
         ) : (
           <>
@@ -376,7 +377,7 @@ export default function SchedulePage() {
                       role="menuitem"
                       onClick={() => { setHeaderMenuOpen(false); enableNurseMode() }}
                     >
-                      <span className={styles.headerMenuIcon} aria-hidden="true">👩‍⚕️</span>
+                      <span className={styles.headerMenuIcon} aria-hidden="true"><IconWork /></span>
                       勤務入力モード
                     </button>
                   </div>

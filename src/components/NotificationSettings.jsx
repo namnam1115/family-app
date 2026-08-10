@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { getPushStatus, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
+import { IconBell, IconStarFill } from '../lib/icons'
 import styles from './NotificationSettings.module.css'
 
 export default function NotificationSettings({ familyMember, onClose }) {
@@ -61,7 +62,7 @@ export default function NotificationSettings({ familyMember, onClose }) {
     <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
-          <h2 className={styles.title}>🔔 通知設定</h2>
+          <h2 className={styles.title}><IconBell /> 通知設定</h2>
           <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
         </div>
 
@@ -130,7 +131,7 @@ export default function NotificationSettings({ familyMember, onClose }) {
               </div>
 
               <p className={styles.hint}>
-                ⭐ マークの未購入アイテムがある場合のみ通知します
+                <IconStarFill /> マークの未購入アイテムがある場合のみ通知します
               </p>
             </section>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { IconCheck } from '../lib/icons'
 import styles from './FamilyInfo.module.css'
 
 export default function FamilyInfo() {
@@ -47,7 +48,7 @@ export default function FamilyInfo() {
         </div>
       </div>
       <button className={styles.inviteBtn} onClick={copyInviteLink}>
-        {inviteCopied ? '✓ コピー' : '招待'}
+        {inviteCopied ? <><IconCheck /> コピー</> : '招待'}
       </button>
     </div>
   )

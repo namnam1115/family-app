@@ -883,3 +883,19 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* ヘッダータイトル横のアイコン（グラデ文字の影響を受けないよう色を明示） */
+.headerTitleIcon {
+  color: var(--primary);
+  -webkit-text-fill-color: var(--primary);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* 評価の星 */
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05em;
+  color: var(--warning);
+}

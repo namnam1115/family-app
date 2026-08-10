@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { IconStar, IconStarFill, IconCheck } from '../lib/icons'
 import styles from './ShoppingItemList.module.css'
 
 export default function ShoppingItemList({ listId, listName, memberName, isFavorite, onToggleFavorite }) {
@@ -116,7 +117,7 @@ export default function ShoppingItemList({ listId, listName, memberName, isFavor
           onClick={onToggleFavorite}
           aria-label={isFavorite ? 'お気に入りを外す' : 'お気に入りに追加'}
         >
-          {isFavorite ? '★' : '☆'}
+          {isFavorite ? <IconStarFill /> : <IconStar />}
         </button>
       </div>
 
@@ -280,7 +281,7 @@ function ItemRow({ item, onToggle, onDelete, onToggleImportant }) {
           onClick={handleCheckboxClick}
           aria-label={item.checked ? 'チェックを外す' : 'チェックする'}
         >
-          {item.checked ? '✓' : ''}
+          {item.checked ? <IconCheck /> : ''}
         </button>
         <div className={styles.itemBody}>
           <span className={styles.itemName}>{item.name}</span>
@@ -296,7 +297,7 @@ function ItemRow({ item, onToggle, onDelete, onToggleImportant }) {
           onClick={e => { e.stopPropagation(); onToggleImportant(item) }}
           aria-label={item.important ? '重要フラグを外す' : '重要としてマーク'}
         >
-          {item.important ? '⭐' : '☆'}
+          {item.important ? <IconStarFill /> : <IconStar />}
         </button>
         {/* デスクトップのみ × ボタン表示 */}
         <button className={styles.deleteBtn} onClick={e => { e.stopPropagation(); onDelete(item.id) }} aria-label="削除">×</button>

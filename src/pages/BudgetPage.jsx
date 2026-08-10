@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import { IconBudget, IconChart, IconPeople } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
@@ -96,7 +97,7 @@ export default function BudgetPage() {
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る">
           <BsHouseFill />
         </button>
-        <h1 className={styles.headerTitle}>📊 予算管理</h1>
+        <h1 className={styles.headerTitle}><IconBudget className={styles.headerTitleIcon} /> 予算管理</h1>
         <button
           className={styles.addBtn}
           onClick={() => setShowAddEntry(true)}
@@ -203,7 +204,7 @@ function CategoryView({ categories, entries, members, onAddCategory, onDeleteCat
   if (categories.length === 0) {
     return (
       <div className={styles.empty}>
-        <span className={styles.emptyIcon}>📊</span>
+        <span className={styles.emptyIcon}><IconChart /></span>
         <p>費目がまだありません</p>
         <p className={styles.emptyDesc}>水道代・食費など月々の固定費を登録しましょう</p>
         <button className={styles.emptyBtn} onClick={onAddCategory}>費目を追加する</button>
@@ -295,7 +296,7 @@ function MemberView({ members, entries, categories, onEditEntry }) {
   if (entries.length === 0) {
     return (
       <div className={styles.empty}>
-        <span className={styles.emptyIcon}>👥</span>
+        <span className={styles.emptyIcon}><IconPeople /></span>
         <p>予算がまだ登録されていません</p>
       </div>
     )
@@ -363,7 +364,7 @@ function TotalView({ categories, entries, members, totalAmount }) {
   if (totalAmount === 0) {
     return (
       <div className={styles.empty}>
-        <span className={styles.emptyIcon}>📊</span>
+        <span className={styles.emptyIcon}><IconChart /></span>
         <p>予算がまだ登録されていません</p>
       </div>
     )

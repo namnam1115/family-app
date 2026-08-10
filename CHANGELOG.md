@@ -6,6 +6,7 @@
 ## [Unreleased]
 
 ### Added
+- アイコンの正本 `src/lib/icons.js` を追加。Bootstrap Icons を単色・線画で統一し、意味のある別名（`IconHome`, `IconSearch` …）で re-export
 - AI 開発ハーネスを導入（`docs/` 配下のドキュメント一式・AI_RULES・CONTRIBUTING・CHANGELOG）
 - グローバルナビ（下部タブバー `BottomNav`）を全ページに追加し、アプリ間をホーム経由せず移動可能に
 - 共通コンポーネント `ConfirmDialog` / `EmptyState` / `Toast` / `OfflineBanner` を追加
@@ -13,6 +14,7 @@
 - 家族参加フローに招待リンク貼り付け欄を追加（`GroupSetup`）
 
 ### Changed
+- 全画面の絵文字アイコンを Bootstrap Icons（`react-icons/bs`）の単色・線画アイコンに置き換え、派手さを抑えて視認性と統一感を改善（ナビ・ヘッダー・検索・絞り込み・空状態・バッジ・お出かけカテゴリ／目的タグ・地図マーカー・評価の星など）
 - 買い物リストの削除を確認ダイアログ経由に変更（従来は確認なしで即削除）
 - 削除確認 UI を全ページで `ConfirmDialog` に統一（Places の編集モーダルの即削除も確認付きに）
 - 戻るボタンを全ページで 🏠 アイコン・円形 40px・`aria-label` 付きに統一（Inventory / Travel の `←` を置換）

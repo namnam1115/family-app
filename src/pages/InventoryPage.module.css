@@ -696,3 +696,10 @@
     margin-right: auto;
   }
 }
+
+/* ヘッダータイトル横のアイコン */
+.titleIcon {
+  color: var(--primary);
+  font-size: 1rem;
+  flex-shrink: 0;
+}

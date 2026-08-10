@@ -62,8 +62,11 @@ Apple Human Interface Guidelines を参考にした、**ミニマルで温かな
 
 ## アイコン
 
-- ライブラリは **react-icons**（既存は主に `react-icons/bs` = Bootstrap Icons）。新しいアイコンセットを混ぜない
-- 絵文字はコンテンツ寄りの装飾（ページタイトル「🛒 買い物リスト」等）として使用可。UI コントロールはアイコンコンポーネントを優先
+- **正本は `src/lib/icons.js`**。Bootstrap Icons（`react-icons/bs`）を単色・線画トーンで統一し、意味のある別名（`IconHome`, `IconSearch`, `IconPin` …）で re-export する。画面側はこのモジュール経由で参照し、`react-icons` から直接 import しない（アイコンの意味と見た目を一箇所で管理するため）
+- **絵文字を UI に使わない**（🛒📍🔍✨🎲 等）。多色の絵文字は画面が派手になり視認性・統一感を損なうため、ヘッダー・タブ・ボタン・空状態・バッジ・カテゴリすべてアイコンコンポーネントに置き換える。star（★☆）や ✓/✕ も対応するアイコン（`IconStarFill`/`IconStar`/`IconCheck`/`IconClose`）を使う
+- アイコンは `currentColor` を継承するので、色は親要素の `color`（`--primary` など）で制御する。グラデ文字（`-webkit-text-fill-color: transparent`）のタイトル内では、アイコン側に `color` / `-webkit-text-fill-color` を明示して沈まないようにする（各ページ CSS の `.headerTitleIcon` / `.titleIcon` 参照）
+- 評価の星は `--warning`（金）系、ステータスの丸（切れ/少ない）は `--danger`/`--warning` を `IconDot` に inline color で付与
+- Google Maps のマーカーは React 外の DOM 要素なので、SVG 文字列（`MAP_PIN_SVG` / `MAP_PIN_VISITED_SVG`）を `innerHTML` で流し込む
 - アイコンのみのボタンには **必ず `aria-label`（日本語）** を付ける
 
 ## アニメーション
@@ -80,7 +83,7 @@ Apple Human Interface Guidelines を参考にした、**ミニマルで温かな
 - **モーダル**: オーバーレイ（背景クリックで閉じる: `e.target === e.currentTarget` 判定）+ 中央カード。ヘッダーにタイトルと「×」閉じるボタン（`aria-label="閉じる"`）。`ShoppingPage` の `CreateListModal` が参照実装
 - **ボトムシート**: モバイルで選択肢が多い場合に使用。`slideUp` で出現
 - **ナビゲーション**: 各機能ページのヘッダー左端に「ホームへ戻る」ボタン（`BsHouseFill`）。ページ間の直接遷移は作らず、ホーム（アプリランチャー）経由を基本とする
-- **空状態（EmptyState）**: アイコン（絵文字）+ 1 文の案内 + 可能なら次のアクション。データゼロの画面を空白にしない
+- **空状態（EmptyState）**: `icon` にはアイコン要素（`<IconXxx />`）を渡す + 1 文の案内 + 可能なら次のアクション。データゼロの画面を空白にしない
 
 ## ダークモード
 

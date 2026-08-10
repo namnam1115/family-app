@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import {
+  IconPlaces, IconSearch, IconFilter, IconList, IconMap, IconPin, IconPinFill,
+  IconSparkle, IconDice, IconStar, IconStarFill, IconCheckCircle, IconReview,
+  IconBroadcast, IconFood, IconPlay, IconMore, IconClose,
+  IconRamen, IconCafe, IconNightview, IconDate, IconKids, IconRainy,
+  IconDrive, IconYakiniku, IconSweets, IconPark, IconOnsen, IconAnniversary,
+} from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { loadGoogleMapsScript } from '../utils/googleMaps'
@@ -13,7 +20,7 @@ import styles from './PlacesPage.module.css'
 const CATEGORIES = {
   food: {
     label: 'グルメ',
-    icon: '🍽️',
+    icon: IconFood,
     subs: [
       { key: 'yakiniku', label: '焼肉・焼き鳥' },
       { key: 'ramen', label: 'ラーメン・麺類' },
@@ -28,7 +35,7 @@ const CATEGORIES = {
   },
   play: {
     label: '遊び',
-    icon: '🎡',
+    icon: IconPlay,
     subs: [
       { key: 'nature', label: '自然・公園' },
       { key: 'shopping', label: 'ショッピング' },
@@ -40,7 +47,7 @@ const CATEGORIES = {
   },
   other: {
     label: 'その他',
-    icon: '📍',
+    icon: IconMore,
     subs: [],
   },
 }
@@ -54,23 +61,42 @@ function getSubcategoryLabel(category, subcategory) {
 
 // 「今日はどこ行く？」で使う目的別タグのプリセット
 const PRESET_TAGS = [
-  { label: 'ラーメン', icon: '🍜' },
-  { label: 'カフェ', icon: '☕' },
-  { label: '夜景', icon: '🌃' },
-  { label: 'デート', icon: '💑' },
-  { label: '子供と遊べる', icon: '🧒' },
-  { label: '雨の日', icon: '☔' },
-  { label: 'ドライブ', icon: '🚗' },
-  { label: '焼肉', icon: '🥩' },
-  { label: 'スイーツ', icon: '🍰' },
-  { label: '公園', icon: '🌳' },
-  { label: '温泉', icon: '♨️' },
-  { label: '記念日', icon: '🎂' },
+  { label: 'ラーメン', icon: IconRamen },
+  { label: 'カフェ', icon: IconCafe },
+  { label: '夜景', icon: IconNightview },
+  { label: 'デート', icon: IconDate },
+  { label: '子供と遊べる', icon: IconKids },
+  { label: '雨の日', icon: IconRainy },
+  { label: 'ドライブ', icon: IconDrive },
+  { label: '焼肉', icon: IconYakiniku },
+  { label: 'スイーツ', icon: IconSweets },
+  { label: '公園', icon: IconPark },
+  { label: '温泉', icon: IconOnsen },
+  { label: '記念日', icon: IconAnniversary },
 ]
 
-function tagIcon(label) {
-  return PRESET_TAGS.find(t => t.label === label)?.icon ?? '#'
+// タグに対応するアイコンコンポーネントを返す（プリセット外は汎用タグアイコン）
+function TagIcon({ label, ...props }) {
+  const Icon = PRESET_TAGS.find(t => t.label === label)?.icon ?? IconMore
+  return <Icon {...props} />
 }
+
+// 評価の星表示（塗り＋枠でシンプルに）
+function StarRating({ value = 0, max = 5 }) {
+  return (
+    <span className={styles.stars} aria-label={`評価 ${value} / ${max}`}>
+      {Array.from({ length: max }, (_, i) =>
+        i < value ? <IconStarFill key={i} /> : <IconStar key={i} />
+      )}
+    </span>
+  )
+}
+
+// 地図マーカー用のアイコン（Google Maps の DOM 要素に流し込むため SVG 文字列で保持）
+const MAP_PIN_SVG =
+  '<svg viewBox="0 0 16 16" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/></svg>'
+const MAP_PIN_VISITED_SVG =
+  '<svg viewBox="0 0 16 16" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>'
 
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371
@@ -303,7 +329,7 @@ export default function PlacesPage() {
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る">
           <BsHouseFill />
         </button>
-        <h1 className={styles.headerTitle}>📍 お出かけリスト</h1>
+        <h1 className={styles.headerTitle}><IconPlaces className={styles.headerTitleIcon} /> お出かけリスト</h1>
         <button className={styles.addBtn} onClick={() => setShowAdd(true)}>＋ 追加</button>
       </header>
 
@@ -321,7 +347,7 @@ export default function PlacesPage() {
       {/* 検索 + 絞り込みトグル + ビュー切り替え（1 行に集約） */}
       <div className={styles.searchBar}>
         <div className={styles.searchWrapper}>
-          <span className={styles.searchIcon}>🔍</span>
+          <span className={styles.searchIcon}><IconSearch /></span>
           <input
             className={styles.searchInput}
             type="search"
@@ -339,7 +365,7 @@ export default function PlacesPage() {
           aria-expanded={showFilters}
           aria-label="絞り込み"
         >
-          <span className={styles.filterToggleIcon}>⚙️</span>
+          <span className={styles.filterToggleIcon}><IconFilter /></span>
           <span className={styles.filterToggleLabel}>絞り込み</span>
           {activeFilterCount > 0 && <span className={styles.filterCountBadge}>{activeFilterCount}</span>}
         </button>
@@ -349,13 +375,13 @@ export default function PlacesPage() {
             onClick={() => setView('list')}
             aria-label="リスト表示"
             title="リスト"
-          >📋</button>
+          ><IconList /></button>
           <button
             className={`${styles.viewBtn} ${view === 'map' ? styles.viewBtnActive : ''}`}
             onClick={() => setView('map')}
             aria-label="地図表示"
             title="地図"
-          >🗺</button>
+          ><IconMap /></button>
         </div>
       </div>
 
@@ -378,7 +404,7 @@ export default function PlacesPage() {
               onClick={() => setShowRadiusSearch(v => !v)}
               aria-expanded={showRadiusSearch}
             >
-              <span className={styles.radiusToggleIcon}>📍</span>
+              <span className={styles.radiusToggleIcon}><IconPin /></span>
               <span className={styles.radiusToggleLabel}>範囲で探す</span>
               {radiusActive && <span className={styles.radiusActiveDot} />}
             </button>
@@ -399,12 +425,12 @@ export default function PlacesPage() {
               className={`${styles.chip} ${categoryFilter === 'all' ? styles.chipActive : ''}`}
               onClick={() => { setCategoryFilter('all'); setSubcategoryFilter('all') }}
             >すべて</button>
-            {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+            {Object.entries(CATEGORIES).map(([key, { label, icon: Icon }]) => (
               <button
                 key={key}
                 className={`${styles.chip} ${categoryFilter === key ? styles.chipActive : ''}`}
                 onClick={() => { setCategoryFilter(key); setSubcategoryFilter('all') }}
-              >{icon} {label}</button>
+              ><Icon className={styles.chipIcon} /> {label}</button>
             ))}
             {availablePrefectures.length > 0 && (
               <select
@@ -413,7 +439,7 @@ export default function PlacesPage() {
                 onChange={e => setPrefectureFilter(e.target.value)}
                 aria-label="都道府県で絞り込む"
               >
-                <option value="">🗾 都道府県</option>
+                <option value="">都道府県</option>
                 {availablePrefectures.map(pref => (
                   <option key={pref} value={pref}>{pref}</option>
                 ))}
@@ -463,7 +489,7 @@ export default function PlacesPage() {
             {filtered.length === 0 ? (
               <div className={styles.empty}>
                 <span className={styles.emptyIcon}>
-                  {narrowingActive ? '🔍' : statusFilter === 'visited' ? '✅' : '📍'}
+                  {narrowingActive ? <IconSearch /> : statusFilter === 'visited' ? <IconCheckCircle /> : <IconPin />}
                 </span>
                 <p>
                   {narrowingActive
@@ -484,7 +510,7 @@ export default function PlacesPage() {
               <>
                 <div className={styles.resultsHeaderRow}>
                   <h2 className={styles.sectionTitle}>
-                    {narrowingActive ? '🔍 検索結果' : statusLabel}
+                    {narrowingActive ? <><IconSearch /> 検索結果</> : statusLabel}
                     {' '}<span className={styles.sectionCount}>{filtered.length}件</span>
                   </h2>
                   {narrowingActive && (
@@ -547,17 +573,17 @@ function RecommendCard({ place, onReroll, onOpen }) {
   return (
     <section className={styles.recommendCard} onClick={() => onOpen(place)}>
       <div className={styles.recommendHeader}>
-        <span className={styles.recommendBadge}>✨ 今日はここ！</span>
+        <span className={styles.recommendBadge}><IconSparkle /> 今日はここ！</span>
         <button
           type="button"
           className={styles.rerollBtn}
           onClick={e => { e.stopPropagation(); onReroll() }}
           aria-label="別の場所を提案"
           title="別の場所を提案"
-        >🎲</button>
+        ><IconDice /></button>
       </div>
-      <p className={styles.recommendName}>{cat.icon} {place.name}</p>
-      {place.address && <p className={styles.recommendAddress}>📍 {place.address}</p>}
+      <p className={styles.recommendName}><cat.icon className={styles.recommendNameIcon} /> {place.name}</p>
+      {place.address && <p className={styles.recommendAddress}><IconPin /> {place.address}</p>}
       {place.memo && <p className={styles.recommendMemo}>{place.memo}</p>}
       {place.tags?.length > 0 && (
         <div className={styles.cardTags}>
@@ -574,13 +600,13 @@ function DiscoverStrip({ activeTags, onSelectTag }) {
     <section className={styles.discoverSection}>
       <h2 className={styles.sectionTitle}>今日はどこ行く？</h2>
       <div className={styles.discoverStrip}>
-        {PRESET_TAGS.map(({ label, icon }) => (
+        {PRESET_TAGS.map(({ label, icon: Icon }) => (
           <button
             key={label}
             className={`${styles.discoverCard} ${activeTags.includes(label) ? styles.discoverCardActive : ''}`}
             onClick={() => onSelectTag(label)}
           >
-            <span className={styles.discoverIcon}>{icon}</span>
+            <span className={styles.discoverIcon}><Icon /></span>
             <span className={styles.discoverLabel}>{label}</span>
           </button>
         ))}
@@ -626,7 +652,7 @@ function NearbySection({ onLocate }) {
     <section className={styles.horizontalSection}>
       <h2 className={styles.sectionTitle}>近くの場所</h2>
       <button type="button" className={styles.nearbyPromptBtn} onClick={locate} disabled={loading}>
-        {loading ? '取得中...' : '📍 現在地から近い場所を探す'}
+        {loading ? '取得中...' : <><IconPin /> 現在地から近い場所を探す</>}
       </button>
       {error && (
         <p className={styles.hintSmall}>位置情報を取得できませんでした</p>
@@ -640,7 +666,7 @@ function MiniPlaceCard({ place, subtitle, onClick }) {
   const cat = CATEGORIES[place.category] ?? CATEGORIES.other
   return (
     <button type="button" className={styles.miniCard} onClick={onClick}>
-      <span className={styles.miniCardIcon}>{cat.icon}</span>
+      <span className={styles.miniCardIcon}><cat.icon /></span>
       <span className={styles.miniCardName}>{place.name}</span>
       <span className={styles.miniCardSubtitle}>{subtitle ?? (place.address || cat.label)}</span>
     </button>
@@ -702,7 +728,7 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
     <div className={styles.radiusPanel}>
       <div className={styles.radiusInputRow}>
         <div className={styles.radiusInputWrapper}>
-          <span className={styles.radiusInputIcon}>📍</span>
+          <span className={styles.radiusInputIcon}><IconPin /></span>
           <input
             ref={inputRef}
             className={styles.radiusInput}
@@ -722,7 +748,7 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
           aria-label="現在地を使う"
           title="現在地を使う"
         >
-          {locating ? '...' : '📡'}
+          {locating ? '...' : <IconBroadcast />}
         </button>
       </div>
 
@@ -743,7 +769,7 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
       )}
 
       {!center && (
-        <p className={styles.radiusHint}>住所を入力するか📡ボタンで現在地を起点に絞り込めます</p>
+        <p className={styles.radiusHint}>住所を入力するか、電波アイコンのボタンで現在地を起点に絞り込めます</p>
       )}
     </div>
   )
@@ -768,16 +794,16 @@ function PlaceCard({ place, onEdit, onVisit }) {
   return (
     <li className={`${styles.card} ${isVisited ? styles.cardVisited : ''}`} onClick={onEdit}>
       <div className={styles.cardTop}>
-        <span className={styles.categoryBadge}>{cat.icon} {cat.label}</span>
+        <span className={styles.categoryBadge}><cat.icon /> {cat.label}</span>
         {place._distanceKm != null && (
-          <span className={styles.distanceBadge}>📍 {place._distanceKm.toFixed(1)}km</span>
+          <span className={styles.distanceBadge}><IconPin /> {place._distanceKm.toFixed(1)}km</span>
         )}
         {isVisited && place.rating && (
           <span className={styles.ratingBadge}>
-            {'★'.repeat(place.rating)}{'☆'.repeat(5 - place.rating)}
+            <StarRating value={place.rating} />
           </span>
         )}
-        {isVisited && <span className={styles.visitedBadge}>✅ 行った</span>}
+        {isVisited && <span className={styles.visitedBadge}><IconCheckCircle /> 行った</span>}
       </div>
 
       <p className={styles.placeName}>{place.name}</p>
@@ -788,9 +814,9 @@ function PlaceCard({ place, onEdit, onVisit }) {
           className={styles.placeAddress}
           onClick={e => { e.stopPropagation(); openMap(e) }}
           title="地図で確認"
-        >📍 {place.address}</button>
+        ><IconPin /> {place.address}</button>
       )}
-      {isVisited && place.review && <p className={styles.placeReview}>💬 {place.review}</p>}
+      {isVisited && place.review && <p className={styles.placeReview}><IconReview /> {place.review}</p>}
 
       {place.tags?.length > 0 && (
         <div className={styles.cardTags}>
@@ -816,7 +842,7 @@ function PlaceCard({ place, onEdit, onVisit }) {
             onClick={openMap}
             aria-label="地図を開く"
             title="Google Mapsで開く"
-          >📍 地図</button>
+          ><IconPin /> 地図</button>
           {!isVisited && (
             <button
               className={styles.visitBtn}
@@ -936,7 +962,7 @@ function TagPicker({ tags, onChange, suggestions }) {
               type="button"
               className={styles.tagSuggestionChip}
               onClick={() => addTag(s)}
-            >{tagIcon(s)} {s}</button>
+            ><TagIcon label={s} /> {s}</button>
           ))}
         </div>
       )}
@@ -1010,13 +1036,13 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
           <label className={styles.label}>
             カテゴリ
             <div className={styles.categorySelect}>
-              {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+              {Object.entries(CATEGORIES).map(([key, { label, icon: Icon }]) => (
                 <button
                   key={key}
                   type="button"
                   className={`${styles.categoryOption} ${category === key ? styles.categoryOptionActive : ''}`}
                   onClick={() => setCategory(key)}
-                >{icon} {label}</button>
+                ><Icon /> {label}</button>
               ))}
             </div>
           </label>
@@ -1032,7 +1058,7 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
             />
             {(selectedName || address) && (
               <p className={styles.acSelected}>
-                📍 {selectedName || address}
+                <IconPin /> {selectedName || address}
                 {selectedName && address && <span className={styles.acAddress}>{address}</span>}
               </p>
             )}
@@ -1104,7 +1130,7 @@ function VisitModal({ place, onSubmit, onClose }) {
                   className={`${styles.starBtn} ${n <= rating ? styles.starActive : ''}`}
                   onClick={() => setRating(n === rating ? 0 : n)}
                   aria-label={`${n}点`}
-                >★</button>
+                >{n <= rating ? <IconStarFill /> : <IconStar />}</button>
               ))}
               {rating > 0 && (
                 <button type="button" className={styles.clearRating} onClick={() => setRating(0)}>
@@ -1200,13 +1226,13 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
           <label className={styles.label}>
             カテゴリ
             <div className={styles.categorySelect}>
-              {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
+              {Object.entries(CATEGORIES).map(([key, { label, icon: Icon }]) => (
                 <button
                   key={key}
                   type="button"
                   className={`${styles.categoryOption} ${category === key ? styles.categoryOptionActive : ''}`}
                   onClick={() => setCategory(key)}
-                >{icon} {label}</button>
+                ><Icon /> {label}</button>
               ))}
             </div>
           </label>
@@ -1222,7 +1248,7 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
             />
             {(selectedName || address) && (
               <p className={styles.acSelected}>
-                📍 {selectedName || address}
+                <IconPin /> {selectedName || address}
                 {selectedName && address && <span className={styles.acAddress}>{address}</span>}
               </p>
             )}
@@ -1318,7 +1344,7 @@ function MapView({ places }) {
     placesWithCoords.forEach(place => {
       const pin = document.createElement('div')
       pin.className = `${styles.mapPin}${place.status === 'visited' ? ` ${styles.mapPinVisited}` : ''}`
-      pin.textContent = place.status === 'visited' ? '✅' : '📍'
+      pin.innerHTML = place.status === 'visited' ? MAP_PIN_VISITED_SVG : MAP_PIN_SVG
       const marker = new AdvancedMarkerElement({
         map,
         position: { lat: place.lat, lng: place.lng },
@@ -1343,7 +1369,7 @@ function MapView({ places }) {
   if (placesWithCoords.length === 0) {
     return (
       <div className={styles.mapEmpty}>
-        <span className={styles.mapEmptyIcon}>🗺️</span>
+        <span className={styles.mapEmptyIcon}><IconMap /></span>
         <p>住所が登録された場所が地図に表示されます</p>
         <p className={styles.mapEmptyDesc}>場所を追加・編集して住所を入力してください</p>
       </div>
@@ -1367,20 +1393,20 @@ function MapPopup({ place, onClose }) {
   return (
     <div className={styles.mapPopup}>
       <div className={styles.mapPopupHeader}>
-        <span className={styles.mapPopupCat}>{cat.icon}</span>
+        <span className={styles.mapPopupCat}><cat.icon /></span>
         <span className={styles.mapPopupName}>{place.name}</span>
-        <button className={styles.mapPopupClose} onClick={onClose}>×</button>
+        <button className={styles.mapPopupClose} onClick={onClose} aria-label="閉じる"><IconClose /></button>
       </div>
-      {place.address && <p className={styles.mapPopupAddress}>📍 {place.address}</p>}
+      {place.address && <p className={styles.mapPopupAddress}><IconPin /> {place.address}</p>}
       <div className={styles.mapPopupMeta}>
         {isVisited && place.rating && (
           <span className={styles.mapPopupRating}>
-            {'★'.repeat(place.rating)}{'☆'.repeat(5 - place.rating)}
+            <StarRating value={place.rating} />
           </span>
         )}
         {isVisited
-          ? <span className={styles.mapPopupVisited}>✅ 行った</span>
-          : <span className={styles.mapPopupWant}>🌟 行きたい</span>
+          ? <span className={styles.mapPopupVisited}><IconCheckCircle /> 行った</span>
+          : <span className={styles.mapPopupWant}><IconStarFill /> 行きたい</span>
         }
       </div>
       {place.memo && <p className={styles.mapPopupMemo}>{place.memo}</p>}

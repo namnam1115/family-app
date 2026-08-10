@@ -523,3 +523,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 .cancelBtn:hover { opacity: 0.8; }
+
+/* ヘッダータイトル横のアイコン */
+.titleIcon {
+  color: var(--primary);
+  font-size: 1rem;
+  flex-shrink: 0;
+}

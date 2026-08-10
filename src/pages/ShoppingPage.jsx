@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
+import { IconShopping, IconBell } from '../lib/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ShoppingItemList from '../components/ShoppingItemList'
@@ -122,13 +123,13 @@ export default function ShoppingPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
-        <h1 className={styles.headerTitle}>🛒 買い物リスト</h1>
+        <h1 className={styles.headerTitle}><IconShopping className={styles.headerTitleIcon} /> 買い物リスト</h1>
         <button
           className={styles.notifBtn}
           onClick={() => setShowNotifSettings(true)}
           aria-label="通知設定"
           title="通知設定"
-        >🔔</button>
+        ><IconBell /></button>
       </header>
 
       <div className={styles.body}>
@@ -173,7 +174,7 @@ export default function ShoppingPage() {
           ) : (
             !loadingLists && (
               <EmptyState
-                icon="🛒"
+                icon={<IconShopping />}
                 title="買い物リストを作りましょう"
                 description="家族で共有できる買い物リストです。チェックするだけで即時に同期されます。"
                 actionLabel="＋ 最初のリストを作成"
