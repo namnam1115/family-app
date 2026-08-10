@@ -6,6 +6,7 @@
 ## [Unreleased]
 
 ### Added
+- お出かけリストで場所名（タイトル）タップ時に、モーダル内へ簡易ブラウザ（Google 検索の iframe 埋め込み）を表示。キーワード編集・外部ブラウザで開くフォールバック付き
 - アイコンの正本 `src/lib/icons.js` を追加。Bootstrap Icons を単色・線画で統一し、意味のある別名（`IconHome`, `IconSearch` …）で re-export
 - AI 開発ハーネスを導入（`docs/` 配下のドキュメント一式・AI_RULES・CONTRIBUTING・CHANGELOG）
 - グローバルナビ（下部タブバー `BottomNav`）を全ページに追加し、アプリ間をホーム経由せず移動可能に
