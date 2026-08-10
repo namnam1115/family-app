@@ -1004,6 +1004,7 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
   const [tags, setTags] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const inputRef = useRef(null)
+  const autoNameRef = useRef('')   // 直前に自動入力した場所名（手入力と区別するため）
 
   useEffect(() => {
     let mounted = true
@@ -1021,6 +1022,11 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
         setSelectedName(place.name || '')
         const loc = place.geometry?.location
         if (loc) { setLat(loc.lat()); setLng(loc.lng()) }
+        // 場所名が未入力、または直前の自動入力のままなら、選んだ場所名で自動補完
+        if (place.name) {
+          setName(prev => (!prev.trim() || prev === autoNameRef.current) ? place.name : prev)
+          autoNameRef.current = place.name
+        }
       })
     }).catch(() => {})
     return () => { mounted = false }
@@ -1044,6 +1050,25 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
         </div>
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.label}>
+            場所を検索（マップ連携）
+            <input
+              ref={inputRef}
+              className={styles.input}
+              type="text"
+              defaultValue=""
+              placeholder="店名・施設名で検索（例: 海遊館）"
+              autoComplete="off"
+              autoFocus
+            />
+            <span className={styles.fieldHint}>検索して選ぶと、場所名・住所・地図が自動で入ります</span>
+            {(selectedName || address) && (
+              <p className={styles.acSelected}>
+                <IconPin /> {selectedName || address}
+                {selectedName && address && <span className={styles.acAddress}>{address}</span>}
+              </p>
+            )}
+          </label>
+          <label className={styles.label}>
             場所名
             <input
               className={styles.input}
@@ -1051,7 +1076,6 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
               onChange={e => setName(e.target.value)}
               placeholder="例: 海遊館、一蘭 梅田店..."
               maxLength={100}
-              autoFocus
               required
             />
           </label>
@@ -1067,23 +1091,6 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
                 ><Icon /> {label}</button>
               ))}
             </div>
-          </label>
-          <label className={styles.label}>
-            住所（任意）
-            <input
-              ref={inputRef}
-              className={styles.input}
-              type="text"
-              defaultValue=""
-              placeholder="例: 大阪府大阪市港区海岸通..."
-              autoComplete="off"
-            />
-            {(selectedName || address) && (
-              <p className={styles.acSelected}>
-                <IconPin /> {selectedName || address}
-                {selectedName && address && <span className={styles.acAddress}>{address}</span>}
-              </p>
-            )}
           </label>
           <label className={styles.label}>
             タグ（任意・複数可）
@@ -1196,6 +1203,7 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
   const [tags, setTags] = useState(place.tags ?? [])
   const [submitting, setSubmitting] = useState(false)
   const inputRef = useRef(null)
+  const autoNameRef = useRef('')
 
   useEffect(() => {
     let mounted = true
@@ -1213,6 +1221,11 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
         setSelectedName(p.name || '')
         const loc = p.geometry?.location
         if (loc) { setLat(loc.lat()); setLng(loc.lng()) }
+        // 名前が空、または直前の自動入力のままのときだけ場所名を補完（手入力した名前は保持）
+        if (p.name) {
+          setName(prev => (!prev.trim() || prev === autoNameRef.current) ? p.name : prev)
+          autoNameRef.current = p.name
+        }
       })
     }).catch(() => {})
     return () => { mounted = false }

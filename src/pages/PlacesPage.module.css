@@ -1076,6 +1076,14 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
+.fieldHint {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--ink-3);
+  line-height: 1.4;
+  margin-top: -0.1rem;
+}
+
 /* ── Places Autocomplete ── */
 .acContainer {
   width: 100%;
