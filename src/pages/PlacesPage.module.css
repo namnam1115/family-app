@@ -1352,6 +1352,20 @@
   gap: 0.5rem;
 }
 
+/* ── 一覧見出し（ブラウズ中／検索結果の切り替え） ── */
+.resultsHeaderRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 1rem 0;
+}
+
+.resultsHeaderRow .sectionTitle {
+  padding: 0;
+  margin-bottom: 0;
+}
+
 .sectionHeaderRow .sectionTitle {
   margin-bottom: 0;
 }

@@ -238,6 +238,11 @@ export default function PlacesPage() {
   const isBrowsing = statusFilter !== 'visited' && !q && selectedTags.length === 0 &&
     categoryFilter === 'all' && !prefectureFilter && !radiusActive
 
+  // 検索語や絞り込み条件が何かしら効いているか（結果一覧の見出し切り替え用）
+  const narrowingActive = !!q || selectedTags.length > 0 ||
+    categoryFilter !== 'all' || !!prefectureFilter || radiusActive
+  const statusLabel = statusFilter === 'want' ? '行きたい場所' : statusFilter === 'visited' ? '行った場所' : 'すべての場所'
+
   // 折りたたみ絞り込みパネルの中で有効になっている条件の数（バッジ表示用）
   const activeFilterCount =
     (categoryFilter !== 'all' ? 1 : 0) +
@@ -251,6 +256,11 @@ export default function PlacesPage() {
     setSelectedTags([])
     setShowRadiusSearch(false)
     setRadiusCenter(null)
+  }
+
+  function clearSearchAndFilters() {
+    setSearchQuery('')
+    clearAllFilters()
   }
 
   const wantPlaces = places.filter(p => p.status === 'want')
@@ -440,10 +450,18 @@ export default function PlacesPage() {
             {filtered.length === 0 ? (
               <div className={styles.empty}>
                 <span className={styles.emptyIcon}>
-                  {statusFilter === 'visited' ? '✅' : '📍'}
+                  {narrowingActive ? '🔍' : statusFilter === 'visited' ? '✅' : '📍'}
                 </span>
-                <p>{statusFilter === 'visited' ? 'まだ行った場所がありません' : '行きたい場所を追加しましょう'}</p>
-                {statusFilter !== 'visited' && (
+                <p>
+                  {narrowingActive
+                    ? '条件に一致する場所が見つかりませんでした'
+                    : statusFilter === 'visited' ? 'まだ行った場所がありません' : '行きたい場所を追加しましょう'}
+                </p>
+                {narrowingActive ? (
+                  <button className={styles.emptyBtn} onClick={clearSearchAndFilters}>
+                    条件をクリア
+                  </button>
+                ) : statusFilter !== 'visited' && (
                   <button className={styles.emptyBtn} onClick={() => setShowAdd(true)}>
                     場所を追加する
                   </button>
@@ -451,11 +469,17 @@ export default function PlacesPage() {
               </div>
             ) : (
               <>
-                {isBrowsing && (
+                <div className={styles.resultsHeaderRow}>
                   <h2 className={styles.sectionTitle}>
-                    すべての場所 <span className={styles.sectionCount}>{filtered.length}</span>
+                    {narrowingActive ? '🔍 検索結果' : statusLabel}
+                    {' '}<span className={styles.sectionCount}>{filtered.length}件</span>
                   </h2>
-                )}
+                  {narrowingActive && (
+                    <button type="button" className={styles.sectionLinkBtn} onClick={clearSearchAndFilters}>
+                      条件をクリア
+                    </button>
+                  )}
+                </div>
                 <ul className={styles.placeList}>
                   {filtered.map(place => (
                     <PlaceCard
