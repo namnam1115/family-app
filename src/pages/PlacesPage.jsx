@@ -264,10 +264,10 @@ export default function PlacesPage() {
   }
 
   // 「現在地から近い場所を探す」→ 既存の範囲検索フィルタに現在地をセットし、検索結果として一覧表示する
+  // 絞り込みパネル自体は開かない（開くと結果一覧の表示領域が圧迫されるため。必要なら「絞り込み」から確認・調整できる）
   function handleNearbyLocate({ lat, lng }) {
     setRadiusCenter({ lat, lng, address: '現在地' })
     setShowRadiusSearch(true)
-    setShowFilters(true)
   }
 
   const wantPlaces = places.filter(p => p.status === 'want')
