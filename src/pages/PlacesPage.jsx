@@ -263,8 +263,14 @@ export default function PlacesPage() {
     clearAllFilters()
   }
 
+  // 「現在地から近い場所を探す」→ 既存の範囲検索フィルタに現在地をセットし、検索結果として一覧表示する
+  function handleNearbyLocate({ lat, lng }) {
+    setRadiusCenter({ lat, lng, address: '現在地' })
+    setShowRadiusSearch(true)
+    setShowFilters(true)
+  }
+
   const wantPlaces = places.filter(p => p.status === 'want')
-  const wantPlacesWithCoords = wantPlaces.filter(p => p.lat != null && p.lng != null)
   const recentPlaces = places.slice(0, 6)
 
   function toggleTag(t) {
@@ -443,7 +449,7 @@ export default function PlacesPage() {
                 {recentPlaces.length > 0 && (
                   <RecentRow places={recentPlaces} onOpen={setEditTarget} />
                 )}
-                <NearbySection places={wantPlacesWithCoords} onOpen={setEditTarget} />
+                <NearbySection onLocate={handleNearbyLocate} />
               </div>
             )}
 
@@ -590,9 +596,8 @@ function RecentRow({ places, onOpen }) {
   )
 }
 
-// ── 近くの場所（現在地ベース） ────────────────────────────
-function NearbySection({ places, onOpen }) {
-  const [location, setLocation] = useState(null)
+// ── 近くの場所（現在地ベース。範囲検索フィルタに現在地をセットし検索結果として表示する） ──
+function NearbySection({ onLocate }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
@@ -603,48 +608,21 @@ function NearbySection({ places, onOpen }) {
     navigator.geolocation.getCurrentPosition(
       pos => {
         setLoading(false)
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        onLocate({ lat: pos.coords.latitude, lng: pos.coords.longitude })
       },
       () => { setLoading(false); setError(true) },
       { timeout: 8000 }
     )
   }
 
-  const nearby = location
-    ? places
-        .map(p => ({ ...p, _distance: haversineKm(location.lat, location.lng, p.lat, p.lng) }))
-        .filter(p => p._distance <= 50)
-        .sort((a, b) => a._distance - b._distance)
-        .slice(0, 6)
-    : []
-
   return (
     <section className={styles.horizontalSection}>
-      <div className={styles.sectionHeaderRow}>
-        <h2 className={styles.sectionTitle}>近くの場所</h2>
-        {location && (
-          <button type="button" className={styles.sectionLinkBtn} onClick={locate}>再取得</button>
-        )}
-      </div>
-
-      {!location && (
-        <button type="button" className={styles.nearbyPromptBtn} onClick={locate} disabled={loading}>
-          {loading ? '取得中...' : '📍 現在地から近い場所を探す'}
-        </button>
-      )}
-      {!location && error && (
+      <h2 className={styles.sectionTitle}>近くの場所</h2>
+      <button type="button" className={styles.nearbyPromptBtn} onClick={locate} disabled={loading}>
+        {loading ? '取得中...' : '📍 現在地から近い場所を探す'}
+      </button>
+      {error && (
         <p className={styles.hintSmall}>位置情報を取得できませんでした</p>
-      )}
-      {location && (
-        nearby.length === 0 ? (
-          <p className={styles.hintSmall}>50km圏内に住所付きの「行きたい」場所がありません</p>
-        ) : (
-          <div className={styles.horizontalScroll}>
-            {nearby.map(p => (
-              <MiniPlaceCard key={p.id} place={p} subtitle={`${p._distance.toFixed(1)}km`} onClick={() => onOpen(p)} />
-            ))}
-          </div>
-        )
       )}
     </section>
   )
