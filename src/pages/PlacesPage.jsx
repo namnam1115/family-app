@@ -211,7 +211,7 @@ export default function PlacesPage() {
   // フィルタリング
   const q = searchQuery.trim().toLowerCase()
   const radiusActive = showRadiusSearch && radiusCenter != null
-  const filtered = places.filter(p => {
+  let filtered = places.filter(p => {
     if (statusFilter !== 'all' && p.status !== statusFilter) return false
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false
     if (subcategoryFilter !== 'all' && p.subcategory !== subcategoryFilter) return false
@@ -233,6 +233,13 @@ export default function PlacesPage() {
     }
     return true
   })
+
+  // 範囲検索が有効な間は、現在地（起点）に近い順に並べ替え、各カードに距離を持たせる
+  if (radiusActive) {
+    filtered = filtered
+      .map(p => ({ ...p, _distanceKm: haversineKm(radiusCenter.lat, radiusCenter.lng, p.lat, p.lng) }))
+      .sort((a, b) => a._distanceKm - b._distanceKm)
+  }
 
   // 検索・絞り込みが何も効いていない「ブラウズ中」かどうか（探索導線を出す条件）
   const isBrowsing = statusFilter !== 'visited' && !q && selectedTags.length === 0 &&
@@ -762,6 +769,9 @@ function PlaceCard({ place, onEdit, onVisit }) {
     <li className={`${styles.card} ${isVisited ? styles.cardVisited : ''}`} onClick={onEdit}>
       <div className={styles.cardTop}>
         <span className={styles.categoryBadge}>{cat.icon} {cat.label}</span>
+        {place._distanceKm != null && (
+          <span className={styles.distanceBadge}>📍 {place._distanceKm.toFixed(1)}km</span>
+        )}
         {isVisited && place.rating && (
           <span className={styles.ratingBadge}>
             {'★'.repeat(place.rating)}{'☆'.repeat(5 - place.rating)}

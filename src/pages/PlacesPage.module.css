@@ -758,6 +758,15 @@
   border-radius: var(--radius-full);
 }
 
+.distanceBadge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  background: var(--gray-100);
+  padding: 0.2rem 0.625rem;
+  border-radius: var(--radius-full);
+}
+
 .ratingBadge {
   font-size: 0.85rem;
   color: var(--warning);
