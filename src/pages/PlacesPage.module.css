@@ -1764,13 +1764,13 @@
 }
 
 .tagPickerChip button {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: none;
   background: color-mix(in srgb, var(--primary) 18%, transparent);
   color: var(--primary-dark);
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -1783,29 +1783,57 @@
   color: white;
 }
 
-.tagPickerSuggestions {
+/* ── タグのトグル選択（複数選択） ── */
+.tagToggleGrid {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
 
-.tagSuggestionChip {
-  padding: 0.3rem 0.65rem;
+.tagToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--radius-full);
-  border: 1.5px dashed var(--gray-200);
-  background: var(--gray-50);
-  color: var(--gray-500);
-  font-size: 0.78rem;
-  font-weight: 500;
-  transition: all 0.18s ease;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.16s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-.tagSuggestionChip:hover {
-  border-color: var(--primary-light);
+.tagToggle:hover:not(:disabled) {
+  border-color: var(--primary);
   color: var(--primary);
-  background: var(--grad-primary-soft);
+}
+
+.tagToggle:disabled {
+  opacity: 0.4;
+}
+
+.tagToggleIcon {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.tagToggleOn {
+  background: var(--grad-primary);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.tagToggleOn .tagToggleIcon {
+  opacity: 1;
+}
+
+.tagToggleCheck {
+  font-size: 0.85em;
+  margin-left: 0.05rem;
 }
 
 @media (max-width: 390px) {

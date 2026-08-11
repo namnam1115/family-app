@@ -7,6 +7,8 @@ import {
   IconBroadcast, IconFood, IconPlay, IconMore, IconClose, IconExternal,
   IconRamen, IconCafe, IconNightview, IconDate, IconKids, IconRainy,
   IconDrive, IconYakiniku, IconSweets, IconPark, IconOnsen, IconAnniversary,
+  IconIzakaya, IconSea, IconFlower, IconMovie, IconShopBag, IconCamera,
+  IconView, IconMoney, IconCheck,
 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -14,6 +16,7 @@ import { loadGoogleMapsScript } from '../utils/googleMaps'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Toast from '../components/Toast'
 import styles from './PlacesPage.module.css'
 
 
@@ -63,16 +66,25 @@ function getSubcategoryLabel(category, subcategory) {
 const PRESET_TAGS = [
   { label: 'ラーメン', icon: IconRamen },
   { label: 'カフェ', icon: IconCafe },
-  { label: '夜景', icon: IconNightview },
-  { label: 'デート', icon: IconDate },
-  { label: '子供と遊べる', icon: IconKids },
-  { label: '雨の日', icon: IconRainy },
-  { label: 'ドライブ', icon: IconDrive },
   { label: '焼肉', icon: IconYakiniku },
+  { label: '居酒屋', icon: IconIzakaya },
   { label: 'スイーツ', icon: IconSweets },
-  { label: '公園', icon: IconPark },
-  { label: '温泉', icon: IconOnsen },
+  { label: 'デート', icon: IconDate },
   { label: '記念日', icon: IconAnniversary },
+  { label: '夜景', icon: IconNightview },
+  { label: '絶景', icon: IconView },
+  { label: '写真映え', icon: IconCamera },
+  { label: '子供と遊べる', icon: IconKids },
+  { label: '公園', icon: IconPark },
+  { label: '海・ビーチ', icon: IconSea },
+  { label: '花見', icon: IconFlower },
+  { label: '紅葉', icon: IconFlower },
+  { label: '温泉', icon: IconOnsen },
+  { label: 'ドライブ', icon: IconDrive },
+  { label: '映画', icon: IconMovie },
+  { label: 'ショッピング', icon: IconShopBag },
+  { label: '雨の日', icon: IconRainy },
+  { label: 'コスパ良し', icon: IconMoney },
 ]
 
 // タグに対応するアイコンコンポーネントを返す（プリセット外は汎用タグアイコン）
@@ -123,6 +135,7 @@ export default function PlacesPage() {
   const [visitTarget, setVisitTarget] = useState(null)      // place object
   const [editTarget, setEditTarget] = useState(null)        // place object
   const [searchTitle, setSearchTitle] = useState(null)      // タイトルの簡易Web検索（文字列）
+  const [toast, setToast] = useState(null)                  // { message, variant }
   const [view, setView] = useState('list')                  // 'list' | 'map'
   const [showRadiusSearch, setShowRadiusSearch] = useState(false)
   const [radiusCenter, setRadiusCenter] = useState(null)    // { lat, lng, address }
@@ -175,7 +188,7 @@ export default function PlacesPage() {
   }, [places])
 
   async function handleAdd({ name, category, memo, address, lat, lng, tags }) {
-    await supabase.from('wish_places').insert({
+    const { error } = await supabase.from('wish_places').insert({
       family_id: familyMember.family_id,
       name: name.trim(),
       category,
@@ -186,6 +199,7 @@ export default function PlacesPage() {
       tags: tags ?? [],
       added_by: familyMember.id,
     })
+    if (error) { console.error('wish_places insert failed:', error); setToast({ message: '場所の保存に失敗しました。', variant: 'error' }); throw error }
     await fetchAll()
   }
 
@@ -200,7 +214,7 @@ export default function PlacesPage() {
   }
 
   async function handleEdit(id, { name, category, memo, address, lat, lng, tags }) {
-    await supabase.from('wish_places').update({
+    const { error } = await supabase.from('wish_places').update({
       name: name.trim(),
       category,
       memo: memo?.trim() || null,
@@ -209,6 +223,7 @@ export default function PlacesPage() {
       lng: lng ?? null,
       tags: tags ?? [],
     }).eq('id', id)
+    if (error) { console.error('wish_places update failed:', error); setToast({ message: '場所の更新に失敗しました。', variant: 'error' }); throw error }
     await fetchAll()
   }
 
@@ -565,6 +580,14 @@ export default function PlacesPage() {
 
       {searchTitle && (
         <WebSearchModal query={searchTitle} onClose={() => setSearchTitle(null)} />
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
       )}
 
       <BottomNav />
@@ -931,14 +954,24 @@ function TagFilterRow({ selected, suggestions, onToggle }) {
 }
 
 // ── タグ選択UI（追加・編集モーダル共通） ──────────────────
+const MAX_TAGS = 12
+
 function TagPicker({ tags, onChange, suggestions }) {
   const [input, setInput] = useState('')
 
   function addTag(raw) {
     const t = raw.trim()
-    if (!t || tags.includes(t) || tags.length >= 8) { setInput(''); return }
+    if (!t || tags.includes(t) || tags.length >= MAX_TAGS) { setInput(''); return }
     onChange([...tags, t])
     setInput('')
+  }
+
+  function toggleTag(t) {
+    if (tags.includes(t)) {
+      onChange(tags.filter(x => x !== t))
+    } else if (tags.length < MAX_TAGS) {
+      onChange([...tags, t])
+    }
   }
 
   function removeTag(t) {
@@ -946,6 +979,8 @@ function TagPicker({ tags, onChange, suggestions }) {
   }
 
   function handleKeyDown(e) {
+    // IME変換確定中のEnterは無視（日本語入力対策）
+    if (e.nativeEvent?.isComposing) return
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault()
       addTag(input)
@@ -954,40 +989,54 @@ function TagPicker({ tags, onChange, suggestions }) {
     }
   }
 
-  const remainingSuggestions = suggestions.filter(s => !tags.includes(s))
+  // 選択肢に出す候補（プリセット＋よく使うタグ）。選択済みも残してトグル表示する
+  const choices = [...new Set([...suggestions, ...tags])]
+  // プリセットにも候補にも無い自由入力タグ
+  const customTags = tags.filter(t => !suggestions.includes(t))
+  const atLimit = tags.length >= MAX_TAGS
 
   return (
     <div className={styles.tagPicker}>
-      {tags.length > 0 && (
+      <div className={styles.tagToggleGrid}>
+        {choices.map(label => {
+          const on = tags.includes(label)
+          return (
+            <button
+              key={label}
+              type="button"
+              className={`${styles.tagToggle} ${on ? styles.tagToggleOn : ''}`}
+              onClick={() => toggleTag(label)}
+              aria-pressed={on}
+              disabled={!on && atLimit}
+            >
+              <TagIcon label={label} className={styles.tagToggleIcon} />
+              <span>{label}</span>
+              {on && <IconCheck className={styles.tagToggleCheck} />}
+            </button>
+          )
+        })}
+      </div>
+
+      {customTags.length > 0 && (
         <div className={styles.tagPickerSelected}>
-          {tags.map(t => (
+          {customTags.map(t => (
             <span key={t} className={styles.tagPickerChip}>
               #{t}
-              <button type="button" onClick={() => removeTag(t)} aria-label={`${t}を削除`}>×</button>
+              <button type="button" onClick={() => removeTag(t)} aria-label={`${t}を削除`}><IconClose /></button>
             </span>
           ))}
         </div>
       )}
+
       <input
         className={styles.input}
         value={input}
         onChange={e => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="タグを入力してEnter（例: 夜景、デート）"
+        placeholder={atLimit ? `タグは最大${MAX_TAGS}個までです` : '自由なタグを追加（入力してEnter）'}
         maxLength={20}
+        disabled={atLimit}
       />
-      {remainingSuggestions.length > 0 && (
-        <div className={styles.tagPickerSuggestions}>
-          {remainingSuggestions.slice(0, 10).map(s => (
-            <button
-              key={s}
-              type="button"
-              className={styles.tagSuggestionChip}
-              onClick={() => addTag(s)}
-            ><TagIcon label={s} /> {s}</button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -1037,7 +1086,9 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
     if (!name.trim()) return
     setSubmitting(true)
     const finalAddress = address || inputRef.current?.value || ''
-    await onSubmit({ name, category, memo, address: finalAddress, lat, lng, tags })
+    try {
+      await onSubmit({ name, category, memo, address: finalAddress, lat, lng, tags })
+    } catch { /* 呼び出し元でトースト表示。モーダルは開いたまま再試行可能に */ }
     setSubmitting(false)
   }
 
@@ -1236,7 +1287,9 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
     if (!name.trim()) return
     setSubmitting(true)
     const finalAddress = address || inputRef.current?.value || ''
-    await onSubmit({ name, category, memo, address: finalAddress, lat, lng, tags })
+    try {
+      await onSubmit({ name, category, memo, address: finalAddress, lat, lng, tags })
+    } catch { /* 呼び出し元でトースト表示。モーダルは開いたまま再試行可能に */ }
     setSubmitting(false)
   }
 

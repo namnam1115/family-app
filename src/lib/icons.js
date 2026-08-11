@@ -74,4 +74,12 @@ export {
   BsTree as IconPark,
   BsDroplet as IconOnsen,
   BsGift as IconAnniversary,
+  BsCupStraw as IconIzakaya,
+  BsWater as IconSea,
+  BsFlower1 as IconFlower,
+  BsFilm as IconMovie,
+  BsBag as IconShopBag,
+  BsCamera as IconCamera,
+  BsBinoculars as IconView,
+  BsCash as IconMoney,
 } from 'react-icons/bs'
