@@ -22,7 +22,7 @@
 ### ホーム（HomePage）
 - 未ログイン: Google ログインボタン
 - ログイン済み・家族未所属: `GroupSetup`（家族作成 or 招待リンク案内）
-- 所属済み: アプリランチャー（`AppCard` グリッド）+ `FamilyInfo`（メンバー・招待リンク共有）+ `TodaySchedule`（今日の予定サマリー）
+- 所属済み: アプリランチャー（`AppCard` グリッド）+ `FamilyInfo`（メンバー・招待リンク共有、メンバーアイコンタップで `MemberInfoModal` に詳細表示）+ `TodaySchedule`（今日の予定サマリー）
 
 ### 買い物リスト（ShoppingPage）
 - 複数リストをタブで切替。お気に入りリストを先頭表示、未購入数バッジ
