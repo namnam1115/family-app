@@ -146,6 +146,9 @@ export default function ShoppingPage() {
                   onClick={() => setSelectedListId(l.id)}
                 >
                   <span className={styles.tabName}>{l.name}</span>
+                  {l.uncheckedCount > 0 && (
+                    <span className={styles.tabBadge}>{l.uncheckedCount}</span>
+                  )}
                   <span
                     className={styles.tabDelete}
                     onClick={e => { e.stopPropagation(); setConfirmDeleteList(l) }}

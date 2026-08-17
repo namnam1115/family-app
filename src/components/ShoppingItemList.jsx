@@ -19,6 +19,8 @@ export default function ShoppingItemList({ listId, listName, memberName, isFavor
   const [editingItem, setEditingItem] = useState(null)
   const [confirmClearHistory, setConfirmClearHistory] = useState(false)
   const [toast, setToast] = useState(null)
+  const [pastNames, setPastNames] = useState([])
+  const [nameFocused, setNameFocused] = useState(false)
 
   const [itemsLimit, setItemsLimit] = useState(ITEMS_PAGE_SIZE)
   const [hasMoreItems, setHasMoreItems] = useState(false)
@@ -62,6 +64,24 @@ export default function ShoppingItemList({ listId, listName, memberName, isFavor
     setItemsLimit(ITEMS_PAGE_SIZE)
     fetchItems(ITEMS_PAGE_SIZE).finally(() => setLoading(false))
   }, [fetchItems])
+
+  // よく買う商品のサジェスト用: このリストの過去のアイテム名を頻度順に取得
+  useEffect(() => {
+    async function fetchPastNames() {
+      const { data, error } = await supabase
+        .from('shopping_items')
+        .select('name')
+        .eq('list_id', listId)
+        .order('created_at', { ascending: false })
+        .limit(200)
+      if (!error && data) {
+        const counts = {}
+        data.forEach(({ name }) => { counts[name] = (counts[name] || 0) + 1 })
+        setPastNames(Object.keys(counts).sort((a, b) => counts[b] - counts[a]))
+      }
+    }
+    fetchPastNames()
+  }, [listId])
 
   useEffect(() => {
     if (showHistory) {
@@ -235,6 +255,17 @@ export default function ShoppingItemList({ listId, listName, memberName, isFavor
     }
   }
 
+  const nameInputValue = name.trim()
+  const suggestions = nameInputValue
+    ? pastNames
+      .filter(n =>
+        n.toLowerCase().includes(nameInputValue.toLowerCase()) &&
+        n !== nameInputValue &&
+        !items.some(i => i.name === n)
+      )
+      .slice(0, 5)
+    : []
+
   return (
     <div className={styles.container}>
       <div className={styles.titleRow}>
@@ -249,7 +280,13 @@ export default function ShoppingItemList({ listId, listName, memberName, isFavor
       </div>
 
       {loading ? (
-        <p className={styles.hint}>読み込み中...</p>
+        <div className={styles.itemsArea}>
+          <ul className={styles.itemList} aria-hidden="true">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li key={i} className={styles.skeletonRow} />
+            ))}
+          </ul>
+        </div>
       ) : (
         <div className={styles.itemsArea}>
           {items.length === 0 && !showHistory && (
@@ -335,12 +372,29 @@ export default function ShoppingItemList({ listId, listName, memberName, isFavor
       )}
 
       <form onSubmit={handleAdd} className={styles.addForm}>
+        {nameFocused && suggestions.length > 0 && (
+          <div className={styles.suggestions} role="listbox" aria-label="よく買う商品の候補">
+            {suggestions.map(s => (
+              <button
+                key={s}
+                type="button"
+                className={styles.suggestionChip}
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => setName(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
         <div className={styles.inputRow}>
           <input
             className={styles.nameInput}
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
+            onFocus={() => setNameFocused(true)}
+            onBlur={() => setNameFocused(false)}
             placeholder="商品名を入力..."
             maxLength={100}
           />
@@ -457,6 +511,7 @@ function ItemRow({ item, onToggle, onDelete, onToggleImportant, onEdit }) {
       {/* 削除ボタン（スワイプで露出） */}
       <button
         className={styles.deleteBgBtn}
+        style={{ opacity: Math.min(Math.abs(offsetX) / REVEAL_WIDTH, 1) }}
         onClick={() => onDelete(item.id)}
         aria-label="削除"
       >
@@ -464,7 +519,7 @@ function ItemRow({ item, onToggle, onDelete, onToggleImportant, onEdit }) {
       </button>
 
       <div
-        className={`${styles.item} ${item.checked ? styles.itemChecked : ''}`}
+        className={`${styles.item} ${item.checked ? styles.itemChecked : ''} ${item.important && !item.checked ? styles.itemImportant : ''}`}
         style={{
           transform: offsetX !== 0 ? `translateX(${offsetX}px)` : undefined,
           transition: touch.current.active ? 'none' : 'transform 0.2s ease',

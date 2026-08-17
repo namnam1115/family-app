@@ -60,6 +60,40 @@
   box-shadow: 0 -4px 24px color-mix(in srgb, var(--primary) 7%, transparent);
 }
 
+/* ── よく買う商品のサジェスト ── */
+.suggestions {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 0.625rem;
+  animation: fadeIn 0.15s ease both;
+}
+
+.suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.suggestionChip {
+  flex-shrink: 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1.5px solid rgba(183, 175, 211, 0.4);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.suggestionChip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
 .inputRow {
   display: flex;
   gap: 0.5rem;
@@ -145,6 +179,20 @@
   gap: 0.5rem;
 }
 
+/* ── 読み込み中スケルトン ── */
+.skeletonRow {
+  height: 60px;
+  border-radius: var(--radius);
+  background: linear-gradient(
+    90deg,
+    var(--gray-100) 25%,
+    var(--gray-50) 37%,
+    var(--gray-100) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
 /* ── スワイプ削除 ── */
 .itemWrapper {
   position: relative;
@@ -167,6 +215,7 @@
   touch-action: manipulation;
   cursor: pointer;
   letter-spacing: 0.04em;
+  transition: opacity 0.15s ease;
 }
 
 .deleteBgBtn:active {
@@ -193,6 +242,16 @@
 
 .item.itemChecked {
   background: var(--gray-50);
+}
+
+.item.itemImportant {
+  padding-left: calc(0.875rem - 3px);
+  border-left: 3px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface));
+}
+
+.item.itemImportant:hover {
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface));
 }
 
 .checkbox {

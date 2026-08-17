@@ -156,6 +156,26 @@
   text-overflow: ellipsis;
 }
 
+.tabBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
+.tab.tabActive .tabBadge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
 .tabDelete {
   position: relative;
   display: inline-flex;
