@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { IconCheck } from '../lib/icons'
+import MemberInfoModal from './MemberInfoModal'
 import styles from './FamilyInfo.module.css'
 
 export default function FamilyInfo() {
   const { familyMember } = useAuth()
   const [members, setMembers] = useState([])
   const [inviteCopied, setInviteCopied] = useState(false)
+  const [selectedMember, setSelectedMember] = useState(null)
 
   useEffect(() => {
     if (!familyMember?.family_id) return
@@ -40,9 +42,15 @@ export default function FamilyInfo() {
         <span className={styles.familyName}>{familyMember.families?.name}</span>
         <div className={styles.memberList}>
           {members.map(m => (
-            <div key={m.id} className={styles.avatar} title={m.name || m.email}>
+            <button
+              key={m.id}
+              type="button"
+              className={styles.avatar}
+              title={m.name || m.email}
+              onClick={() => setSelectedMember(m)}
+            >
               {(m.name || m.email || '?')[0].toUpperCase()}
-            </div>
+            </button>
           ))}
           <span className={styles.memberCount}>{members.length}名</span>
         </div>
@@ -50,6 +58,11 @@ export default function FamilyInfo() {
       <button className={styles.inviteBtn} onClick={copyInviteLink}>
         {inviteCopied ? <><IconCheck /> コピー</> : '招待'}
       </button>
+      <MemberInfoModal
+        member={selectedMember}
+        isSelf={selectedMember?.id === familyMember.id}
+        onClose={() => setSelectedMember(null)}
+      />
     </div>
   )
 }

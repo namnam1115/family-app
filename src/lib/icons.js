@@ -82,4 +82,5 @@ export {
   BsCamera as IconCamera,
   BsBinoculars as IconView,
   BsCash as IconMoney,
+  BsEnvelope as IconMail,
 } from 'react-icons/bs'
