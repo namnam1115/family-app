@@ -38,6 +38,29 @@ export function AuthProvider({ children }) {
         .select('*, families(id, name)')
         .eq('user_id', userId)
         .maybeSingle()
+
+      const authUser = (await supabase.auth.getUser()).data.user
+      if (data && authUser) {
+        const patch = {}
+        if (!data.email && authUser.email) patch.email = authUser.email
+        if (!data.name && (authUser.user_metadata?.full_name || authUser.email)) {
+          patch.name = authUser.user_metadata?.full_name || authUser.email
+        }
+        if (!data.joined_at) patch.joined_at = new Date().toISOString()
+        if (Object.keys(patch).length > 0) {
+          const { data: updated } = await supabase
+            .from('family_members')
+            .update(patch)
+            .eq('id', data.id)
+            .select('*, families(id, name)')
+            .maybeSingle()
+          if (updated) {
+            setFamilyMember(updated)
+            return
+          }
+        }
+      }
+
       setFamilyMember(data)
     } catch (err) {
       console.error('家族メンバー取得エラー:', err)

@@ -16,6 +16,7 @@ $$;
 - ユーザーは **最大 1 家族**に所属（`family_members.user_id` に unique 制約）
 - 家族スコープの全テーブルの RLS は `family_id = get_my_family_id()` パターン
 - 例外: `families` の SELECT は認証済み全員に許可（招待リンク `/join/:familyId` で未所属ユーザーが検索するため。UUID は推測困難）。`push_subscriptions` は `user_id = auth.uid()`（本人のみ）
+- `family_members` の UPDATE は本人の行のみ（`user_id = auth.uid()`、`030_family_members_self_update.sql`）。ログイン時 `AuthContext.fetchFamilyMember` が `email`/`name`/`joined_at` の欠損を自動補完する
 
 ## テーブル一覧
 

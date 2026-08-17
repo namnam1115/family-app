@@ -7,6 +7,7 @@
 
 ### Added
 - ホームの `FamilyInfo` でメンバーアイコンをタップすると、名前・メールアドレス・参加日を表示する `MemberInfoModal` を開けるように（自分自身には「あなた」バッジを表示）
+- `family_members` に UPDATE の RLS ポリシーを追加（本人の行のみ）。ログイン時に `email` / `name` / `joined_at` が未設定なら自動補完するように（要マイグレーション `030_family_members_self_update.sql`）
 - お出かけリストで場所名（タイトル）タップ時に、モーダル内へ簡易ブラウザ（Google 検索の iframe 埋め込み）を表示。キーワード編集・外部ブラウザで開くフォールバック付き
 - アイコンの正本 `src/lib/icons.js` を追加。Bootstrap Icons を単色・線画で統一し、意味のある別名（`IconHome`, `IconSearch` …）で re-export
 - AI 開発ハーネスを導入（`docs/` 配下のドキュメント一式・AI_RULES・CONTRIBUTING・CHANGELOG）
