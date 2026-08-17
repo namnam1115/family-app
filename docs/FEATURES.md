@@ -13,7 +13,7 @@
 | `/budget` | BudgetPage 家計 | 必要 | budget_categories, budget_entries |
 | `/places` | PlacesPage お出かけリスト | 必要 | wish_places |
 | `/dishes` | DishesPage 食べたいおかず | 必要 | dish_categories, dishes |
-| `/schedule` | SchedulePage 予定表 | 必要 | schedule_events, schedule_event_history |
+| `/schedule` | SchedulePage 予定表 | 必要 | schedule_events, schedule_event_history, schedule_event_comments |
 | `/inventory` | InventoryPage 在庫管理 | 必要 | inventory_items |
 | `/travels` | TravelPage 旅行記録 | 必要 | travel_trips, travel_activities |
 
@@ -46,7 +46,25 @@
 - 「作った」記録（cooked_at）、5 段階評価とレビュー
 
 ### 予定表（SchedulePage）
+- 表示: 月 / 週（タイムグリッド・ドラッグ移動リサイズ）/ リスト（アジェンダ）の3ビュー
+- 月/リストは左右スワイプで前後移動
 - 終日 / 時間指定イベント、メンバー割当て
+- カテゴリ（仕事/学校/病院/家事/行事/遊び）で色分け（カテゴリ色 > メンバー色）
+- 場所（Google マップリンク）、メモ
+- 繰り返し予定（毎日/毎週/毎月/毎年 + 終了日、月末はクランプ）。表示範囲内でクライアント展開
+  - 「すべて」編集/削除＝シリーズ全体、「この回だけ削除」＝除外日追加、「この回だけ変更」＝除外日＋単発予定として切り出し
+- リマインダー通知（時間指定=10分〜1日前 / 終日=当日朝〜2日前）。繰り返し・終日にも対応（Edge Function `send-schedule-reminders`、`schedule_reminder_log` でオカレンス単位の二重送信防止）
+- 予定の追加/更新/コメント時に家族へ即時 push 通知（Edge Function `notify-schedule-change`、本人デバイス除外）
+  - ユーザー毎に変更通知 ON/OFF（ヘッダー⋯メニュー、`schedule_notify_prefs`）
+- アクセシビリティ: モーダルは Esc で閉じる、月セルはキーボード操作可（Enter/Space）
+- コメント未読バッジ（自分以外の新着コメントを赤ドット表示、`schedule_event_reads` で既読管理）
+- 日本の祝日表示（`src/lib/holidays.js`、2024〜2027年、赤字＋祝日名）
+- 複数日の終日予定は月表示で横帯連結。1日あたり表示件数はセル高さに応じて可変
+- 年月ジャンプ（月ラベルタップでピッカー）
+- 入力補助: タイトル履歴サジェスト / 所要時間チップ(30分〜3時間) / 「続けて追加」
+- デイビュー: 日付タップ／`+N件`でその日の全予定を一覧表示
+- 予定詳細ビュー（閲覧）→ 編集を分離
+- 予定ごとのコメント（家族間コミュニケーション、realtime）
 - 勤務シフトモード（日勤 / 夜勤 / 明け / 休み）
 - 変更履歴（誰がいつ何を変更したかの snapshot 保存）
 

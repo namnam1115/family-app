@@ -31,8 +31,12 @@ $$;
 | `push_subscriptions` | Web Push 購読（デバイスごと） | user_id, family_id, endpoint, p256dh, auth, UNIQUE(user_id, endpoint) | |
 | `dish_categories` | 献立カテゴリ | family_id, name, sort_order | ✅ |
 | `dishes` | 食べたいおかず | family_id, name, category_id, url, image_url, added_by → family_members, cooked_at, rating (1-5), review | ✅ |
-| `schedule_events` | 予定 | family_id, title, memo, all_day, start_date/end_date または start_datetime/end_datetime, member_id, shift_type (日勤/夜勤/明け/休み), updated_at 自動更新トリガー | ✅ |
+| `schedule_events` | 予定 | family_id, title, memo, all_day, start_date/end_date または start_datetime/end_datetime, member_id, shift_type (日勤/夜勤/明け/休み), location, category, recurrence (none/daily/weekly/monthly/yearly), recurrence_until, recurrence_exceptions (date[]), reminder_minutes, reminder_sent_at, updated_at 自動更新トリガー | ✅ |
 | `schedule_event_history` | 予定の変更履歴 | event_id, changed_by, action (created/updated), snapshot jsonb | |
+| `schedule_event_comments` | 予定へのコメント | event_id, family_id, member_id, member_name, body, created_at | ✅ |
+| `schedule_event_reads` | コメント既読管理 | event_id, member_id, family_id, last_read_at, PK(event_id, member_id) | |
+| `schedule_notify_prefs` | ユーザー毎の変更通知 ON/OFF | user_id (PK), family_id, notify_on_change | |
+| `schedule_reminder_log` | リマインダー送信ログ（二重送信防止） | event_id, occurrence_date, sent_at, PK(event_id, occurrence_date)。service role 専用 | |
 | `inventory_items` | 在庫 | family_id, name, quantity, unit, category, stock_status (ok/low/out), expiry_date, note | |
 | `travel_trips` | 旅行 | family_id, title, start_date, end_date, prefecture, memo, schedule_event_id | ✅ |
 | `travel_activities` | 旅行内アクティビティ | trip_id, family_id, order_index, title, memo | ✅ |

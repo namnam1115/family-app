@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { IconSchedule, IconClose, IconWork } from '../lib/icons'
 import { supabase } from '../lib/supabase'
+import { getHoliday } from '../lib/holidays'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -23,6 +24,64 @@ const SHIFT_COLORS = {
   '休み': '#10B981',
 }
 
+// 予定カテゴリ（色分け #10）
+const CATEGORIES = [
+  { key: '仕事', color: '#6B9EC2' },
+  { key: '学校', color: '#5A9E82' },
+  { key: '病院', color: '#C26B8E' },
+  { key: '家事', color: '#C49A5A' },
+  { key: '行事', color: '#9E6BC2' },
+  { key: '遊び', color: '#C2826A' },
+]
+const CATEGORY_COLORS = Object.fromEntries(CATEGORIES.map(c => [c.key, c.color]))
+
+// リマインダー選択肢（#4）
+const REMINDER_OPTIONS = [
+  { value: '', label: 'なし' },
+  { value: '10', label: '10分前' },
+  { value: '30', label: '30分前' },
+  { value: '60', label: '1時間前' },
+  { value: '1440', label: '1日前' },
+]
+// 終日予定は当日朝（JST 9:00）を基準に通知
+const ALLDAY_REMINDER_OPTIONS = [
+  { value: '', label: 'なし' },
+  { value: '0', label: '当日の朝' },
+  { value: '1440', label: '前日の朝' },
+  { value: '2880', label: '2日前の朝' },
+]
+
+// 繰り返し選択肢（#3）
+const RECURRENCE_OPTIONS = [
+  { value: 'none', label: '繰り返さない' },
+  { value: 'daily', label: '毎日' },
+  { value: 'weekly', label: '毎週' },
+  { value: 'monthly', label: '毎月' },
+  { value: 'yearly', label: '毎年' },
+]
+const RECURRENCE_LABELS = Object.fromEntries(RECURRENCE_OPTIONS.map(o => [o.value, o.label]))
+
+// 色決定：カテゴリ優先 → メンバー色 → 既定（#10）
+function eventColor(event, memberColorMap) {
+  if (event.category && CATEGORY_COLORS[event.category]) return CATEGORY_COLORS[event.category]
+  if (event.member_id && memberColorMap[event.member_id]) return memberColorMap[event.member_id]
+  return '#8E81B5'
+}
+
+// 繰り返し予定・オカレンスの元IDを取得（DB操作はマスターに対して行う）
+function masterId(event) {
+  return event.master_id ?? event.id
+}
+
+// Esc キーでモーダルを閉じる（アクセシビリティ）
+function useEscapeKey(onClose) {
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+}
+
 function cycleShift(current) {
   if (!current) return '日勤'
   const idx = SHIFT_TYPES.indexOf(current)
@@ -41,6 +100,14 @@ function toDateStr(date) {
 function formatTime(isoString) {
   if (!isoString) return ''
   return new Date(isoString).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+// datetime-local 入力用にローカル時刻の 'YYYY-MM-DDTHH:mm' を返す。
+// toISOString() は UTC に変換され時刻がズレるため使わない。
+function toLocalInput(date) {
+  const d = new Date(date)
+  const p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
 function isEventOnDay(event, date) {
@@ -69,6 +136,66 @@ function getWeekDates(baseDate) {
   })
 }
 
+function addByRule(date, rule, n) {
+  const d = new Date(date)
+  if (rule === 'daily') { d.setDate(d.getDate() + n) }
+  else if (rule === 'weekly') { d.setDate(d.getDate() + 7 * n) }
+  else if (rule === 'monthly' || rule === 'yearly') {
+    // 月末日（例: 31日・2/29）の桁上がりを防ぐため、対象月の末日にクランプする
+    const day = d.getDate()
+    d.setDate(1)
+    if (rule === 'monthly') d.setMonth(d.getMonth() + n)
+    else d.setFullYear(d.getFullYear() + n)
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+    d.setDate(Math.min(day, lastDay))
+  }
+  return d
+}
+
+// 繰り返し予定を表示範囲内のオカレンス群に展開する（#3）
+// 単発イベントはそのまま [event] を返す。
+function expandEvent(event, rangeStartStr, rangeEndStr) {
+  if (!event.recurrence || event.recurrence === 'none') return [event]
+
+  const isTimed = !event.all_day
+  const until = event.recurrence_until || null
+  const baseStart = isTimed ? new Date(event.start_datetime) : new Date(`${event.start_date}T00:00:00`)
+  const durMs = isTimed ? (new Date(event.end_datetime) - new Date(event.start_datetime)) : 0
+  const durDays = isTimed ? 0
+    : Math.round((new Date(event.end_date || event.start_date) - new Date(event.start_date)) / 86400000)
+
+  const exceptions = new Set(event.recurrence_exceptions || [])
+  const out = []
+  for (let n = 0; n < 800; n++) {
+    const occStart = addByRule(baseStart, event.recurrence, n)
+    const occStartStr = toDateStr(occStart)
+    if (occStartStr > rangeEndStr) break
+    if (until && occStartStr > until) break
+    if (exceptions.has(occStartStr)) continue   // 「この回だけ削除」された日はスキップ
+
+    let occEndStr
+    if (isTimed) {
+      occEndStr = toDateStr(new Date(occStart.getTime() + durMs))
+    } else {
+      const ed = new Date(occStart); ed.setDate(ed.getDate() + durDays); occEndStr = toDateStr(ed)
+    }
+    if (occEndStr < rangeStartStr) continue
+
+    const base = { ...event, id: `${event.id}::${occStartStr}`, master_id: event.id, is_occurrence: true }
+    if (isTimed) {
+      out.push({
+        ...base,
+        start_datetime: occStart.toISOString(),
+        end_datetime: new Date(occStart.getTime() + durMs).toISOString(),
+      })
+    } else {
+      const ed = new Date(occStart); ed.setDate(ed.getDate() + durDays)
+      out.push({ ...base, start_date: occStartStr, end_date: event.end_date ? toDateStr(ed) : null })
+    }
+  }
+  return out
+}
+
 function getMonthGrid(baseDate) {
   const year = baseDate.getFullYear()
   const month = baseDate.getMonth()
@@ -86,7 +213,7 @@ function getMonthGrid(baseDate) {
 // ── メインコンポーネント ──────────────────────────────────────
 
 export default function SchedulePage() {
-  const { familyMember } = useAuth()
+  const { familyMember, user } = useAuth()
   const navigate = useNavigate()
 
   const [events, setEvents] = useState([])
@@ -98,6 +225,13 @@ export default function SchedulePage() {
   const [addDefaultDate, setAddDefaultDate] = useState(null)
   const [addDefaultStartDt, setAddDefaultStartDt] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
+  const [detailTarget, setDetailTarget] = useState(null)   // 予定詳細ビュー（#6）
+  const [dayDetail, setDayDetail] = useState(null)          // デイビュー対象日 dateStr（#1 #2）
+  const [showMonthPicker, setShowMonthPicker] = useState(false) // 年月ジャンプ
+
+  // コメント未読バッジ用（#2）: { [eventId]: {count, latestAt, latestAuthor} } と既読時刻
+  const [commentMeta, setCommentMeta] = useState({})
+  const [reads, setReads] = useState({})
 
   // 看護師モード
   const [nurseMode, setNurseMode] = useState(false)
@@ -110,6 +244,9 @@ export default function SchedulePage() {
 
   // ヘッダーの「⋯」メニュー開閉
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
+
+  // 変更通知 ON/OFF（ユーザー毎）
+  const [notifyOnChange, setNotifyOnChange] = useState(true)
 
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate])
   const monthGrid = useMemo(() => getMonthGrid(baseDate), [baseDate])
@@ -147,14 +284,29 @@ export default function SchedulePage() {
       `and(all_day.eq.true,start_date.lte.${end},end_date.gte.${start})`,
       `and(all_day.eq.false,start_datetime.lte.${end}T23:59:59Z,end_datetime.gte.${start}T00:00:00Z)`,
     ].join(',')
-    const { data: ev } = await supabase
-      .from('schedule_events')
-      .select('*, member:family_members!schedule_events_member_id_fkey(id, name)')
-      .eq('family_id', familyMember.family_id)
-      .or(orFilter)
-      .order('start_datetime', { ascending: true, nullsFirst: false })
-      .order('start_date', { ascending: true })
-    if (ev) setEvents(ev)
+    const select = '*, member:family_members!schedule_events_member_id_fkey(id, name)'
+
+    // 単発イベント（範囲内）と繰り返しイベント（全件→クライアント展開）を並行取得
+    const [normalRes, recurringRes] = await Promise.all([
+      supabase
+        .from('schedule_events')
+        .select(select)
+        .eq('family_id', familyMember.family_id)
+        .or(orFilter)
+        .or('recurrence.is.null,recurrence.eq.none')
+        .order('start_datetime', { ascending: true, nullsFirst: false })
+        .order('start_date', { ascending: true }),
+      supabase
+        .from('schedule_events')
+        .select(select)
+        .eq('family_id', familyMember.family_id)
+        .not('recurrence', 'is', null)
+        .neq('recurrence', 'none'),
+    ])
+
+    const normal = normalRes.data || []
+    const expanded = (recurringRes.data || []).flatMap(e => expandEvent(e, start, end))
+    setEvents([...normal, ...expanded])
     setLoading(false)
   }, [familyMember?.family_id, visibleRange])
 
@@ -183,6 +335,111 @@ export default function SchedulePage() {
     return map
   }, [members])
 
+  // 表示中イベントのマスターID一覧（未読集計を表示範囲に限定しスケールさせる）
+  const visibleMasterIds = useMemo(
+    () => [...new Set(events.map(masterId))],
+    [events]
+  )
+
+  // ── コメント未読バッジ（#2） ──────────────────────────────
+  const fetchCommentMeta = useCallback(async () => {
+    if (!familyMember?.family_id || visibleMasterIds.length === 0) {
+      setCommentMeta({}); setReads({}); return
+    }
+    const [{ data: comments }, { data: readRows }] = await Promise.all([
+      supabase
+        .from('schedule_event_comments')
+        .select('event_id, created_at, member_id')
+        .eq('family_id', familyMember.family_id)
+        .in('event_id', visibleMasterIds)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('schedule_event_reads')
+        .select('event_id, last_read_at')
+        .eq('member_id', familyMember.id)
+        .in('event_id', visibleMasterIds),
+    ])
+    const meta = {}
+    for (const c of comments || []) {
+      const m = meta[c.event_id] || { count: 0, latestAt: null, latestAuthor: null }
+      m.count += 1
+      m.latestAt = c.created_at
+      m.latestAuthor = c.member_id
+      meta[c.event_id] = m
+    }
+    setCommentMeta(meta)
+    const r = {}
+    for (const row of readRows || []) r[row.event_id] = row.last_read_at
+    setReads(r)
+  }, [familyMember?.family_id, familyMember?.id, visibleMasterIds])
+
+  useEffect(() => { fetchCommentMeta() }, [fetchCommentMeta])
+
+  useEffect(() => {
+    if (!familyMember?.family_id) return
+    const ch = supabase
+      .channel('schedule_comments_meta_rt')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'schedule_event_comments',
+        filter: `family_id=eq.${familyMember.family_id}`,
+      }, () => fetchCommentMeta())
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [familyMember?.family_id, fetchCommentMeta])
+
+  // イベントID→未読フラグ（自分以外の新着コメントが既読時刻より後）
+  const unreadMap = useMemo(() => {
+    const map = {}
+    for (const [eid, m] of Object.entries(commentMeta)) {
+      const lastRead = reads[eid]
+      map[eid] = m.latestAuthor && m.latestAuthor !== familyMember?.id &&
+        (!lastRead || new Date(m.latestAt) > new Date(lastRead))
+    }
+    return map
+  }, [commentMeta, reads, familyMember?.id])
+
+  // 予定を開いたら既読にする
+  const markRead = useCallback(async (eid) => {
+    if (!familyMember?.family_id) return
+    const now = new Date().toISOString()
+    setReads(prev => ({ ...prev, [eid]: now }))
+    await supabase.from('schedule_event_reads').upsert({
+      event_id: eid, member_id: familyMember.id, family_id: familyMember.family_id, last_read_at: now,
+    }, { onConflict: 'event_id,member_id' })
+  }, [familyMember?.family_id, familyMember?.id])
+
+  // ── 変更通知 ON/OFF ───────────────────────────────────────
+  useEffect(() => {
+    if (!user?.id) return
+    supabase
+      .from('schedule_notify_prefs')
+      .select('notify_on_change')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setNotifyOnChange(data.notify_on_change) })
+  }, [user?.id])
+
+  async function toggleNotify() {
+    const next = !notifyOnChange
+    setNotifyOnChange(next)
+    await supabase.from('schedule_notify_prefs').upsert({
+      user_id: user.id, family_id: familyMember.family_id, notify_on_change: next, updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+  }
+
+  // ── 家族への即時通知（#1） ────────────────────────────────
+  const notifyFamily = useCallback((action, title, eventId) => {
+    if (!familyMember?.family_id) return
+    supabase.functions.invoke('notify-schedule-change', {
+      body: {
+        family_id: familyMember.family_id,
+        actor_name: familyMember.name,
+        actor_user_id: user?.id,
+        action, title, event_id: eventId,
+      },
+    }).catch(() => {})   // 通知失敗は本処理をブロックしない
+  }, [familyMember?.family_id, familyMember?.name, user?.id])
+
   // ── 通常 CRUD ─────────────────────────────────────────────
   async function handleAdd(data) {
     const { data: inserted } = await supabase
@@ -199,11 +456,13 @@ export default function SchedulePage() {
         action: 'created',
         snapshot: data,
       })
+      notifyFamily('created', data.title, inserted.id)   // 家族へ即時通知（#1）
     }
     await fetchEvents()
   }
   async function handleEdit(id, data) {
-    await supabase.from('schedule_events').update(data).eq('id', id)
+    // 編集したらリマインダー送信済みフラグをリセットし再度通知対象にする（#4）
+    await supabase.from('schedule_events').update({ ...data, reminder_sent_at: null }).eq('id', id)
     await supabase.from('schedule_event_history').insert({
       event_id: id,
       family_id: familyMember.family_id,
@@ -212,10 +471,39 @@ export default function SchedulePage() {
       action: 'updated',
       snapshot: data,
     })
+    notifyFamily('updated', data.title, id)   // 家族へ即時通知（#1）
     await fetchEvents()
   }
   async function handleDelete(id) {
     await supabase.from('schedule_events').delete().eq('id', id)
+    await fetchEvents()
+  }
+
+  // 繰り返し予定の「この回だけ削除」= 除外日を追加（#3）
+  async function handleDeleteOccurrence(event) {
+    const id = masterId(event)
+    const occDate = event.all_day ? event.start_date : toDateStr(new Date(event.start_datetime))
+    const nextExceptions = [...(event.recurrence_exceptions || []), occDate]
+    await supabase.from('schedule_events').update({ recurrence_exceptions: nextExceptions }).eq('id', id)
+    await fetchEvents()
+  }
+
+  // 繰り返し予定の「この回だけ変更」= 元の回を除外し、単発予定として切り出す（#3）
+  async function handleEditOccurrence(occ, data) {
+    const id = masterId(occ)
+    const occDate = occ.all_day ? occ.start_date : toDateStr(new Date(occ.start_datetime))
+    const nextExceptions = [...(occ.recurrence_exceptions || []), occDate]
+    await supabase.from('schedule_events').update({ recurrence_exceptions: nextExceptions }).eq('id', id)
+    const { data: inserted } = await supabase
+      .from('schedule_events')
+      .insert({
+        family_id: familyMember.family_id,
+        ...data,
+        recurrence: 'none', recurrence_until: null, recurrence_exceptions: [], reminder_sent_at: null,
+      })
+      .select('id')
+      .single()
+    if (inserted?.id) notifyFamily('updated', data.title, inserted.id)
     await fetchEvents()
   }
 
@@ -233,6 +521,31 @@ export default function SchedulePage() {
     if (viewMode === 'week') { d.setDate(d.getDate() + 7) }
     else { d.setDate(1); d.setMonth(d.getMonth() + 1) }
     setBaseDate(d)
+  }
+
+  // 予定を開く＝既読化＋詳細表示
+  function openDetail(ev) {
+    markRead(masterId(ev))
+    setDetailTarget(ev)
+  }
+
+  // ── スワイプで前後移動（#7） ──────────────────────────────
+  const touchStartRef = useRef(null)
+  function onMainTouchStart(e) {
+    if (viewMode === 'week' || nurseMode) return   // 週表示はドラッグ操作と競合するため除外
+    const t = e.touches[0]
+    touchStartRef.current = { x: t.clientX, y: t.clientY }
+  }
+  function onMainTouchEnd(e) {
+    const s = touchStartRef.current
+    if (!s) return
+    touchStartRef.current = null
+    const t = e.changedTouches[0]
+    const dx = t.clientX - s.x
+    const dy = t.clientY - s.y
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) next(); else prev()
+    }
   }
 
   const todayStr = toDateStr(new Date())
@@ -380,6 +693,15 @@ export default function SchedulePage() {
                       <span className={styles.headerMenuIcon} aria-hidden="true"><IconWork /></span>
                       勤務入力モード
                     </button>
+                    <button
+                      className={styles.headerMenuItem}
+                      role="menuitemcheckbox"
+                      aria-checked={notifyOnChange}
+                      onClick={() => { toggleNotify() }}
+                    >
+                      <span className={styles.headerMenuIcon} aria-hidden="true">{notifyOnChange ? '🔔' : '🔕'}</span>
+                      変更通知 {notifyOnChange ? 'ON' : 'OFF'}
+                    </button>
                   </div>
                 </>
               )}
@@ -394,7 +716,13 @@ export default function SchedulePage() {
       <div className={styles.weekNav}>
         <button className={styles.navBtn} onClick={prev} disabled={nurseMode} aria-label="前へ">‹</button>
         <div className={styles.weekLabel}>
-          <span className={styles.weekRange}>{navLabel}</span>
+          <button
+            className={styles.weekRangeBtn}
+            onClick={() => { if (!nurseMode) setShowMonthPicker(true) }}
+            disabled={nurseMode}
+          >
+            {navLabel}{!nurseMode && <span className={styles.weekRangeCaret} aria-hidden="true">▾</span>}
+          </button>
           {!isCurrentPeriod && !nurseMode && (
             <button className={styles.todayBtn} onClick={() => setBaseDate(new Date())}>今日</button>
           )}
@@ -404,6 +732,7 @@ export default function SchedulePage() {
           <div className={styles.viewToggle}>
             <button className={`${styles.viewBtn} ${viewMode === 'month' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('month')}>月</button>
             <button className={`${styles.viewBtn} ${viewMode === 'week' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('week')}>週</button>
+            <button className={`${styles.viewBtn} ${viewMode === 'list' ? styles.viewBtnActive : ''}`} onClick={() => setViewMode('list')}>リスト</button>
           </div>
         )}
       </div>
@@ -447,7 +776,11 @@ export default function SchedulePage() {
       )}
 
       {/* ── カレンダー本体 ── */}
-      <main className={`${styles.main} ${viewMode === 'week' ? styles.mainWeekView : ''}`}>
+      <main
+        className={`${styles.main} ${viewMode === 'week' ? styles.mainWeekView : ''}`}
+        onTouchStart={onMainTouchStart}
+        onTouchEnd={onMainTouchEnd}
+      >
         {loading ? (
           <LoadingSpinner inline />
         ) : viewMode === 'week' ? (
@@ -456,13 +789,24 @@ export default function SchedulePage() {
             filteredEvents={filteredEvents}
             memberColorMap={memberColorMap}
             todayStr={todayStr}
-            onEventClick={ev => setEditTarget(ev)}
+            unreadMap={unreadMap}
+            onEventClick={openDetail}
             onEdit={handleEdit}
             onSlotClick={dt => {
               setAddDefaultDate(toDateStr(dt))
-              setAddDefaultStartDt(dt.toISOString().slice(0, 16))
+              setAddDefaultStartDt(toLocalInput(dt))
               setShowAdd(true)
             }}
+          />
+        ) : viewMode === 'list' ? (
+          /* アジェンダ（リスト）表示（#8） */
+          <AgendaView
+            events={filteredEvents}
+            memberColorMap={memberColorMap}
+            baseDate={baseDate}
+            todayStr={todayStr}
+            unreadMap={unreadMap}
+            onEventClick={openDetail}
           />
         ) : (
           /* 月表示 */
@@ -472,8 +816,10 @@ export default function SchedulePage() {
             memberColorMap={memberColorMap}
             baseDate={baseDate}
             todayStr={todayStr}
-            onDayClick={nurseMode ? handleNurseDayTap : dateStr => { setAddDefaultDate(dateStr); setShowAdd(true) }}
-            onEventClick={nurseMode ? null : ev => setEditTarget(ev)}
+            unreadMap={unreadMap}
+            onDayClick={nurseMode ? handleNurseDayTap : dateStr => setDayDetail(dateStr)}
+            onEventClick={nurseMode ? null : openDetail}
+            onOverflowClick={dateStr => setDayDetail(dateStr)}
             nurseMode={nurseMode}
             shiftDraft={shiftDraft}
           />
@@ -507,10 +853,12 @@ export default function SchedulePage() {
           mode="add"
           members={members}
           memberColorMap={memberColorMap}
+          familyId={familyMember?.family_id}
           defaultDate={addDefaultDate}
           defaultStartDt={addDefaultStartDt}
           defaultMemberId={familyMember?.id}
           onSubmit={async data => { await handleAdd(data); setShowAdd(false); setAddDefaultStartDt(null) }}
+          onSubmitContinue={async data => { await handleAdd(data) }}
           onClose={() => { setShowAdd(false); setAddDefaultStartDt(null) }}
         />
       )}
@@ -520,9 +868,50 @@ export default function SchedulePage() {
           event={editTarget}
           members={members}
           memberColorMap={memberColorMap}
-          onSubmit={async data => { await handleEdit(editTarget.id, data); setEditTarget(null) }}
-          onDelete={async () => { await handleDelete(editTarget.id); setEditTarget(null) }}
+          familyId={familyMember?.family_id}
+          onSubmit={async (data, scope) => {
+            if (editTarget.is_occurrence && scope === 'single') await handleEditOccurrence(editTarget, data)
+            else await handleEdit(masterId(editTarget), data)
+            setEditTarget(null)
+          }}
+          onDelete={async () => { await handleDelete(masterId(editTarget)); setEditTarget(null) }}
           onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {/* ── デイビュー（その日の全予定 #1 #2） ── */}
+      {dayDetail && (
+        <DayDetailModal
+          dateStr={dayDetail}
+          events={filteredEvents}
+          memberColorMap={memberColorMap}
+          unreadMap={unreadMap}
+          onEventClick={ev => { setDayDetail(null); openDetail(ev) }}
+          onAdd={() => { setAddDefaultDate(dayDetail); setDayDetail(null); setShowAdd(true) }}
+          onClose={() => setDayDetail(null)}
+        />
+      )}
+
+      {/* ── 予定詳細ビュー（#5 #6 #9） ── */}
+      {detailTarget && (
+        <EventDetailModal
+          event={detailTarget}
+          familyMember={familyMember}
+          memberColorMap={memberColorMap}
+          onNotifyComment={title => notifyFamily('commented', title, masterId(detailTarget))}
+          onEdit={() => { setEditTarget(detailTarget); setDetailTarget(null) }}
+          onDelete={async () => { await handleDelete(masterId(detailTarget)); setDetailTarget(null) }}
+          onDeleteOccurrence={async () => { await handleDeleteOccurrence(detailTarget); setDetailTarget(null) }}
+          onClose={() => setDetailTarget(null)}
+        />
+      )}
+
+      {/* ── 年月ジャンプ ── */}
+      {showMonthPicker && (
+        <MonthPickerModal
+          baseDate={baseDate}
+          onSelect={(y, m) => { setBaseDate(new Date(y, m, 1)); setShowMonthPicker(false) }}
+          onClose={() => setShowMonthPicker(false)}
         />
       )}
 
@@ -533,12 +922,94 @@ export default function SchedulePage() {
 
 // ── 月表示コンポーネント ──────────────────────────────────────
 
-const MAX_CHIPS = 2
+// セル内の高さ配分（CSS と揃える）。件数可変計算に使用（#6）
+const MONTH_DATE_ROW_H = 28
+const MONTH_CHIP_H = 16
+const MONTH_BAND_H = 16
+const MONTH_MAX_CHIPS_CAP = 5
 
-function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClick, onEventClick, nurseMode, shiftDraft }) {
+// 複数日 all_day イベントを週内の帯レーンに割り当てる（#5）
+function isMultiDay(e) {
+  return e.all_day && e.end_date && e.end_date !== e.start_date
+}
+
+function assignBandLanes(bands) {
+  const lanes = []
+  const sorted = [...bands].sort((a, b) => a.startCol - b.startCol || (b.endCol - b.startCol) - (a.endCol - a.startCol))
+  for (const b of sorted) {
+    let placed = false
+    for (let li = 0; li < lanes.length; li++) {
+      if (lanes[li].every(x => b.startCol > x.endCol || b.endCol < x.startCol)) {
+        lanes[li].push(b); b.lane = li; placed = true; break
+      }
+    }
+    if (!placed) { b.lane = lanes.length; lanes.push([b]) }
+  }
+  return sorted
+}
+
+function MonthView({ grid, events, memberColorMap, baseDate, todayStr, unreadMap = {}, onDayClick, onEventClick, onOverflowClick, nurseMode, shiftDraft }) {
   const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
   const currentMonth = baseDate.getMonth()
   const currentYear = baseDate.getFullYear()
+
+  // 週を6行に分割
+  const weeks = []
+  for (let w = 0; w < 6; w++) weeks.push(grid.slice(w * 7, w * 7 + 7))
+
+  // セル高さを測って1日あたり表示件数を可変化（#6）
+  const gridRef = useRef(null)
+  const [weekH, setWeekH] = useState(0)
+  useEffect(() => {
+    if (!gridRef.current) return
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) setWeekH(e.contentRect.height / 6)
+    })
+    ro.observe(gridRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  function renderCellContent(date, bandLaneCount) {
+    const dateStr = toDateStr(date)
+    // 帯を除いた単日イベント（単日 all_day + 時間指定）
+    const dayEvents = events
+      .filter(e => !e.shift_type && !isMultiDay(e) && isEventOnDay(e, date))
+      .sort((a, b) => {
+        if (a.all_day !== b.all_day) return a.all_day ? -1 : 1
+        const aTime = a.all_day ? a.start_date : a.start_datetime
+        const bTime = b.all_day ? b.start_date : b.start_datetime
+        return aTime < bTime ? -1 : 1
+      })
+    const dayShifts = events.filter(e => e.shift_type && isEventOnDay(e, date))
+
+    // 帯レーン分を差し引いた残り高さから件数を算出
+    const avail = weekH - MONTH_DATE_ROW_H - bandLaneCount * MONTH_BAND_H - (dayShifts.length ? MONTH_BAND_H : 0)
+    const cap = weekH > 0 ? Math.max(1, Math.min(MONTH_MAX_CHIPS_CAP, Math.floor(avail / MONTH_CHIP_H))) : 2
+    const visibleEvents = dayEvents.slice(0, cap)
+    const overflow = dayEvents.length - visibleEvents.length
+
+    return (
+      <>
+        <div className={styles.monthEventList}>
+          {visibleEvents.map(ev => (
+            <EventChip key={ev.id} event={ev} color={eventColor(ev, memberColorMap)} compact showTime={!ev.all_day} unread={unreadMap[masterId(ev)]} onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
+          ))}
+          {overflow > 0 && (
+            <button type="button" className={styles.monthOverflow} onClick={e => { e.stopPropagation(); onOverflowClick?.(dateStr) }}>
+              +{overflow}件
+            </button>
+          )}
+        </div>
+        {dayShifts.length > 0 && (
+          <div className={styles.monthShiftList}>
+            {dayShifts.map(ev => (
+              <ShiftBlock key={ev.id} shiftType={ev.shift_type} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
+            ))}
+          </div>
+        )}
+      </>
+    )
+  }
 
   return (
     <div className={styles.monthWrapper}>
@@ -549,71 +1020,102 @@ function MonthView({ grid, events, memberColorMap, baseDate, todayStr, onDayClic
           </div>
         ))}
       </div>
-      <div className={styles.monthGrid}>
-        {grid.map((date, idx) => {
-          const dateStr = toDateStr(date)
-          const isToday = dateStr === todayStr
-          const isCurrentMonth = date.getMonth() === currentMonth && date.getFullYear() === currentYear
-          const isSat = idx % 7 === 5
-          const isSun = idx % 7 === 6
-
-          // 看護師モード
-          if (nurseMode) {
-            const draftShift = shiftDraft[dateStr] ?? null
-            return (
-              <div
-                key={dateStr}
-                className={`${styles.monthCell} ${styles.monthCellNurse} ${isToday ? styles.monthCellToday : ''} ${!isCurrentMonth ? styles.monthCellOtherMonth : ''}`}
-                style={draftShift ? { '--shift-color': SHIFT_COLORS[draftShift] } : {}}
-                onClick={() => onDayClick(dateStr)}
-              >
-                <span className={`${styles.monthDateNum} ${isToday ? styles.monthDateNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''} ${!isCurrentMonth ? styles.otherMonth : ''}`}>
-                  {date.getDate()}
-                </span>
-                {draftShift && (
-                  <div className={styles.nurseShiftBadge}>
-                    {draftShift}
-                  </div>
-                )}
-              </div>
-            )
+      <div className={styles.monthGrid} ref={gridRef}>
+        {weeks.map((week, wi) => {
+          // この週の帯（複数日 all_day）を算出
+          const weekStartStr = toDateStr(week[0])
+          const weekEndStr = toDateStr(week[6])
+          const bands = []
+          const seen = new Set()
+          for (let col = 0; col < 7; col++) {
+            for (const e of events) {
+              if (!isMultiDay(e) || e.shift_type) continue
+              if (seen.has(e.id)) continue
+              if (!(e.start_date <= weekEndStr && (e.end_date || e.start_date) >= weekStartStr)) continue
+              if (!isEventOnDay(e, week[col])) continue
+              seen.add(e.id)
+              const startCol = e.start_date < weekStartStr ? 0 : week.findIndex(d => toDateStr(d) === e.start_date)
+              const endColRaw = (e.end_date || e.start_date) > weekEndStr ? 6 : week.findIndex(d => toDateStr(d) === (e.end_date || e.start_date))
+              bands.push({ ev: e, startCol: startCol < 0 ? 0 : startCol, endCol: endColRaw < 0 ? 6 : endColRaw })
+            }
           }
-
-          // 通常モード
-          const dayShifts = events.filter(e => e.shift_type && isEventOnDay(e, date))
-          const dayEvents = events
-            .filter(e => !e.shift_type && isEventOnDay(e, date))
-            .sort((a, b) => {
-              if (a.all_day !== b.all_day) return a.all_day ? -1 : 1
-              const aTime = a.all_day ? a.start_date : a.start_datetime
-              const bTime = b.all_day ? b.start_date : b.start_datetime
-              return aTime < bTime ? -1 : 1
-            })
-          const visibleEvents = dayEvents.slice(0, MAX_CHIPS)
-          const overflow = dayEvents.length - MAX_CHIPS
+          assignBandLanes(bands)
+          const laneCount = bands.reduce((m, b) => Math.max(m, b.lane + 1), 0)
 
           return (
-            <div
-              key={dateStr}
-              className={`${styles.monthCell} ${isToday ? styles.monthCellToday : ''} ${!isCurrentMonth ? styles.monthCellOtherMonth : ''}`}
-              onClick={() => onDayClick(dateStr)}
-            >
-              <span className={`${styles.monthDateNum} ${isToday ? styles.monthDateNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''} ${!isCurrentMonth ? styles.otherMonth : ''}`}>
-                {date.getDate()}
-              </span>
-              <div className={styles.monthEventList}>
-                {visibleEvents.map(ev => (
-                  <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
-                ))}
-                {overflow > 0 && <span className={styles.monthOverflow}>+{overflow}件</span>}
+            <div key={wi} className={styles.monthWeek}>
+              {/* 日付・セル背景 */}
+              <div className={styles.monthWeekRow}>
+                {week.map((date, ci) => {
+                  const dateStr = toDateStr(date)
+                  const isToday = dateStr === todayStr
+                  const isCurrentMonth = date.getMonth() === currentMonth && date.getFullYear() === currentYear
+                  const isSat = ci === 5
+                  const isSun = ci === 6
+                  const holiday = getHoliday(dateStr)
+
+                  if (nurseMode) {
+                    const draftShift = shiftDraft[dateStr] ?? null
+                    return (
+                      <div
+                        key={dateStr}
+                        className={`${styles.monthCell} ${styles.monthCellNurse} ${isToday ? styles.monthCellToday : ''} ${!isCurrentMonth ? styles.monthCellOtherMonth : ''}`}
+                        style={draftShift ? { '--shift-color': SHIFT_COLORS[draftShift] } : {}}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${date.getMonth() + 1}月${date.getDate()}日`}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDayClick(dateStr) } }}
+                        onClick={() => onDayClick(dateStr)}
+                      >
+                        <span className={`${styles.monthDateNum} ${isToday ? styles.monthDateNumToday : ''} ${isSat ? styles.sat : ''} ${(isSun || holiday) ? styles.sun : ''} ${!isCurrentMonth ? styles.otherMonth : ''}`}>
+                          {date.getDate()}
+                        </span>
+                        {draftShift && <div className={styles.nurseShiftBadge}>{draftShift}</div>}
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div
+                      key={dateStr}
+                      className={`${styles.monthCell} ${isToday ? styles.monthCellToday : ''} ${!isCurrentMonth ? styles.monthCellOtherMonth : ''}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${date.getMonth() + 1}月${date.getDate()}日${holiday ? ` ${holiday}` : ''}`}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDayClick(dateStr) } }}
+                      onClick={() => onDayClick(dateStr)}
+                    >
+                      <div className={styles.monthDateRow}>
+                        <span className={`${styles.monthDateNum} ${isToday ? styles.monthDateNumToday : ''} ${isSat ? styles.sat : ''} ${(isSun || holiday) ? styles.sun : ''} ${!isCurrentMonth ? styles.otherMonth : ''}`}>
+                          {date.getDate()}
+                        </span>
+                        {holiday && isCurrentMonth && <span className={styles.monthHolidayName}>{holiday}</span>}
+                      </div>
+                      {/* 帯レーン分のスペーサー（帯は上に絶対配置） */}
+                      {laneCount > 0 && <div style={{ height: laneCount * MONTH_BAND_H }} />}
+                      {renderCellContent(date, laneCount)}
+                    </div>
+                  )
+                })}
               </div>
-              {dayShifts.length > 0 && (
-                <div className={styles.monthShiftList}>
-                  {dayShifts.map(ev => (
-                    <ShiftBlock key={ev.id} shiftType={ev.shift_type} compact onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
-                  ))}
-                </div>
-              )}
+
+              {/* 複数日イベントの帯（セル上に重ねる #5） */}
+              {!nurseMode && bands.map(b => (
+                <button
+                  key={`${b.ev.id}_${wi}`}
+                  type="button"
+                  className={styles.monthBand}
+                  style={{
+                    '--chip-color': eventColor(b.ev, memberColorMap),
+                    left: `calc(${(b.startCol / 7) * 100}% + 2px)`,
+                    width: `calc(${((b.endCol - b.startCol + 1) / 7) * 100}% - 4px)`,
+                    top: MONTH_DATE_ROW_H + b.lane * MONTH_BAND_H,
+                  }}
+                  onClick={e => { e.stopPropagation(); onEventClick?.(b.ev) }}
+                >
+                  {b.ev.title}
+                </button>
+              ))}
             </div>
           )
         })}
@@ -670,7 +1172,7 @@ function CurrentTimeLine({ weekDates, todayStr }) {
 
 // ── 週タイムグリッドコンポーネント ────────────────────────────
 
-function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, onEventClick, onEdit, onSlotClick }) {
+function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, unreadMap = {}, onEventClick, onEdit, onSlotClick }) {
   const scrollRef = useRef(null)
   const gridRef = useRef(null)
   const draggingRef = useRef(null)
@@ -779,6 +1281,8 @@ function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, onE
 
   function onDragStart(e, event, mode) {
     e.stopPropagation()
+    // 繰り返し予定のオカレンスはドラッグ編集不可（タップで詳細のみ）
+    if (event.is_occurrence) return
     const src = e.touches?.[0] ?? e
     const origStart = new Date(event.start_datetime)
     const origEnd = new Date(event.end_datetime)
@@ -822,10 +1326,11 @@ function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, onE
           const ds = toDateStr(date)
           const isToday = ds === todayStr
           const isSat = idx === 5, isSun = idx === 6
+          const holiday = getHoliday(ds)
           return (
-            <div key={ds} className={`${styles.weekDayHead} ${isToday ? styles.weekDayHeadToday : ''}`}>
-              <span className={`${styles.dayLabel} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{WLABELS[idx]}</span>
-              <span className={`${styles.dayNum} ${isToday ? styles.dayNumToday : ''} ${isSat ? styles.sat : ''} ${isSun ? styles.sun : ''}`}>{date.getDate()}</span>
+            <div key={ds} className={`${styles.weekDayHead} ${isToday ? styles.weekDayHeadToday : ''}`} title={holiday || undefined}>
+              <span className={`${styles.dayLabel} ${isSat ? styles.sat : ''} ${(isSun || holiday) ? styles.sun : ''}`}>{WLABELS[idx]}</span>
+              <span className={`${styles.dayNum} ${isToday ? styles.dayNumToday : ''} ${isSat ? styles.sat : ''} ${(isSun || holiday) ? styles.sun : ''}`}>{date.getDate()}</span>
             </div>
           )
         })}
@@ -839,7 +1344,7 @@ function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, onE
             {allDayByDay[idx].map(ev => (
               ev.shift_type
                 ? <ShiftBlock key={ev.id} shiftType={ev.shift_type} compact onClick={e => { e.stopPropagation(); onEventClick(ev) }} />
-                : <EventChip key={ev.id} event={ev} color={ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'} compact onClick={e => { e.stopPropagation(); onEventClick(ev) }} />
+                : <EventChip key={ev.id} event={ev} color={eventColor(ev, memberColorMap)} compact unread={unreadMap[masterId(ev)]} onClick={e => { e.stopPropagation(); onEventClick(ev) }} />
             ))}
           </div>
         ))}
@@ -896,7 +1401,7 @@ function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, onE
                 const height = Math.max(22, (dispEnd - dispStart) * PX_PER_MIN)
                 const leftPct = (dispDay / 7 + colIdx / (totalCols * 7)) * 100
                 const widthPct = 100 / (totalCols * 7)
-                const color = ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'
+                const color = eventColor(ev, memberColorMap)
 
                 return (
                   <div
@@ -912,17 +1417,23 @@ function WeekTimeGrid({ weekDates, filteredEvents, memberColorMap, todayStr, onE
                     onTouchStart={e => onDragStart(e, ev, 'move')}
                     onClick={e => { e.stopPropagation(); if (!draggingRef.current) onEventClick(ev) }}
                   >
-                    <span className={styles.timedEventTitle}>{ev.title}</span>
+                    <span className={styles.timedEventTitle}>
+                      {unreadMap[masterId(ev)] && <span className={styles.unreadDot} aria-label="新着コメント" />}
+                      {ev.is_occurrence && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
+                      {ev.title}
+                    </span>
                     {height > 34 && (
                       <span className={styles.timedEventTime}>
                         {formatTime(ev.start_datetime)}–{formatTime(ev.end_datetime)}
                       </span>
                     )}
-                    <div
-                      className={styles.resizeHandle}
-                      onMouseDown={e => { e.stopPropagation(); onDragStart(e, ev, 'resize') }}
-                      onTouchStart={e => { e.stopPropagation(); onDragStart(e, ev, 'resize') }}
-                    />
+                    {!ev.is_occurrence && (
+                      <div
+                        className={styles.resizeHandle}
+                        onMouseDown={e => { e.stopPropagation(); onDragStart(e, ev, 'resize') }}
+                        onTouchStart={e => { e.stopPropagation(); onDragStart(e, ev, 'resize') }}
+                      />
+                    )}
                   </div>
                 )
               })
@@ -952,7 +1463,7 @@ function ShiftBlock({ shiftType, compact = false, onClick }) {
 
 // ── イベントチップ ────────────────────────────────────────────
 
-function EventChip({ event, color, showTime = false, compact = false, onClick }) {
+function EventChip({ event, color, showTime = false, compact = false, unread = false, onClick }) {
   return (
     <button
       className={`${styles.eventChip} ${compact ? styles.eventChipCompact : ''}`}
@@ -960,8 +1471,12 @@ function EventChip({ event, color, showTime = false, compact = false, onClick })
       onClick={onClick}
       title={event.title}
     >
+      {unread && <span className={styles.unreadDot} aria-label="新着コメント" />}
       {showTime && <span className={styles.eventTime}>{formatTime(event.start_datetime)}</span>}
-      <span className={styles.eventTitle}>{event.title}</span>
+      <span className={styles.eventTitle}>
+        {event.is_occurrence && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
+        {event.title}
+      </span>
       {!compact && event.member?.name && <span className={styles.eventMember}>{event.member.name}</span>}
     </button>
   )
@@ -969,12 +1484,13 @@ function EventChip({ event, color, showTime = false, compact = false, onClick })
 
 // ── イベント追加・編集モーダル ────────────────────────────────
 
-function EventModal({ mode, event, members, memberColorMap, defaultDate, defaultStartDt, defaultMemberId, onSubmit, onDelete, onClose }) {
+function EventModal({ mode, event, members, memberColorMap, familyId, defaultDate, defaultStartDt, defaultMemberId, onSubmit, onSubmitContinue, onDelete, onClose }) {
+  useEscapeKey(onClose)
   const today = toDateStr(new Date())
   const nowRound = (() => {
     const d = new Date()
     d.setMinutes(Math.ceil(d.getMinutes() / 30) * 30, 0, 0)
-    return d.toISOString().slice(0, 16)
+    return toLocalInput(d)
   })()
 
   const [title, setTitle] = useState(event?.title ?? '')
@@ -984,51 +1500,113 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
   const [endDate, setEndDate] = useState(event?.end_date ?? '')
   const [startDt, setStartDt] = useState(
     event?.start_datetime
-      ? new Date(event.start_datetime).toISOString().slice(0, 16)
+      ? toLocalInput(event.start_datetime)
       : defaultStartDt ?? nowRound
   )
   const [endDt, setEndDt] = useState(
     event?.end_datetime
-      ? new Date(event.end_datetime).toISOString().slice(0, 16)
+      ? toLocalInput(event.end_datetime)
       : (() => {
           const base = new Date(defaultStartDt ?? nowRound)
           base.setHours(base.getHours() + 1)
-          return base.toISOString().slice(0, 16)
+          return toLocalInput(base)
         })()
   )
   const [memberId, setMemberId] = useState(event?.member_id ?? defaultMemberId ?? '')
+  const [location, setLocation] = useState(event?.location ?? '')
+  const [category, setCategory] = useState(event?.category ?? '')
+  const [recurrence, setRecurrence] = useState(event?.recurrence ?? 'none')
+  const [recurrenceUntil, setRecurrenceUntil] = useState(event?.recurrence_until ?? '')
+  const [reminderMinutes, setReminderMinutes] = useState(
+    event?.reminder_minutes != null ? String(event.reminder_minutes) : ''
+  )
   const [submitting, setSubmitting] = useState(false)
+  const [continueMode, setContinueMode] = useState(false)
+  // 繰り返し予定の編集範囲（この回だけ / すべて）
+  const [editScope, setEditScope] = useState('single')
+  const titleRef = useRef(null)
 
   const [history, setHistory] = useState([])
+  const histId = event ? masterId(event) : null
   useEffect(() => {
-    if (mode !== 'edit' || !event?.id) return
+    if (mode !== 'edit' || !histId) return
     supabase
       .from('schedule_event_history')
       .select('id, action, changed_by_name, changed_at')
-      .eq('event_id', event.id)
+      .eq('event_id', histId)
       .order('changed_at', { ascending: false })
       .then(({ data }) => { if (data) setHistory(data) })
-  }, [mode, event?.id])
+  }, [mode, histId])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!title.trim()) return
-    setSubmitting(true)
-    await onSubmit({
+  // タイトル履歴サジェスト（#7）: 家族の過去タイトルをよく使う順に
+  const [titleSuggestions, setTitleSuggestions] = useState([])
+  useEffect(() => {
+    if (mode !== 'add' || !familyId) return
+    supabase
+      .from('schedule_events')
+      .select('title')
+      .eq('family_id', familyId)
+      .is('shift_type', null)
+      .order('created_at', { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        if (!data) return
+        const counts = {}
+        for (const r of data) { if (r.title) counts[r.title] = (counts[r.title] || 0) + 1 }
+        setTitleSuggestions(Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 20))
+      })
+  }, [mode, familyId])
+
+  // 所要時間チップ（#7）: 終了を開始+分に設定
+  function setDuration(min) {
+    const base = new Date(startDt)
+    if (isNaN(base)) return
+    base.setMinutes(base.getMinutes() + min)
+    setEndDt(toLocalInput(base))
+  }
+
+  function buildData() {
+    return {
       title: title.trim(),
       memo: memo.trim() || null,
       all_day: allDay,
       member_id: memberId || null,
       shift_type: null,
+      location: location.trim() || null,
+      category: category || null,
+      recurrence,
+      recurrence_until: recurrence !== 'none' && recurrenceUntil ? recurrenceUntil : null,
+      reminder_minutes: reminderMinutes ? Number(reminderMinutes) : null,
       ...(allDay
         ? { start_date: startDate, end_date: endDate || null, start_datetime: null, end_datetime: null }
         : { start_date: null, end_date: null, start_datetime: new Date(startDt).toISOString(), end_datetime: new Date(endDt).toISOString() }
       ),
-    })
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!title.trim()) return
+    setSubmitting(true)
+    const data = buildData()
+    if (continueMode && !isEdit && onSubmitContinue) {
+      // 続けて追加：モーダルを閉じずタイトルだけリセット
+      await onSubmitContinue(data)
+      setTitle(''); setMemo(''); setLocation('')
+      setSubmitting(false)
+      titleRef.current?.focus()
+      return
+    }
+    // 「この回だけ変更」は単発予定として切り出すため繰り返しを解除
+    if (isEdit && isOccurrence && editScope === 'single') {
+      data.recurrence = 'none'; data.recurrence_until = null
+    }
+    await onSubmit(data, isOccurrence ? editScope : 'all')
     setSubmitting(false)
   }
 
   const isEdit = mode === 'edit'
+  const isOccurrence = !!event?.is_occurrence
 
   return (
     <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -1038,9 +1616,24 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
           <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
         </div>
         <form onSubmit={handleSubmit} className={styles.form}>
+          {/* 繰り返し予定の編集範囲（#3） */}
+          {isEdit && isOccurrence && (
+            <div className={styles.fieldLabel}>
+              変更範囲
+              <div className={styles.toggleRow}>
+                <button type="button" className={`${styles.toggleBtn} ${editScope === 'single' ? styles.toggleActive : ''}`} onClick={() => setEditScope('single')}>この回だけ</button>
+                <button type="button" className={`${styles.toggleBtn} ${editScope === 'all' ? styles.toggleActive : ''}`} onClick={() => setEditScope('all')}>すべて</button>
+              </div>
+            </div>
+          )}
           <label className={styles.fieldLabel}>
             タイトル
-            <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="例: 家族でお出かけ、歯医者..." maxLength={100} autoFocus required />
+            <input ref={titleRef} list="schedule-title-suggestions" className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="例: 家族でお出かけ、歯医者..." maxLength={100} autoFocus required />
+            {titleSuggestions.length > 0 && (
+              <datalist id="schedule-title-suggestions">
+                {titleSuggestions.map(t => <option key={t} value={t} />)}
+              </datalist>
+            )}
           </label>
           <div className={styles.fieldLabel}>
             種類
@@ -1056,8 +1649,23 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
             </>
           ) : (
             <>
-              <label className={styles.fieldLabel}>開始<input className={styles.input} type="datetime-local" value={startDt} onChange={e => setStartDt(e.target.value)} required /></label>
+              <label className={styles.fieldLabel}>開始<input className={styles.input} type="datetime-local" value={startDt} onChange={e => {
+                const v = e.target.value
+                setStartDt(v)
+                // 開始を動かしたら、終了が開始以前になった場合は開始+1時間へ自動追従
+                if (v && endDt && endDt <= v) {
+                  const base = new Date(v); base.setHours(base.getHours() + 1)
+                  setEndDt(toLocalInput(base))
+                }
+              }} required /></label>
               <label className={styles.fieldLabel}>終了<input className={styles.input} type="datetime-local" value={endDt} min={startDt} onChange={e => setEndDt(e.target.value)} required /></label>
+              <div className={styles.durationChips}>
+                <span className={styles.durationLabel}>所要</span>
+                <button type="button" className={styles.durationChip} onClick={() => setDuration(30)}>30分</button>
+                <button type="button" className={styles.durationChip} onClick={() => setDuration(60)}>1時間</button>
+                <button type="button" className={styles.durationChip} onClick={() => setDuration(120)}>2時間</button>
+                <button type="button" className={styles.durationChip} onClick={() => setDuration(180)}>3時間</button>
+              </div>
             </>
           )}
           {members.length > 0 && (
@@ -1078,11 +1686,62 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
               </div>
             </div>
           )}
-          <label className={styles.fieldLabel}>メモ（任意）<input className={styles.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="詳細・場所など..." maxLength={200} /></label>
+          {/* カテゴリ（#10） */}
+          <div className={styles.fieldLabel}>
+            カテゴリ（任意）
+            <div className={styles.categorySelect}>
+              <button type="button" className={`${styles.categoryChip} ${!category ? styles.categoryChipActive : ''}`} onClick={() => setCategory('')}>
+                なし
+              </button>
+              {CATEGORIES.map(c => (
+                <button
+                  key={c.key}
+                  type="button"
+                  className={`${styles.categoryChip} ${category === c.key ? styles.categoryChipActive : ''}`}
+                  style={{ '--cat-color': c.color }}
+                  onClick={() => setCategory(c.key)}
+                >
+                  <span className={styles.categoryDot} style={{ background: c.color }} />{c.key}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 繰り返し（#3） */}
+          <label className={styles.fieldLabel}>
+            繰り返し
+            <select className={styles.input} value={recurrence} onChange={e => setRecurrence(e.target.value)}>
+              {RECURRENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          {recurrence !== 'none' && (
+            <label className={styles.fieldLabel}>
+              繰り返し終了日（任意・空欄で無期限）
+              <input className={styles.input} type="date" value={recurrenceUntil} min={allDay ? startDate : undefined} onChange={e => setRecurrenceUntil(e.target.value)} />
+            </label>
+          )}
+
+          {/* リマインダー（#4・終日は当日朝基準） */}
+          <label className={styles.fieldLabel}>
+            リマインダー通知
+            <select className={styles.input} value={reminderMinutes} onChange={e => setReminderMinutes(e.target.value)}>
+              {(allDay ? ALLDAY_REMINDER_OPTIONS : REMINDER_OPTIONS).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+
+          {/* 場所（#9） */}
+          <label className={styles.fieldLabel}>場所（任意）<input className={styles.input} value={location} onChange={e => setLocation(e.target.value)} placeholder="例: 〇〇病院、東京駅..." maxLength={120} /></label>
+          <label className={styles.fieldLabel}>メモ（任意）<input className={styles.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="詳細など..." maxLength={200} /></label>
+          {!isEdit && (
+            <label className={styles.continueToggle}>
+              <input type="checkbox" checked={continueMode} onChange={e => setContinueMode(e.target.checked)} />
+              続けて追加する（保存後に入力欄をリセット）
+            </label>
+          )}
           <div className={styles.formBtns}>
             {isEdit && <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>}
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !title.trim()}>{submitting ? '保存中...' : isEdit ? '保存' : '追加'}</button>
+            <button type="button" className={styles.cancelBtn} onClick={onClose}>{continueMode && !isEdit ? '完了' : 'キャンセル'}</button>
+            <button type="submit" className={styles.saveBtn} disabled={submitting || !title.trim()}>{submitting ? '保存中...' : isEdit ? '保存' : continueMode ? '追加して次へ' : '追加'}</button>
           </div>
         </form>
         {isEdit && history.length > 0 && (
@@ -1105,6 +1764,370 @@ function EventModal({ mode, event, members, memberColorMap, defaultDate, default
             </ul>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── 表示ヘルパー ──────────────────────────────────────────────
+
+function eventTimeLabel(ev) {
+  if (ev.all_day) {
+    if (ev.end_date && ev.end_date !== ev.start_date) {
+      return `${ev.start_date} 〜 ${ev.end_date}`
+    }
+    return '終日'
+  }
+  return `${formatTime(ev.start_datetime)}–${formatTime(ev.end_datetime)}`
+}
+
+function mapsUrl(loc) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`
+}
+
+function reminderLabel(min, allDay) {
+  const opts = allDay ? ALLDAY_REMINDER_OPTIONS : REMINDER_OPTIONS
+  const o = opts.find(x => x.value === String(min))
+  return o ? o.label : `${min}分前`
+}
+
+function sortDayEvents(list) {
+  return [...list].sort((a, b) => {
+    if (a.all_day !== b.all_day) return a.all_day ? -1 : 1
+    const at = a.all_day ? a.start_date : a.start_datetime
+    const bt = b.all_day ? b.start_date : b.start_datetime
+    return at < bt ? -1 : at > bt ? 1 : 0
+  })
+}
+
+// ── アジェンダ（リスト）表示（#8） ────────────────────────────
+
+function AgendaView({ events, memberColorMap, baseDate, todayStr, unreadMap = {}, onEventClick }) {
+  const year = baseDate.getFullYear()
+  const month = baseDate.getMonth()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const rows = []
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d)
+    const dayEvents = sortDayEvents(events.filter(e => isEventOnDay(e, date)))
+    if (dayEvents.length) rows.push({ date, dateStr: toDateStr(date), dayEvents })
+  }
+
+  if (rows.length === 0) {
+    return <div className={styles.agendaEmpty}>この月の予定はありません</div>
+  }
+
+  const DOW = ['日', '月', '火', '水', '木', '金', '土']
+  return (
+    <div className={styles.agenda}>
+      {rows.map(({ date, dateStr, dayEvents }) => {
+        const isToday = dateStr === todayStr
+        const dow = date.getDay()
+        const holiday = getHoliday(dateStr)
+        return (
+          <div key={dateStr} className={styles.agendaDay}>
+            <div className={`${styles.agendaDate} ${isToday ? styles.agendaDateToday : ''}`}>
+              <span className={styles.agendaDateNum}>{date.getDate()}</span>
+              <span className={`${styles.agendaDow} ${dow === 6 ? styles.sat : ''} ${(dow === 0 || holiday) ? styles.sun : ''}`}>{DOW[dow]}</span>
+              {holiday && <span className={styles.agendaHoliday}>{holiday}</span>}
+            </div>
+            <div className={styles.agendaEvents}>
+              {dayEvents.map(ev => (
+                <button
+                  key={ev.id}
+                  className={styles.agendaEvent}
+                  style={{ '--chip-color': ev.shift_type ? (SHIFT_COLORS[ev.shift_type] ?? '#8E81B5') : eventColor(ev, memberColorMap) }}
+                  onClick={() => onEventClick(ev)}
+                >
+                  <span className={styles.agendaEventTime}>{ev.shift_type ? ev.shift_type : eventTimeLabel(ev)}</span>
+                  <span className={styles.agendaEventTitle}>
+                    {unreadMap[masterId(ev)] && <span className={styles.unreadDot} aria-label="新着コメント" />}
+                    {ev.is_occurrence && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
+                    {ev.title}
+                  </span>
+                  {ev.member?.name && <span className={styles.agendaEventMember}>{ev.member.name}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── デイビュー（その日の全予定 #1 #2） ────────────────────────
+
+function DayDetailModal({ dateStr, events, memberColorMap, unreadMap = {}, onEventClick, onAdd, onClose }) {
+  useEscapeKey(onClose)
+  const date = new Date(`${dateStr}T00:00:00`)
+  const dayEvents = sortDayEvents(events.filter(e => isEventOnDay(e, date)))
+  const label = date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })
+  const holiday = getHoliday(dateStr)
+
+  return (
+    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.sheet}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>{label}{holiday && <span className={styles.dayHolidayTag}>{holiday}</span>}</h2>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+        </div>
+        <div className={styles.dayList}>
+          {dayEvents.length === 0 ? (
+            <p className={styles.dayEmpty}>予定はありません</p>
+          ) : (
+            dayEvents.map(ev => (
+              <button
+                key={ev.id}
+                className={styles.dayRow}
+                style={{ '--chip-color': ev.shift_type ? (SHIFT_COLORS[ev.shift_type] ?? '#8E81B5') : eventColor(ev, memberColorMap) }}
+                onClick={() => onEventClick(ev)}
+              >
+                <span className={styles.dayRowBar} />
+                <span className={styles.dayRowTime}>{ev.shift_type ? ev.shift_type : eventTimeLabel(ev)}</span>
+                <span className={styles.dayRowBody}>
+                  <span className={styles.dayRowTitle}>
+                    {unreadMap[masterId(ev)] && <span className={styles.unreadDot} aria-label="新着コメント" />}
+                    {ev.is_occurrence && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
+                    {ev.title}
+                  </span>
+                  {ev.member?.name && <span className={styles.dayRowMember}>{ev.member.name}</span>}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+        <div className={styles.dayAddBar}>
+          <button className={styles.saveBtn} onClick={onAdd}>＋ この日に予定を追加</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── 予定詳細ビュー（閲覧・コメント #5 #6 #9） ────────────────
+
+function EventDetailModal({ event, familyMember, memberColorMap, onNotifyComment, onEdit, onDelete, onDeleteOccurrence, onClose }) {
+  useEscapeKey(onClose)
+  const color = event.shift_type ? (SHIFT_COLORS[event.shift_type] ?? '#8E81B5') : eventColor(event, memberColorMap)
+  const eid = masterId(event)
+  const isRecurring = event.recurrence && event.recurrence !== 'none'
+
+  const dateLabel = (() => {
+    const base = event.all_day ? event.start_date : toDateStr(new Date(event.start_datetime))
+    const d = new Date(`${base}T00:00:00`)
+    return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
+  })()
+
+  return (
+    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>予定の詳細</h2>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+        </div>
+
+        <div className={styles.detailBody}>
+          <div className={styles.detailTitleRow}>
+            <span className={styles.detailColorBar} style={{ background: color }} />
+            <h3 className={styles.detailTitle}>{event.title}</h3>
+          </div>
+
+          <dl className={styles.detailList}>
+            <div className={styles.detailItem}>
+              <dt className={styles.detailLabel}>日時</dt>
+              <dd className={styles.detailValue}>{dateLabel}<br />{eventTimeLabel(event)}</dd>
+            </div>
+            {event.recurrence && event.recurrence !== 'none' && (
+              <div className={styles.detailItem}>
+                <dt className={styles.detailLabel}>繰り返し</dt>
+                <dd className={styles.detailValue}>
+                  {RECURRENCE_LABELS[event.recurrence]}
+                  {event.recurrence_until && `（${event.recurrence_until}まで）`}
+                </dd>
+              </div>
+            )}
+            {event.category && (
+              <div className={styles.detailItem}>
+                <dt className={styles.detailLabel}>カテゴリ</dt>
+                <dd className={styles.detailValue}>
+                  <span className={styles.detailChip} style={{ '--cat-color': CATEGORY_COLORS[event.category] ?? '#8E81B5' }}>
+                    <span className={styles.categoryDot} style={{ background: CATEGORY_COLORS[event.category] ?? '#8E81B5' }} />{event.category}
+                  </span>
+                </dd>
+              </div>
+            )}
+            {event.member?.name && (
+              <div className={styles.detailItem}>
+                <dt className={styles.detailLabel}>担当</dt>
+                <dd className={styles.detailValue}>{event.member.name}</dd>
+              </div>
+            )}
+            {event.reminder_minutes != null && (
+              <div className={styles.detailItem}>
+                <dt className={styles.detailLabel}>通知</dt>
+                <dd className={styles.detailValue}>{reminderLabel(event.reminder_minutes, event.all_day)}</dd>
+              </div>
+            )}
+            {event.location && (
+              <div className={styles.detailItem}>
+                <dt className={styles.detailLabel}>場所</dt>
+                <dd className={styles.detailValue}>
+                  {event.location}
+                  <a className={styles.mapLink} href={mapsUrl(event.location)} target="_blank" rel="noopener noreferrer">地図で開く</a>
+                </dd>
+              </div>
+            )}
+            {event.memo && (
+              <div className={styles.detailItem}>
+                <dt className={styles.detailLabel}>メモ</dt>
+                <dd className={styles.detailValue}>{event.memo}</dd>
+              </div>
+            )}
+          </dl>
+
+          <EventComments eventId={eid} familyMember={familyMember} eventTitle={event.title} onCommented={onNotifyComment} />
+        </div>
+
+        {/* 繰り返し予定は「この回だけ削除」を用意（#3） */}
+        {isRecurring && (
+          <div className={styles.recurDeleteRow}>
+            <button type="button" className={styles.recurDeleteBtn} onClick={onDeleteOccurrence}>この回だけ削除</button>
+            <span className={styles.recurDeleteHint}>繰り返し予定（{RECURRENCE_LABELS[event.recurrence]}）</span>
+          </div>
+        )}
+
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.deleteBtn} onClick={onDelete}>{isRecurring ? 'すべて削除' : '削除'}</button>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>閉じる</button>
+          <button type="button" className={styles.saveBtn} onClick={onEdit}>編集</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── 予定コメント（家族間コミュニケーション #5） ──────────────
+
+function EventComments({ eventId, familyMember, eventTitle, onCommented }) {
+  const [comments, setComments] = useState([])
+  const [body, setBody] = useState('')
+  const [sending, setSending] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from('schedule_event_comments')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: true })
+    if (data) setComments(data)
+  }, [eventId])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`schedule_comments_${eventId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'schedule_event_comments',
+        filter: `event_id=eq.${eventId}`,
+      }, () => load())
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [eventId, load])
+
+  async function send(e) {
+    e.preventDefault()
+    const text = body.trim()
+    if (!text || !familyMember) return
+    setSending(true)
+    setBody('')
+    const { error } = await supabase.from('schedule_event_comments').insert({
+      event_id: eventId,
+      family_id: familyMember.family_id,
+      member_id: familyMember.id,
+      member_name: familyMember.name,
+      body: text,
+    })
+    if (error) setBody(text)
+    else { await load(); onCommented?.(eventTitle) }   // 家族へ即時通知（#1）
+    setSending(false)
+  }
+
+  async function remove(id) {
+    await supabase.from('schedule_event_comments').delete().eq('id', id)
+    await load()
+  }
+
+  return (
+    <div className={styles.commentsSection}>
+      <p className={styles.commentsTitle}>コメント</p>
+      <ul className={styles.commentList}>
+        {comments.length === 0 && <li className={styles.commentEmpty}>まだコメントはありません</li>}
+        {comments.map(c => (
+          <li key={c.id} className={styles.commentItem}>
+            <div className={styles.commentHead}>
+              <span className={styles.commentAuthor}>{c.member_name || '家族'}</span>
+              <span className={styles.commentDate}>
+                {new Date(c.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+              {c.member_id === familyMember?.id && (
+                <button className={styles.commentDelete} onClick={() => remove(c.id)} aria-label="コメントを削除">×</button>
+              )}
+            </div>
+            <p className={styles.commentBody}>{c.body}</p>
+          </li>
+        ))}
+      </ul>
+      <form className={styles.commentForm} onSubmit={send}>
+        <input
+          className={styles.commentInput}
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          placeholder="コメントを入力..."
+          maxLength={500}
+        />
+        <button className={styles.commentSend} type="submit" disabled={sending || !body.trim()}>送信</button>
+      </form>
+    </div>
+  )
+}
+
+// ── 年月ジャンプ（#8） ────────────────────────────────────────
+
+function MonthPickerModal({ baseDate, onSelect, onClose }) {
+  useEscapeKey(onClose)
+  const [year, setYear] = useState(baseDate.getFullYear())
+  const curM = baseDate.getMonth()
+  const curY = baseDate.getFullYear()
+  const todayM = new Date().getMonth()
+  const todayY = new Date().getFullYear()
+
+  return (
+    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.pickerModal}>
+        <div className={styles.pickerYearRow}>
+          <button className={styles.pickerYearBtn} onClick={() => setYear(y => y - 1)} aria-label="前の年">‹</button>
+          <span className={styles.pickerYear}>{year}年</span>
+          <button className={styles.pickerYearBtn} onClick={() => setYear(y => y + 1)} aria-label="次の年">›</button>
+        </div>
+        <div className={styles.pickerGrid}>
+          {Array.from({ length: 12 }, (_, m) => {
+            const isCur = year === curY && m === curM
+            const isToday = year === todayY && m === todayM
+            return (
+              <button
+                key={m}
+                className={`${styles.pickerMonth} ${isCur ? styles.pickerMonthActive : ''} ${isToday ? styles.pickerMonthToday : ''}`}
+                onClick={() => onSelect(year, m)}
+              >
+                {m + 1}月
+              </button>
+            )
+          })}
+        </div>
+        <button className={styles.cancelBtn} onClick={onClose}>閉じる</button>
       </div>
     </div>
   )

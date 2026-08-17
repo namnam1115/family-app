@@ -1162,10 +1162,23 @@
 }
 
 .monthGrid {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* 週行：帯を重ねるため position: relative */
+.monthWeek {
+  position: relative;
+  flex: 1;
+  min-height: 80px;
+  display: flex;
+}
+
+.monthWeekRow {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: repeat(6, minmax(80px, 1fr));
-  flex: 1;
+  width: 100%;
 }
 
 .monthCell {
@@ -1179,14 +1192,59 @@
   transition: background 0.12s ease;
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;
+  min-width: 0;
 }
 
-.monthCell:nth-child(7n) {
+.monthWeekRow > .monthCell:last-child {
   border-right: none;
+}
+
+/* 日付行（日付＋祝日名） */
+.monthDateRow {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.monthHolidayName {
+  font-size: 0.56rem;
+  color: #C2826A;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 複数日イベントの帯 */
+.monthBand {
+  position: absolute;
+  height: 14px;
+  border: none;
+  border-radius: 3px;
+  background: var(--chip-color);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 14px;
+  padding: 0 0.35rem;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  z-index: 2;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .monthCell:hover {
   background: color-mix(in srgb, var(--primary) 4%, transparent);
+}
+
+.monthCell:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  z-index: 3;
 }
 
 .monthCellToday {
@@ -1236,6 +1294,16 @@
   color: var(--gray-400);
   padding: 0 0.2rem;
   white-space: nowrap;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 4px;
+}
+
+.monthOverflow:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .monthShiftList {
@@ -1377,4 +1445,664 @@
   -webkit-text-fill-color: var(--primary);
   font-size: 1rem;
   flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   スケジュール強化：繰り返し / カテゴリ / デイビュー / 詳細 /
+   アジェンダ / コメント（TimeTree 相当の使い勝手）
+   ══════════════════════════════════════════════════════════════ */
+
+/* 繰り返しバッジ */
+.recurBadge {
+  font-size: 0.72em;
+  opacity: 0.8;
+  margin-right: 0.15em;
+}
+
+/* ── カテゴリ選択（EventModal） ── */
+.categorySelect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.categoryChip:hover {
+  border-color: var(--gray-300);
+}
+
+.categoryChipActive {
+  border-color: var(--cat-color, var(--primary));
+  background: color-mix(in srgb, var(--cat-color, var(--primary)) 12%, transparent);
+}
+
+.categoryDot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── デイビュー（ボトムシート） ── */
+.sheet {
+  background: var(--surface);
+  border-radius: 1.75rem 1.75rem 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 1.5rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 -8px 48px color-mix(in srgb, var(--primary) 14%, transparent);
+  animation: slideUp 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+@media (min-width: 480px) {
+  .sheet {
+    border-radius: 1.5rem;
+  }
+}
+
+.dayList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dayEmpty,
+.agendaEmpty,
+.dayEmpty {
+  color: var(--gray-400);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.dayRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border: none;
+  border-radius: 0.85rem;
+  background: var(--gray-50, color-mix(in srgb, var(--primary) 4%, var(--surface)));
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.dayRow:hover {
+  background: color-mix(in srgb, var(--chip-color) 12%, var(--surface));
+}
+
+.dayRowBar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--chip-color);
+  flex-shrink: 0;
+}
+
+.dayRowTime {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--chip-color);
+  min-width: 4.2rem;
+  flex-shrink: 0;
+}
+
+.dayRowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.dayRowTitle {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dayRowMember {
+  font-size: 0.72rem;
+  color: var(--gray-400);
+}
+
+.dayAddBar {
+  margin-top: 0.25rem;
+}
+
+.dayAddBar .saveBtn {
+  width: 100%;
+}
+
+/* ── アジェンダ（リスト）表示 ── */
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem 2rem;
+  overflow-y: auto;
+}
+
+.agendaDay {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.agendaDate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 2.6rem;
+  flex-shrink: 0;
+  padding-top: 0.2rem;
+}
+
+.agendaDateNum {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.agendaDow {
+  font-size: 0.68rem;
+  color: var(--gray-400);
+  margin-top: 0.15rem;
+}
+
+.agendaDateToday .agendaDateNum {
+  background: var(--primary);
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.agendaEvents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.agendaEvent {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.7rem;
+  border: none;
+  border-left: 4px solid var(--chip-color);
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--chip-color) 8%, var(--surface));
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.agendaEvent:hover {
+  background: color-mix(in srgb, var(--chip-color) 16%, var(--surface));
+}
+
+.agendaEventTime {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--chip-color);
+  min-width: 4.2rem;
+  flex-shrink: 0;
+}
+
+.agendaEventTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agendaEventMember {
+  font-size: 0.7rem;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+
+/* ── 予定詳細ビュー ── */
+.detailBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.detailTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.detailColorBar {
+  width: 5px;
+  height: 1.6rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.detailTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.detailList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.detailItem {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.detailLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gray-400);
+  min-width: 3.5rem;
+  flex-shrink: 0;
+  padding-top: 0.1rem;
+}
+
+.detailValue {
+  font-size: 0.92rem;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.detailChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cat-color) 14%, transparent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.mapLink {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.mapLink:hover {
+  text-decoration: underline;
+}
+
+/* ── コメント ── */
+.commentsSection {
+  border-top: 1px solid var(--gray-100);
+  padding-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.commentsTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gray-500, var(--gray-400));
+  margin: 0;
+}
+
+.commentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 40dvh;
+  overflow-y: auto;
+}
+
+.commentEmpty {
+  font-size: 0.82rem;
+  color: var(--gray-400);
+}
+
+.commentItem {
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.commentHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.commentAuthor {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.commentDate {
+  font-size: 0.68rem;
+  color: var(--gray-400);
+}
+
+.commentDelete {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--gray-400);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+
+.commentDelete:hover {
+  color: var(--danger, #d9534f);
+}
+
+.commentBody {
+  font-size: 0.88rem;
+  color: var(--text);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.commentForm {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.commentInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.commentInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.commentSend {
+  border: none;
+  border-radius: 0.75rem;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.commentSend:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   深堀り強化：未読 / 例外削除 / 年月ジャンプ / 入力高速化 / 祝日
+   ══════════════════════════════════════════════════════════════ */
+
+/* コメント未読ドット（#2） */
+.unreadDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  flex-shrink: 0;
+  margin-right: 0.15rem;
+  vertical-align: middle;
+}
+
+/* 月ラベル（年月ジャンプのトリガー #8） */
+.weekRangeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  font-family: var(--font-display);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.5rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.weekRangeBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.weekRangeBtn:disabled {
+  cursor: default;
+}
+
+.weekRangeCaret {
+  font-size: 0.6rem;
+  color: var(--gray-400);
+}
+
+/* 年月ピッカー */
+.pickerModal {
+  background: var(--surface);
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 340px;
+  margin: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 8px 48px color-mix(in srgb, var(--primary) 18%, transparent);
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+
+.pickerYearRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.pickerYear {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 5rem;
+  text-align: center;
+}
+
+.pickerYearBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.pickerYearBtn:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.pickerGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.pickerMonth {
+  padding: 0.7rem 0;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pickerMonth:hover {
+  border-color: var(--primary);
+}
+
+.pickerMonthActive {
+  background: var(--grad-primary);
+  color: #fff;
+  border-color: transparent;
+}
+
+.pickerMonthToday:not(.pickerMonthActive) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* 繰り返しの「この回だけ削除」（#3） */
+.recurDeleteRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--gray-100);
+  flex-wrap: wrap;
+}
+
+.recurDeleteBtn {
+  border: 1.5px solid color-mix(in srgb, #EF4444 45%, transparent);
+  background: color-mix(in srgb, #EF4444 8%, transparent);
+  color: #EF4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.recurDeleteHint {
+  font-size: 0.72rem;
+  color: var(--gray-400);
+}
+
+/* 所要時間チップ（#7） */
+.durationChips {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: -0.25rem;
+}
+
+.durationLabel {
+  font-size: 0.72rem;
+  color: var(--gray-400);
+  font-weight: 600;
+}
+
+.durationChip {
+  padding: 0.3rem 0.65rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--gray-600);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.durationChip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* 続けて追加トグル（#7） */
+.continueToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--gray-600);
+  cursor: pointer;
+}
+
+.continueToggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--primary);
+}
+
+/* アジェンダ・デイビューの祝日名 */
+.agendaHoliday {
+  font-size: 0.6rem;
+  color: #C2826A;
+  font-weight: 600;
+  margin-top: 0.1rem;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.dayHolidayTag {
+  font-size: 0.72rem;
+  color: #C2826A;
+  font-weight: 600;
+  margin-left: 0.5rem;
 }

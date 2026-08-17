@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { IconHome, IconShopping, IconSchedule, IconInventory, IconPlaces } from '../lib/icons'
+import { IconHome, IconShopping, IconSchedule, IconTravel, IconPlaces } from '../lib/icons'
 import styles from './BottomNav.module.css'
 
 /**
@@ -7,13 +7,13 @@ import styles from './BottomNav.module.css'
  * 各ページの .page（flex 縦積み）の最後の子として置くと、
  * スクロール領域が自動で縮み、コンテンツと重ならずに固定表示される。
  *
- * 主要5アプリを常設。その他（価格・予算・おかず・旅行）はホームから辿る。
+ * 主要5アプリを常設。その他（価格・予算・おかず・在庫）はホームから辿る。
  */
 const TABS = [
   { path: '/',          label: 'ホーム',   Icon: IconHome },
   { path: '/shopping',  label: '買い物',   Icon: IconShopping },
   { path: '/schedule',  label: '予定',     Icon: IconSchedule },
-  { path: '/inventory', label: '在庫',     Icon: IconInventory },
+  { path: '/travels',   label: '旅行',     Icon: IconTravel },
   { path: '/places',    label: 'おでかけ', Icon: IconPlaces },
 ]
 
