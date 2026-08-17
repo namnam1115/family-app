@@ -47,6 +47,10 @@
 
 .headerTitle {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
@@ -55,6 +59,9 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .addBtn {
