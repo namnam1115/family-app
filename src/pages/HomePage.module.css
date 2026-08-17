@@ -134,7 +134,11 @@
   font-weight: 600;
   color: var(--ink);
   flex: 1;
+  min-width: 0;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .signOutBtn {
