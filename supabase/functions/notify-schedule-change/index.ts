@@ -51,13 +51,31 @@ Deno.serve(async (req: Request) => {
     // 通知OFF にしているユーザー
     const muted = new Set((mutedPrefs || []).map((p: { user_id: string }) => p.user_id))
 
-    const verb = action === 'created' ? '追加' : action === 'updated' ? '更新' : 'コメント'
     const who = actor_name || '家族'
-    const emoji = action === 'commented' ? '💬' : '📅'
-    const body = action === 'commented'
-      ? `${who} が「${title}」にコメントしました`
-      : `${who} が「${title}」を${verb}しました`
-    const payload = JSON.stringify({ title: `${emoji} 予定の${verb}`, body, url: '/schedule' })
+    let notifTitle: string
+    let body: string
+    switch (action) {
+      case 'commented':
+        notifTitle = '💬 予定のコメント'
+        body = `${who} が「${title}」にコメントしました`
+        break
+      case 'poll_created':
+        notifTitle = '🗳️ 日程調整'
+        body = `${who} が日程調整「${title}」を作成しました`
+        break
+      case 'poll_voted':
+        notifTitle = '🗳️ 日程調整の回答'
+        body = `${who} が「${title}」に回答しました`
+        break
+      case 'updated':
+        notifTitle = '📅 予定の更新'
+        body = `${who} が「${title}」を更新しました`
+        break
+      default: // created
+        notifTitle = '📅 予定の追加'
+        body = `${who} が「${title}」を追加しました`
+    }
+    const payload = JSON.stringify({ title: notifTitle, body, url: '/schedule' })
 
     let sent = 0
     for (const sub of subs as { endpoint: string; p256dh: string; auth: string; user_id: string }[]) {

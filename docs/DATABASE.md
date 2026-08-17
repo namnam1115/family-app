@@ -34,6 +34,10 @@ $$;
 | `schedule_events` | 予定 | family_id, title, memo, all_day, start_date/end_date または start_datetime/end_datetime, member_id, shift_type (日勤/夜勤/明け/休み), location, category, recurrence (none/daily/weekly/monthly/yearly), recurrence_until, recurrence_exceptions (date[]), reminder_minutes, reminder_sent_at, updated_at 自動更新トリガー | ✅ |
 | `schedule_event_history` | 予定の変更履歴 | event_id, changed_by, action (created/updated), snapshot jsonb | |
 | `schedule_event_comments` | 予定へのコメント | event_id, family_id, member_id, member_name, body, created_at | ✅ |
+| `schedule_event_reactions` | 予定へのアイコン反応 | event_id, family_id, member_id, member_name, emoji, UNIQUE(event_id, member_id, emoji) | ✅ |
+| `schedule_polls` | 日程調整 | family_id, title, memo, created_by, status (open/closed), confirmed_event_id | ✅ |
+| `schedule_poll_candidates` | 日程調整の候補日 | poll_id, family_id, candidate_date, candidate_time, sort_order | |
+| `schedule_poll_votes` | 日程調整の回答 | poll_id, candidate_id, family_id, member_id, member_name, choice (ok/maybe/ng), UNIQUE(candidate_id, member_id) | ✅ |
 | `schedule_event_reads` | コメント既読管理 | event_id, member_id, family_id, last_read_at, PK(event_id, member_id) | |
 | `schedule_notify_prefs` | ユーザー毎の変更通知 ON/OFF | user_id (PK), family_id, notify_on_change | |
 | `schedule_reminder_log` | リマインダー送信ログ（二重送信防止） | event_id, occurrence_date, sent_at, PK(event_id, occurrence_date)。service role 専用 | |

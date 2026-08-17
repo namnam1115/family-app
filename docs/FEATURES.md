@@ -13,7 +13,7 @@
 | `/budget` | BudgetPage 家計 | 必要 | budget_categories, budget_entries |
 | `/places` | PlacesPage お出かけリスト | 必要 | wish_places |
 | `/dishes` | DishesPage 食べたいおかず | 必要 | dish_categories, dishes |
-| `/schedule` | SchedulePage 予定表 | 必要 | schedule_events, schedule_event_history, schedule_event_comments |
+| `/schedule` | SchedulePage 予定表 | 必要 | schedule_events, schedule_event_history, schedule_event_comments, schedule_event_reactions |
 | `/inventory` | InventoryPage 在庫管理 | 必要 | inventory_items |
 | `/travels` | TravelPage 旅行記録 | 必要 | travel_trips, travel_activities |
 
@@ -61,10 +61,15 @@
 - 日本の祝日表示（`src/lib/holidays.js`、2024〜2027年、赤字＋祝日名）
 - 複数日の終日予定は月表示で横帯連結。1日あたり表示件数はセル高さに応じて可変
 - 年月ジャンプ（月ラベルタップでピッカー）
+- 予定の検索（ヘッダー🔍。タイトル・メモ・場所を横断、今日以降→過去の順、結果タップでその月へ移動＋詳細表示）
 - 入力補助: タイトル履歴サジェスト / 所要時間チップ(30分〜3時間) / 「続けて追加」
 - デイビュー: 日付タップ／`+N件`でその日の全予定を一覧表示
 - 予定詳細ビュー（閲覧）→ 編集を分離
 - 予定ごとのコメント（家族間コミュニケーション、realtime）
+- 予定へのアイコン反応（⭕OK / ❌NG / 🤔未定 / 👍 / 🙏 / 🎉、ラベル付き。メンバー毎トグル、件数・誰が押したか表示、realtime）
+- 日程調整（出欠調整）: ヘッダー⋯メニューから。候補日を複数出す→家族が ⭕🤔❌ で回答（realtime集計・最有力候補ハイライト）→「この日で確定」でそのまま予定化。`schedule_polls` / `schedule_poll_candidates` / `schedule_poll_votes`
+  - 作成時・初回回答時に家族へ即時 push 通知（`notify-schedule-change`、初回回答のみで連打の多重通知を防止）
+  - 調整中の候補日は月カレンダーに「🗳️ 調整中」を薄く表示（タップで日程調整を開く）
 - 勤務シフトモード（日勤 / 夜勤 / 明け / 休み）
 - 変更履歴（誰がいつ何を変更したかの snapshot 保存）
 

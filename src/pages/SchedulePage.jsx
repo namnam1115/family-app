@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
-import { IconSchedule, IconClose, IconWork } from '../lib/icons'
+import { IconSchedule, IconClose, IconWork, IconSearch } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { getHoliday } from '../lib/holidays'
 import { useAuth } from '../contexts/AuthContext'
@@ -60,6 +60,17 @@ const RECURRENCE_OPTIONS = [
   { value: 'yearly', label: '毎年' },
 ]
 const RECURRENCE_LABELS = Object.fromEntries(RECURRENCE_OPTIONS.map(o => [o.value, o.label]))
+
+// 予定へのアイコン反応（スタンプ）。⭕=OK / ❌=NG を中心に出欠調整にも使える
+const REACTIONS = [
+  { emoji: '⭕', label: 'OK' },
+  { emoji: '❌', label: 'NG' },
+  { emoji: '🤔', label: '未定' },
+  { emoji: '👍', label: 'いいね' },
+  { emoji: '🙏', label: 'たのむ' },
+  { emoji: '🎉', label: 'やった' },
+]
+const REACTION_LABELS = Object.fromEntries(REACTIONS.map(r => [r.emoji, r.label]))
 
 // 色決定：カテゴリ優先 → メンバー色 → 既定（#10）
 function eventColor(event, memberColorMap) {
@@ -228,6 +239,8 @@ export default function SchedulePage() {
   const [detailTarget, setDetailTarget] = useState(null)   // 予定詳細ビュー（#6）
   const [dayDetail, setDayDetail] = useState(null)          // デイビュー対象日 dateStr（#1 #2）
   const [showMonthPicker, setShowMonthPicker] = useState(false) // 年月ジャンプ
+  const [showPolls, setShowPolls] = useState(false)             // 日程調整
+  const [showSearch, setShowSearch] = useState(false)           // 予定の検索
 
   // コメント未読バッジ用（#2）: { [eventId]: {count, latestAt, latestAuthor} } と既読時刻
   const [commentMeta, setCommentMeta] = useState({})
@@ -334,6 +347,38 @@ export default function SchedulePage() {
     members.forEach((m, i) => { map[m.id] = MEMBER_COLORS[i % MEMBER_COLORS.length] })
     return map
   }, [members])
+
+  // ── 日程調整の候補日をカレンダーに薄く表示 ────────────────
+  const [pollDates, setPollDates] = useState({})   // { dateStr: [poll title, ...] }
+  const fetchPollDates = useCallback(async () => {
+    if (!familyMember?.family_id) { setPollDates({}); return }
+    const { data } = await supabase
+      .from('schedule_polls')
+      .select('title, candidates:schedule_poll_candidates(candidate_date)')
+      .eq('family_id', familyMember.family_id)
+      .eq('status', 'open')
+    const map = {}
+    for (const p of data || []) {
+      for (const c of p.candidates || []) {
+        (map[c.candidate_date] ||= []).push(p.title)
+      }
+    }
+    setPollDates(map)
+  }, [familyMember?.family_id])
+
+  useEffect(() => { fetchPollDates() }, [fetchPollDates])
+
+  useEffect(() => {
+    if (!familyMember?.family_id) return
+    const ch = supabase
+      .channel('schedule_polls_rt')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'schedule_polls',
+        filter: `family_id=eq.${familyMember.family_id}`,
+      }, () => fetchPollDates())
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [familyMember?.family_id, fetchPollDates])
 
   // 表示中イベントのマスターID一覧（未読集計を表示範囲に限定しスケールさせる）
   const visibleMasterIds = useMemo(
@@ -672,6 +717,11 @@ export default function SchedulePage() {
           </button>
         ) : (
           <>
+            {/* 予定の検索 */}
+            <button className={styles.menuBtn} onClick={() => setShowSearch(true)} aria-label="予定を検索">
+              <IconSearch />
+            </button>
+
             {/* その他メニュー（勤務入力モードなど、頻度の低い操作を格納） */}
             <div className={styles.headerMenuWrap}>
               <button
@@ -685,6 +735,14 @@ export default function SchedulePage() {
                 <>
                   <div className={styles.menuBackdrop} onClick={() => setHeaderMenuOpen(false)} />
                   <div className={styles.headerMenu} role="menu">
+                    <button
+                      className={styles.headerMenuItem}
+                      role="menuitem"
+                      onClick={() => { setHeaderMenuOpen(false); setShowPolls(true) }}
+                    >
+                      <span className={styles.headerMenuIcon} aria-hidden="true">🗳️</span>
+                      日程調整
+                    </button>
                     <button
                       className={styles.headerMenuItem}
                       role="menuitem"
@@ -817,6 +875,8 @@ export default function SchedulePage() {
             baseDate={baseDate}
             todayStr={todayStr}
             unreadMap={unreadMap}
+            pollDates={pollDates}
+            onPollClick={() => setShowPolls(true)}
             onDayClick={nurseMode ? handleNurseDayTap : dateStr => setDayDetail(dateStr)}
             onEventClick={nurseMode ? null : openDetail}
             onOverflowClick={dateStr => setDayDetail(dateStr)}
@@ -915,6 +975,31 @@ export default function SchedulePage() {
         />
       )}
 
+      {/* ── 予定の検索 ── */}
+      {showSearch && (
+        <SearchModal
+          familyMember={familyMember}
+          memberColorMap={memberColorMap}
+          onSelect={ev => {
+            setShowSearch(false)
+            const base = ev.all_day ? ev.start_date : toDateStr(new Date(ev.start_datetime))
+            setBaseDate(new Date(`${base}T00:00:00`))
+            openDetail(ev)
+          }}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {/* ── 日程調整（出欠調整） ── */}
+      {showPolls && (
+        <PollsModal
+          familyMember={familyMember}
+          onRefetch={fetchEvents}
+          onNotify={notifyFamily}
+          onClose={() => { setShowPolls(false); fetchPollDates() }}
+        />
+      )}
+
       <BottomNav />
     </div>
   )
@@ -948,7 +1033,7 @@ function assignBandLanes(bands) {
   return sorted
 }
 
-function MonthView({ grid, events, memberColorMap, baseDate, todayStr, unreadMap = {}, onDayClick, onEventClick, onOverflowClick, nurseMode, shiftDraft }) {
+function MonthView({ grid, events, memberColorMap, baseDate, todayStr, unreadMap = {}, pollDates = {}, onPollClick, onDayClick, onEventClick, onOverflowClick, nurseMode, shiftDraft }) {
   const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
   const currentMonth = baseDate.getMonth()
   const currentYear = baseDate.getFullYear()
@@ -988,8 +1073,20 @@ function MonthView({ grid, events, memberColorMap, baseDate, todayStr, unreadMap
     const visibleEvents = dayEvents.slice(0, cap)
     const overflow = dayEvents.length - visibleEvents.length
 
+    const hasPoll = pollDates[dateStr]?.length > 0
+
     return (
       <>
+        {hasPoll && (
+          <button
+            type="button"
+            className={styles.monthPoll}
+            title={`日程調整中: ${pollDates[dateStr].join('、')}`}
+            onClick={e => { e.stopPropagation(); onPollClick?.() }}
+          >
+            🗳️ 調整中
+          </button>
+        )}
         <div className={styles.monthEventList}>
           {visibleEvents.map(ev => (
             <EventChip key={ev.id} event={ev} color={eventColor(ev, memberColorMap)} compact showTime={!ev.all_day} unread={unreadMap[masterId(ev)]} onClick={e => { e.stopPropagation(); onEventClick?.(ev) }} />
@@ -1987,6 +2084,8 @@ function EventDetailModal({ event, familyMember, memberColorMap, onNotifyComment
             )}
           </dl>
 
+          <EventReactions eventId={eid} familyMember={familyMember} />
+
           <EventComments eventId={eid} familyMember={familyMember} eventTitle={event.title} onCommented={onNotifyComment} />
         </div>
 
@@ -2003,6 +2102,104 @@ function EventDetailModal({ event, familyMember, memberColorMap, onNotifyComment
           <button type="button" className={styles.cancelBtn} onClick={onClose}>閉じる</button>
           <button type="button" className={styles.saveBtn} onClick={onEdit}>編集</button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── 予定へのアイコン反応（スタンプ） ─────────────────────────
+
+function EventReactions({ eventId, familyMember }) {
+  const [reactions, setReactions] = useState([])
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from('schedule_event_reactions')
+      .select('id, emoji, member_id, member_name')
+      .eq('event_id', eventId)
+    if (data) setReactions(data)
+  }, [eventId])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`schedule_reactions_${eventId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'schedule_event_reactions',
+        filter: `event_id=eq.${eventId}`,
+      }, () => load())
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [eventId, load])
+
+  // 絵文字ごとに集計（誰が押したか・自分が押したか）
+  const summary = useMemo(() => {
+    const map = {}
+    for (const r of reactions) {
+      const m = map[r.emoji] || { emoji: r.emoji, count: 0, names: [], mine: null }
+      m.count += 1
+      if (r.member_name) m.names.push(r.member_name)
+      if (r.member_id === familyMember?.id) m.mine = r.id
+      map[r.emoji] = m
+    }
+    return REACTIONS.map(o => map[o.emoji]).filter(Boolean)
+  }, [reactions, familyMember?.id])
+
+  async function toggle(emoji) {
+    if (!familyMember) return
+    const existing = reactions.find(r => r.emoji === emoji && r.member_id === familyMember.id)
+    // 楽観的更新
+    if (existing) {
+      setReactions(prev => prev.filter(r => r.id !== existing.id))
+      await supabase.from('schedule_event_reactions').delete().eq('id', existing.id)
+    } else {
+      const optimistic = { id: `tmp-${emoji}`, emoji, member_id: familyMember.id, member_name: familyMember.name }
+      setReactions(prev => [...prev, optimistic])
+      await supabase.from('schedule_event_reactions').insert({
+        event_id: eventId, family_id: familyMember.family_id,
+        member_id: familyMember.id, member_name: familyMember.name, emoji,
+      })
+    }
+    await load()
+  }
+
+  return (
+    <div className={styles.reactionsSection}>
+      {/* 押されている反応（件数・誰が） */}
+      {summary.length > 0 && (
+        <div className={styles.reactionSummary}>
+          {summary.map(s => (
+            <button
+              key={s.emoji}
+              className={`${styles.reactionCount} ${s.mine ? styles.reactionCountMine : ''}`}
+              onClick={() => toggle(s.emoji)}
+              title={`${REACTION_LABELS[s.emoji] ?? ''}：${s.names.join('、')}`}
+            >
+              <span className={styles.reactionEmoji}>{s.emoji}</span>
+              <span className={styles.reactionCountLabel}>{REACTION_LABELS[s.emoji]}</span>
+              <span className={styles.reactionNum}>{s.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {/* 反応を追加するパレット */}
+      <div className={styles.reactionPalette}>
+        {REACTIONS.map(({ emoji, label }) => {
+          const mine = reactions.some(r => r.emoji === emoji && r.member_id === familyMember?.id)
+          return (
+            <button
+              key={emoji}
+              className={`${styles.reactionBtn} ${mine ? styles.reactionBtnMine : ''}`}
+              onClick={() => toggle(emoji)}
+              aria-label={`${label} で反応`}
+              aria-pressed={mine}
+            >
+              <span className={styles.reactionBtnEmoji}>{emoji}</span>
+              <span className={styles.reactionBtnLabel}>{label}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -2096,6 +2293,102 @@ function EventComments({ eventId, familyMember, eventTitle, onCommented }) {
 
 // ── 年月ジャンプ（#8） ────────────────────────────────────────
 
+// ── 予定の検索 ────────────────────────────────────────────────
+
+function SearchModal({ familyMember, memberColorMap, onSelect, onClose }) {
+  useEscapeKey(onClose)
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [searched, setSearched] = useState(false)
+
+  useEffect(() => {
+    const term = q.trim()
+    if (!term || !familyMember?.family_id) { setResults([]); setSearched(false); return }
+    setLoading(true)
+    const timer = setTimeout(async () => {
+      // PostgREST の or フィルタを壊す文字を除去
+      const safe = term.replace(/[,()%*]/g, ' ').trim()
+      if (!safe) { setResults([]); setLoading(false); return }
+      const { data } = await supabase
+        .from('schedule_events')
+        .select('*, member:family_members!schedule_events_member_id_fkey(id, name)')
+        .eq('family_id', familyMember.family_id)
+        .is('shift_type', null)
+        .or(`title.ilike.%${safe}%,memo.ilike.%${safe}%,location.ilike.%${safe}%`)
+        .limit(80)
+      // 実効日で並べ替え：今日以降を昇順→過去を降順
+      const todayStr = toDateStr(new Date())
+      const eff = e => e.all_day ? e.start_date : toDateStr(new Date(e.start_datetime))
+      const rows = (data || []).map(e => ({ ...e, _eff: eff(e) }))
+      const future = rows.filter(r => r._eff >= todayStr).sort((a, b) => a._eff < b._eff ? -1 : 1)
+      const past = rows.filter(r => r._eff < todayStr).sort((a, b) => a._eff > b._eff ? -1 : 1)
+      setResults([...future, ...past])
+      setLoading(false)
+      setSearched(true)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [q, familyMember?.family_id])
+
+  function dateLabel(ev) {
+    const d = new Date(`${ev._eff}T00:00:00`)
+    const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
+    const base = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}(${wd})`
+    return ev.all_day ? base : `${base} ${formatTime(ev.start_datetime)}`
+  }
+
+  return (
+    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>予定を検索</h2>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+        </div>
+        <input
+          className={styles.input}
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="タイトル・メモ・場所で検索..."
+          autoFocus
+        />
+        <div className={styles.searchResults}>
+          {loading && <p className={styles.searchHint}>検索中...</p>}
+          {!loading && searched && results.length === 0 && (
+            <p className={styles.searchHint}>「{q.trim()}」に一致する予定はありません</p>
+          )}
+          {!loading && !searched && (
+            <p className={styles.searchHint}>キーワードを入力してください</p>
+          )}
+          {results.map(ev => {
+            const past = ev._eff < toDateStr(new Date())
+            return (
+              <button
+                key={ev.id}
+                className={`${styles.searchRow} ${past ? styles.searchRowPast : ''}`}
+                style={{ '--chip-color': eventColor(ev, memberColorMap) }}
+                onClick={() => onSelect(ev)}
+              >
+                <span className={styles.searchBar} />
+                <span className={styles.searchBody}>
+                  <span className={styles.searchTitle}>
+                    {ev.recurrence && ev.recurrence !== 'none' && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
+                    {ev.title}
+                  </span>
+                  <span className={styles.searchMeta}>
+                    {dateLabel(ev)}
+                    {ev.location && ` ・ ${ev.location}`}
+                    {ev.member?.name && ` ・ ${ev.member.name}`}
+                  </span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MonthPickerModal({ baseDate, onSelect, onClose }) {
   useEscapeKey(onClose)
   const [year, setYear] = useState(baseDate.getFullYear())
@@ -2128,6 +2421,314 @@ function MonthPickerModal({ baseDate, onSelect, onClose }) {
           })}
         </div>
         <button className={styles.cancelBtn} onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// 日程調整（出欠調整）— 候補日を出し合い ⭕🤔❌ で回答→集計→予定に確定
+// ══════════════════════════════════════════════════════════════
+
+const POLL_CHOICES = [
+  { key: 'ok', emoji: '⭕', label: 'OK' },
+  { key: 'maybe', emoji: '🤔', label: '未定' },
+  { key: 'ng', emoji: '❌', label: 'NG' },
+]
+
+function pollDateLabel(cand) {
+  const d = new Date(`${cand.candidate_date}T00:00:00`)
+  const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
+  const base = `${d.getMonth() + 1}/${d.getDate()}(${wd})`
+  return cand.candidate_time ? `${base} ${cand.candidate_time}` : `${base} 終日`
+}
+
+function PollsModal({ familyMember, onRefetch, onNotify, onClose }) {
+  useEscapeKey(onClose)
+  const [polls, setPolls] = useState([])
+  const [view, setView] = useState('list')       // 'list' | 'create'
+  const [activePollId, setActivePollId] = useState(null)
+
+  const loadPolls = useCallback(async () => {
+    if (!familyMember?.family_id) return
+    const { data } = await supabase
+      .from('schedule_polls')
+      .select('*, candidates:schedule_poll_candidates(id)')
+      .eq('family_id', familyMember.family_id)
+      .order('created_at', { ascending: false })
+    if (data) setPolls(data)
+  }, [familyMember?.family_id])
+
+  useEffect(() => { loadPolls() }, [loadPolls])
+
+  const activePoll = polls.find(p => p.id === activePollId) || null
+  const inSub = view === 'create' || !!activePollId
+  const heading = view === 'create' ? '新しい日程調整' : activePoll ? activePoll.title : '日程調整'
+
+  return (
+    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          {inSub && (
+            <button className={styles.pollBack} onClick={() => { setView('list'); setActivePollId(null) }} aria-label="戻る">‹</button>
+          )}
+          <h2 className={styles.modalTitle}>{heading}</h2>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+        </div>
+
+        {view === 'create' ? (
+          <PollCreate familyMember={familyMember} onNotify={onNotify} onDone={async () => { await loadPolls(); setView('list') }} />
+        ) : activePoll ? (
+          <PollVote
+            poll={activePoll}
+            familyMember={familyMember}
+            onRefetch={onRefetch}
+            onNotify={onNotify}
+            onChanged={loadPolls}
+            onClose={onClose}
+          />
+        ) : (
+          <PollList polls={polls} onCreate={() => setView('create')} onOpen={setActivePollId} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PollList({ polls, onCreate, onOpen }) {
+  return (
+    <div className={styles.pollList}>
+      <button className={styles.pollCreateBtn} onClick={onCreate}>＋ 新しい日程を調整する</button>
+      {polls.length === 0 ? (
+        <p className={styles.pollEmpty}>まだ調整中の予定はありません。<br />候補日を出して家族に聞いてみましょう。</p>
+      ) : (
+        polls.map(p => (
+          <button key={p.id} className={styles.pollRow} onClick={() => onOpen(p.id)}>
+            <span className={`${styles.pollBadge} ${p.status === 'open' ? styles.pollBadgeOpen : styles.pollBadgeClosed}`}>
+              {p.status === 'open' ? '調整中' : '確定'}
+            </span>
+            <span className={styles.pollRowBody}>
+              <span className={styles.pollRowTitle}>{p.title}</span>
+              <span className={styles.pollRowMeta}>候補 {p.candidates?.length ?? 0}日{p.created_by_name ? ` ・ ${p.created_by_name}` : ''}</span>
+            </span>
+          </button>
+        ))
+      )}
+    </div>
+  )
+}
+
+function PollCreate({ familyMember, onNotify, onDone }) {
+  const today = toDateStr(new Date())
+  const [title, setTitle] = useState('')
+  const [memo, setMemo] = useState('')
+  const [cands, setCands] = useState([{ date: today, time: '' }, { date: '', time: '' }])
+  const [saving, setSaving] = useState(false)
+
+  function update(i, key, val) {
+    setCands(prev => prev.map((c, idx) => idx === i ? { ...c, [key]: val } : c))
+  }
+  function addRow() { setCands(prev => [...prev, { date: '', time: '' }]) }
+  function removeRow(i) { setCands(prev => prev.filter((_, idx) => idx !== i)) }
+
+  const valid = title.trim() && cands.some(c => c.date)
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!valid) return
+    setSaving(true)
+    const { data: poll } = await supabase
+      .from('schedule_polls')
+      .insert({
+        family_id: familyMember.family_id,
+        title: title.trim(),
+        memo: memo.trim() || null,
+        created_by: familyMember.id,
+        created_by_name: familyMember.name,
+      })
+      .select('id')
+      .single()
+    if (poll?.id) {
+      const rows = cands
+        .filter(c => c.date)
+        .map((c, i) => ({
+          poll_id: poll.id,
+          family_id: familyMember.family_id,
+          candidate_date: c.date,
+          candidate_time: c.time || null,
+          sort_order: i,
+        }))
+      if (rows.length) await supabase.from('schedule_poll_candidates').insert(rows)
+      onNotify?.('poll_created', title.trim(), null)   // 家族へ通知
+    }
+    setSaving(false)
+    onDone()
+  }
+
+  return (
+    <form className={styles.form} onSubmit={submit}>
+      <label className={styles.fieldLabel}>
+        タイトル
+        <input className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="例: 家族で焼肉、祖父母と食事..." maxLength={100} autoFocus required />
+      </label>
+      <div className={styles.fieldLabel}>
+        候補日（家族に聞きたい日を並べる）
+        <div className={styles.pollCandEdit}>
+          {cands.map((c, i) => (
+            <div key={i} className={styles.pollCandRow}>
+              <input className={styles.input} type="date" value={c.date} onChange={e => update(i, 'date', e.target.value)} />
+              <input className={styles.input} type="time" value={c.time} onChange={e => update(i, 'time', e.target.value)} placeholder="時刻" />
+              {cands.length > 1 && (
+                <button type="button" className={styles.pollCandRemove} onClick={() => removeRow(i)} aria-label="この候補を削除">×</button>
+              )}
+            </div>
+          ))}
+          <button type="button" className={styles.pollAddCand} onClick={addRow}>＋ 候補日を追加</button>
+        </div>
+      </div>
+      <label className={styles.fieldLabel}>メモ（任意）<input className={styles.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="場所・補足など..." maxLength={200} /></label>
+      <div className={styles.formBtns}>
+        <button type="submit" className={styles.saveBtn} disabled={saving || !valid}>{saving ? '作成中...' : '家族に聞く'}</button>
+      </div>
+    </form>
+  )
+}
+
+function PollVote({ poll, familyMember, onRefetch, onNotify, onChanged, onClose }) {
+  const [candidates, setCandidates] = useState([])
+  const [votes, setVotes] = useState([])
+  const [confirming, setConfirming] = useState(false)
+
+  const load = useCallback(async () => {
+    const [{ data: cands }, { data: vs }] = await Promise.all([
+      supabase.from('schedule_poll_candidates').select('*').eq('poll_id', poll.id).order('sort_order', { ascending: true }),
+      supabase.from('schedule_poll_votes').select('*').eq('poll_id', poll.id),
+    ])
+    if (cands) setCandidates(cands)
+    if (vs) setVotes(vs)
+  }, [poll.id])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`poll_votes_${poll.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_poll_votes', filter: `poll_id=eq.${poll.id}` }, () => load())
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [poll.id, load])
+
+  const myVote = candId => votes.find(v => v.candidate_id === candId && v.member_id === familyMember?.id)?.choice
+  const tally = candId => {
+    const t = { ok: 0, maybe: 0, ng: 0 }
+    for (const v of votes) if (v.candidate_id === candId) t[v.choice] = (t[v.choice] || 0) + 1
+    return t
+  }
+  const names = (candId, choice) => votes.filter(v => v.candidate_id === candId && v.choice === choice).map(v => v.member_name).filter(Boolean).join('、')
+
+  // 最有力候補（OK最多→NG最少）
+  const bestId = useMemo(() => {
+    let best = null, bestScore = -Infinity
+    for (const c of candidates) {
+      const t = tally(c.id)
+      const score = t.ok * 2 - t.ng
+      if (t.ok > 0 && score > bestScore) { bestScore = score; best = c.id }
+    }
+    return best
+  }, [candidates, votes])
+
+  const open = poll.status === 'open'
+
+  async function vote(candId, choice) {
+    if (!familyMember) return
+    const existing = votes.find(v => v.candidate_id === candId && v.member_id === familyMember.id)
+    // この予定に対して自分がまだ一度も回答していないか（初回のみ家族へ通知）
+    const firstResponse = !votes.some(v => v.member_id === familyMember.id)
+    if (existing && existing.choice === choice) {
+      setVotes(prev => prev.filter(v => v !== existing))
+      await supabase.from('schedule_poll_votes').delete().eq('candidate_id', candId).eq('member_id', familyMember.id)
+    } else {
+      await supabase.from('schedule_poll_votes').upsert({
+        poll_id: poll.id, candidate_id: candId, family_id: familyMember.family_id,
+        member_id: familyMember.id, member_name: familyMember.name, choice,
+      }, { onConflict: 'candidate_id,member_id' })
+      if (firstResponse) onNotify?.('poll_voted', poll.title, null)   // 初回回答時のみ通知（連打での多重通知を防止）
+    }
+    await load()
+  }
+
+  async function confirm(cand) {
+    setConfirming(true)
+    const timed = !!cand.candidate_time
+    let eventData
+    if (timed) {
+      const start = new Date(`${cand.candidate_date}T${cand.candidate_time}:00`)
+      const end = new Date(start); end.setHours(end.getHours() + 1)
+      eventData = {
+        family_id: familyMember.family_id, title: poll.title, memo: poll.memo, all_day: false,
+        member_id: null, shift_type: null, recurrence: 'none',
+        start_date: null, end_date: null, start_datetime: start.toISOString(), end_datetime: end.toISOString(),
+      }
+    } else {
+      eventData = {
+        family_id: familyMember.family_id, title: poll.title, memo: poll.memo, all_day: true,
+        member_id: null, shift_type: null, recurrence: 'none',
+        start_date: cand.candidate_date, end_date: null, start_datetime: null, end_datetime: null,
+      }
+    }
+    const { data: inserted } = await supabase.from('schedule_events').insert(eventData).select('id').single()
+    if (inserted?.id) {
+      await supabase.from('schedule_polls').update({ status: 'closed', confirmed_event_id: inserted.id }).eq('id', poll.id)
+      onNotify?.('created', poll.title, inserted.id)
+    }
+    setConfirming(false)
+    await onRefetch()
+    await onChanged()
+    onClose()
+  }
+
+  return (
+    <div className={styles.pollVote}>
+      {poll.memo && <p className={styles.pollMemo}>{poll.memo}</p>}
+      {!open && <p className={styles.pollClosedNote}>この日程は確定済みです。</p>}
+
+      <div className={styles.pollCands}>
+        {candidates.map(c => {
+          const t = tally(c.id)
+          const isBest = open && c.id === bestId
+          return (
+            <div key={c.id} className={`${styles.pollCand} ${isBest ? styles.pollCandBest : ''}`}>
+              <div className={styles.pollCandHead}>
+                <span className={styles.pollCandDate}>{pollDateLabel(c)}{isBest && <span className={styles.pollBestTag}>最有力</span>}</span>
+                <span className={styles.pollTally}>
+                  {POLL_CHOICES.map(ch => (
+                    <span key={ch.key} className={styles.pollTallyItem} title={names(c.id, ch.key)}>{ch.emoji}{t[ch.key]}</span>
+                  ))}
+                </span>
+              </div>
+              {open && (
+                <div className={styles.pollChoiceRow}>
+                  {POLL_CHOICES.map(ch => {
+                    const mine = myVote(c.id) === ch.key
+                    return (
+                      <button
+                        key={ch.key}
+                        className={`${styles.pollChoiceBtn} ${mine ? styles.pollChoiceBtnMine : ''}`}
+                        onClick={() => vote(c.id, ch.key)}
+                        aria-pressed={mine}
+                      >
+                        <span className={styles.reactionBtnEmoji}>{ch.emoji}</span>{ch.label}
+                      </button>
+                    )
+                  })}
+                  <button className={styles.pollConfirmBtn} onClick={() => confirm(c)} disabled={confirming}>
+                    この日で確定
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
