@@ -25,6 +25,7 @@
 | `EmptyState` | 空データ時の「アイコン＋一言＋主アクション」 | ShoppingPage ほか |
 | `Toast` | 画面下部の一時通知（失敗通知・任意アクション） | ShoppingPage ほか |
 | `OfflineBanner` | オフライン時の上部バナー（アプリ全体で 1 つ） | `App.jsx` |
+| `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択 | TravelPage |
 
 ## 共通化ロードマップ
 

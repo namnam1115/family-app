@@ -1,0 +1,64 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.svg {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+
+@media (min-width: 480px) {
+  .svg {
+    max-width: 300px;
+  }
+}
+
+.pref {
+  stroke: var(--surface);
+  stroke-width: 1;
+  cursor: pointer;
+  transition: fill 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pref:hover {
+  opacity: 0.85;
+}
+
+.visited {
+  fill: var(--primary);
+}
+
+.unvisited {
+  fill: var(--gray-200);
+}
+
+.selected {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 0.2rem;
+}

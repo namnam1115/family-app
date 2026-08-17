@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
-import { IconTravel, IconClose, IconPin } from '../lib/icons'
+import { IconTravel, IconClose, IconPin, IconMap } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import JapanMap from '../components/JapanMap'
 import styles from './TravelPage.module.css'
 
 const PREFECTURES = [
@@ -49,8 +50,14 @@ export default function TravelPage() {
   const [editingTrip, setEditingTrip] = useState(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [prefectureFilter, setPrefectureFilter] = useState('all')
+  const [showMap, setShowMap] = useState(true)
 
   const fid = familyMember?.family_id
+
+  const visitedPrefectures = useMemo(
+    () => new Set(trips.map(t => t.prefecture).filter(Boolean)),
+    [trips]
+  )
 
   const fetchTrips = useCallback(async () => {
     if (!fid) return
@@ -210,6 +217,23 @@ export default function TravelPage() {
               <option key={pref} value={pref}>{pref}</option>
             ))}
           </select>
+          <button
+            className={styles.mapToggleBtn}
+            onClick={() => setShowMap(v => !v)}
+            aria-pressed={showMap}
+          >
+            <IconMap /> {showMap ? '地図を隠す' : '地図で見る'}
+          </button>
+        </div>
+      )}
+
+      {trips.length > 0 && showMap && (
+        <div className={styles.mapSection}>
+          <JapanMap
+            visited={visitedPrefectures}
+            selected={prefectureFilter === 'all' ? null : prefectureFilter}
+            onSelect={pref => setPrefectureFilter(pref ?? 'all')}
+          />
         </div>
       )}
 
