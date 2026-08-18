@@ -90,6 +90,8 @@ useEffect(() => {
 |---|---|---|
 | `fetch-og-image` | クライアント（`supabase.functions.invoke('fetch-og-image', { body: { url } })`、DishesPage） | URL から OG 画像を取得し `dish-thumbnails` バケットへ永続保存（期限付き URL 対策）。http/https のみ許可する URL バリデーションあり |
 | `send-shopping-notifications` | スケジュール実行（cron） | `family_settings.notification_hour`（JST）に一致する家族へ、未チェックの買い物アイテムを Web Push 通知。service_role で RLS をバイパス |
+| `send-schedule-reminders` | スケジュール実行（cron） | リマインダー指定のある予定を JST の暦日で展開し、通知時刻に達した回を Web Push。二重送信は `schedule_reminder_log` で防止。オカレンス計算は `occurrences.ts` に分離 |
+| `notify-schedule-change` | クライアント（SchedulePage） | 予定の追加・更新・コメント・日程調整を家族へ即時 Push（本人の端末と通知 OFF のユーザーは除外） |
 
 ### Edge Function を書くときの規約
 
@@ -97,6 +99,7 @@ useEffect(() => {
 - 入力は必ずバリデーションし、エラーは `{ error: string }` JSON + 適切なステータスコードで返す
 - service_role キーは Edge Function 内のみ。クライアントに露出させない
 - デプロイは `supabase functions deploy <name>`（手動）。完了報告にデプロイ要否を明記する
+- **日付は JST の暦日で計算する。** クライアント（`src/lib/schedule.js`）はブラウザのローカル時刻で暦日を扱うため、Edge Function 側で UTC の暦日を使うと繰り返し予定の除外日や通知日が 1 日ずれる。繰り返しの計算を変更したら `node scripts/check-recurrence-parity.mjs` で両者の一致を確認する
 
 ## Push 通知（`src/lib/pushNotifications.js`）
 

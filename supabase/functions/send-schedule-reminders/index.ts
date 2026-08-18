@@ -1,82 +1,10 @@
 import webpush from 'npm:web-push@3'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { type Ev, dueOccurrences } from './occurrences.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-const DAY = 86400000
-// 終日予定のリマインダー基準時刻（JST 9:00）
-const ALLDAY_HOUR_JST = 9
-
-type Ev = {
-  id: string
-  family_id: string
-  title: string
-  all_day: boolean
-  start_date: string | null
-  start_datetime: string | null
-  reminder_minutes: number
-  recurrence: string
-  recurrence_until: string | null
-  recurrence_exceptions: string[] | null
-}
-
-function ymd(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
-}
-
-// 繰り返し規則で n 回進めた開始時刻（UTC ms）を返す
-function addByRule(baseMs: number, rule: string, n: number): number {
-  const d = new Date(baseMs)
-  if (rule === 'daily') d.setUTCDate(d.getUTCDate() + n)
-  else if (rule === 'weekly') d.setUTCDate(d.getUTCDate() + 7 * n)
-  else if (rule === 'monthly' || rule === 'yearly') {
-    const day = d.getUTCDate()
-    d.setUTCDate(1)
-    if (rule === 'monthly') d.setUTCMonth(d.getUTCMonth() + n)
-    else d.setUTCFullYear(d.getUTCFullYear() + n)
-    const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()
-    d.setUTCDate(Math.min(day, last))
-  }
-  return d.getTime()
-}
-
-// この予定の「リマインドすべきオカレンス」を [windowStart, windowEnd] から探す
-function dueOccurrences(ev: Ev, now: number): { occDateStr: string; startMs: number }[] {
-  // 予定開始の絶対時刻（ms）
-  const baseStart = ev.all_day
-    ? Date.parse(`${ev.start_date}T${String(ALLDAY_HOUR_JST - 9).padStart(2, '0')}:00:00Z`) // JST9:00 = UTC0:00
-    : Date.parse(ev.start_datetime!)
-  if (isNaN(baseStart)) return []
-
-  const remindMs = ev.reminder_minutes * 60000
-  const exceptions = new Set(ev.recurrence_exceptions || [])
-  const untilMs = ev.recurrence_until ? Date.parse(`${ev.recurrence_until}T23:59:59Z`) : null
-
-  const out: { occDateStr: string; startMs: number }[] = []
-  const isRecurring = ev.recurrence && ev.recurrence !== 'none'
-  const maxN = isRecurring ? 800 : 1
-
-  for (let n = 0; n < maxN; n++) {
-    const startMs = isRecurring ? addByRule(baseStart, ev.recurrence, n) : baseStart
-    if (untilMs && startMs > untilMs) break
-    // まだ先すぎる（リマインド時刻に到達していない）オカレンスが出たら終了
-    const remindAt = startMs - remindMs
-    if (remindAt > now) {
-      // 未来。単発なら終了、繰り返しでもこれ以降は更に未来なので終了
-      break
-    }
-    // 既に開始済みなら通知不要
-    if (now >= startMs) continue
-    const occDateStr = ymd(new Date(ev.all_day ? Date.parse(`${ev.start_date}T00:00:00Z`) + (startMs - baseStart) : startMs))
-    if (exceptions.has(occDateStr)) continue
-    // remindAt <= now < startMs → 送信対象
-    out.push({ occDateStr, startMs })
-  }
-  return out
 }
 
 Deno.serve(async (req: Request) => {
