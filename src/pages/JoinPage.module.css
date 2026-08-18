@@ -4,18 +4,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--grad-bg);
   padding: 1rem;
   overflow-y: auto;
 }
 
 .card {
-  background: white;
-  border-radius: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
   padding: 2.5rem 2rem;
   width: 100%;
   max-width: 380px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-lg);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -46,8 +47,9 @@
   gap: 0.75rem;
   width: 100%;
   padding: 0.75rem 1rem;
-  background: white;
-  border: 2px solid var(--gray-200);
+  min-height: 48px;
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius);
   font-size: 1rem;
   font-weight: 500;
@@ -62,6 +64,7 @@
 
 .btn {
   padding: 0.625rem 1.5rem;
+  min-height: 44px;
   background: var(--primary);
   color: var(--on-primary);
   border: none;

@@ -63,7 +63,11 @@ export default function HomePage() {
       <div className={styles.page}>
         <header className={styles.header}>
           <span className={styles.headerLogo}><IconHome /></span>
-          <span className={styles.headerTitle}>家族プラットフォーム</span>
+          <span className={styles.headerTitle}>
+          {/* 狭い端末では PWA の short_name と同じ短縮名にする */}
+          <span className={styles.titleFull}>家族プラットフォーム</span>
+          <span className={styles.titleShort}>家族アプリ</span>
+        </span>
           <button className={styles.signOutBtn} onClick={signOut}>ログアウト</button>
         </header>
         <main className={styles.main}>
@@ -153,7 +157,11 @@ export default function HomePage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <span className={styles.headerLogo}><IconHome /></span>
-        <span className={styles.headerTitle}>家族プラットフォーム</span>
+        <span className={styles.headerTitle}>
+          {/* 狭い端末では PWA の short_name と同じ短縮名にする */}
+          <span className={styles.titleFull}>家族プラットフォーム</span>
+          <span className={styles.titleShort}>家族アプリ</span>
+        </span>
         <button
           className={styles.searchBtn}
           onClick={() => setShowSearch(true)}
