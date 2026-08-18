@@ -32,6 +32,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Modal from '../components/Modal'
 import styles from './PricePage.module.css'
 
 function formatPrice(p) {
@@ -795,100 +796,96 @@ function AddModal({ stores, productNames, productCategory, productIcon, onSubmit
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>価格を追加・更新</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <>
+      <Modal open onClose={onClose} title="価格を追加・更新">
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.label}>
+          店舗
+          <select className={styles.input} value={storeName} onChange={e => setStoreName(e.target.value)} required>
+            {stores.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label className={styles.label}>
+          商品名
+          <input
+            className={styles.input}
+            list="product-list"
+            value={productName}
+            onChange={handleProductChange}
+            placeholder="例: 牛乳 1L"
+            maxLength={100}
+            required
+            autoComplete="off"
+          />
+          <datalist id="product-list">
+            {productNames.map(p => <option key={p} value={p} />)}
+          </datalist>
+        </label>
+
+        <div className={styles.label}>
+          アイコン
+          <button
+            type="button"
+            className={styles.iconSelectBtn}
+            onClick={() => setShowIconPicker(true)}
+          >
+            <span className={styles.iconSelectEmoji}>
+              <Icon name={icon || 'TbShoppingCart'} size={26} />
+            </span>
+            <span className={styles.iconSelectLabel}>{icon ? 'タップして変更' : 'アイコンを選択'}</span>
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label}>
-            店舗
-            <select className={styles.input} value={storeName} onChange={e => setStoreName(e.target.value)} required>
-              {stores.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          <label className={styles.label}>
-            商品名
-            <input
-              className={styles.input}
-              list="product-list"
-              value={productName}
-              onChange={handleProductChange}
-              placeholder="例: 牛乳 1L"
-              maxLength={100}
-              required
-              autoComplete="off"
-            />
-            <datalist id="product-list">
-              {productNames.map(p => <option key={p} value={p} />)}
-            </datalist>
-          </label>
 
-          <div className={styles.label}>
-            アイコン
-            <button
-              type="button"
-              className={styles.iconSelectBtn}
-              onClick={() => setShowIconPicker(true)}
-            >
-              <span className={styles.iconSelectEmoji}>
-                <Icon name={icon || 'TbShoppingCart'} size={26} />
-              </span>
-              <span className={styles.iconSelectLabel}>{icon ? 'タップして変更' : 'アイコンを選択'}</span>
-            </button>
+        <div className={styles.label}>
+          カテゴリ
+          <div className={styles.categoryBtns}>
+            {PRICE_CATEGORIES.map(c => (
+              <button
+                key={c.value}
+                type="button"
+                className={`${styles.categoryBtn} ${category === c.value ? styles.categoryBtnActive : ''}`}
+                onClick={() => setCategory(c.value)}
+              ><c.icon /> {c.label}</button>
+            ))}
           </div>
-
-          <div className={styles.label}>
-            カテゴリ
-            <div className={styles.categoryBtns}>
-              {PRICE_CATEGORIES.map(c => (
-                <button
-                  key={c.value}
-                  type="button"
-                  className={`${styles.categoryBtn} ${category === c.value ? styles.categoryBtnActive : ''}`}
-                  onClick={() => setCategory(c.value)}
-                ><c.icon /> {c.label}</button>
-              ))}
-            </div>
-          </div>
-          <label className={styles.label}>
-            価格（円）
-            <input
-              className={styles.input}
-              type="number"
-              value={price}
-              onChange={e => setPrice(e.target.value)}
-              placeholder="例: 198.50"
-              min={0}
-              max={999999}
-              step="0.01"
-              required
-            />
-          </label>
-          <label className={styles.label}>
-            メモ（任意）
-            <input
-              className={styles.input}
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="例: 税込・特売"
-              maxLength={100}
-            />
-          </label>
-          {error && <p className={styles.errorMsg}>{error}</p>}
-          <div className={styles.formBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button
-              type="submit"
-              className={styles.saveBtn}
-              disabled={submitting || !storeName || !productName.trim() || price === ''}
-            >
-              {submitting ? '保存中...' : '保存'}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <label className={styles.label}>
+          価格（円）
+          <input
+            className={styles.input}
+            type="number"
+            value={price}
+            onChange={e => setPrice(e.target.value)}
+            placeholder="例: 198.50"
+            min={0}
+            max={999999}
+            step="0.01"
+            required
+          />
+        </label>
+        <label className={styles.label}>
+          メモ（任意）
+          <input
+            className={styles.input}
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="例: 税込・特売"
+            maxLength={100}
+          />
+        </label>
+        {error && <p className={styles.errorMsg}>{error}</p>}
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button
+            type="submit"
+            className={styles.saveBtn}
+            disabled={submitting || !storeName || !productName.trim() || price === ''}
+          >
+            {submitting ? '保存中...' : '保存'}
+          </button>
+        </div>
+      </form>
+      </Modal>
 
       {showIconPicker && (
         <IconPicker
@@ -897,7 +894,7 @@ function AddModal({ stores, productNames, productCategory, productIcon, onSubmit
           onClose={() => setShowIconPicker(false)}
         />
       )}
-    </div>
+    </>
   )
 }
 
@@ -954,45 +951,42 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>店舗管理</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-        <ul className={styles.storeList}>
-          {stores.length === 0 && (
-            <li className={styles.storeEmpty}>店舗が登録されていません</li>
-          )}
-          {stores.map(s => (
-            <li key={s.id} className={styles.storeItem}>
-              <span className={styles.storeName}>{s.name}</span>
-              <button
-                className={styles.storeDeleteBtn}
-                onClick={() => setConfirmState({
-                  message: `「${s.name}」を削除しますか？登録済みの価格データもすべて削除されます。`,
-                  onConfirm: () => onDelete(s.id, s.name),
-                })}
-                aria-label={`${s.name}を削除`}
-              >削除</button>
-            </li>
-          ))}
-        </ul>
-        <form onSubmit={handleAdd} className={styles.storeAddForm}>
-          <input
-            className={styles.input}
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            placeholder="新しい店舗名を入力..."
-            maxLength={50}
-            autoComplete="off"
-          />
-          <button type="submit" className={styles.saveBtn} disabled={adding || !newName.trim()}>
-            追加
-          </button>
-        </form>
-        {error && <p className={styles.errorMsg}>{error}</p>}
-      </div>
+    <>
+      <Modal open onClose={onClose} title="店舗管理">
+      <ul className={styles.storeList}>
+        {stores.length === 0 && (
+          <li className={styles.storeEmpty}>店舗が登録されていません</li>
+        )}
+        {stores.map(s => (
+          <li key={s.id} className={styles.storeItem}>
+            <span className={styles.storeName}>{s.name}</span>
+            <button
+              className={styles.storeDeleteBtn}
+              onClick={() => setConfirmState({
+                message: `「${s.name}」を削除しますか？登録済みの価格データもすべて削除されます。`,
+                onConfirm: () => onDelete(s.id, s.name),
+              })}
+              aria-label={`${s.name}を削除`}
+            >削除</button>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={handleAdd} className={styles.storeAddForm}>
+        <input
+          className={styles.input}
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          placeholder="新しい店舗名を入力..."
+          maxLength={50}
+          autoComplete="off"
+        />
+        <button type="submit" className={styles.saveBtn} disabled={adding || !newName.trim()}>
+          追加
+        </button>
+      </form>
+      {error && <p className={styles.errorMsg}>{error}</p>}
+      </Modal>
+
       {confirmState && (
         <DeleteConfirmDialog
           message={confirmState.message}
@@ -1000,7 +994,7 @@ function StoreModal({ stores, onAdd, onDelete, onClose }) {
           onCancel={() => setConfirmState(null)}
         />
       )}
-    </div>
+    </>
   )
 }
 

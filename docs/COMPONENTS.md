@@ -26,31 +26,32 @@
 | `Toast` | 画面下部の一時通知（失敗通知・任意アクション） | ShoppingPage ほか |
 | `OfflineBanner` | オフライン時の上部バナー（アプリ全体で 1 つ） | `App.jsx` |
 | `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択 | TravelPage |
+| `Modal` | 全ページ共通モーダル（ボトムシート↔中央表示、Esc / 背景タップで閉じる、フォーカストラップ、背景スクロールロック） | 全ページのモーダル |
+| `ErrorBoundary` | 描画エラー時のフォールバック UI（再試行 / ホームへ） | `App.jsx`（アプリ全体 + ルート単位） |
 
 ## 共通化ロードマップ
 
-現状、モーダル・ボタン・空状態などは各ページに **CSS Module パターンとして重複**している（`styles.overlay` / `styles.modal` / `styles.saveBtn` 等の同型実装）。方針:
+モーダルは `Modal` に集約済み。ボタン・空状態などは各ページに **CSS Module パターンとして重複**している（`styles.saveBtn` 等の同型実装）。方針:
 
 - **すぐに全部共通化しない。** 動いている UI の一括置換はデグレリスクが利益を上回る
 - 新規実装・既存改修で同じ部品が **3 箇所目**に必要になったタイミングで、以下の候補名で `src/components/` に抽出する
 
 | 候補 | 抽出元パターン | 備考 |
 |---|---|---|
-| `Modal` | 各ページの overlay + modal + ヘッダー + × ボタン | 背景クリック / × で閉じる。参照実装: `ShoppingPage.CreateListModal` |
-| `BottomSheet` | モバイル向け選択 UI | `slideUp` アニメーション |
+| `BottomSheet` | モバイル向け選択 UI | `Modal` の `variant="sheet"` で概ね代替できる |
 | `Button` | saveBtn / cancelBtn / dangerBtn | variant: primary / ghost / danger |
 | `Input` / `SearchBar` | modalInput / 検索バー | 16px フォント維持（iOS ズーム防止） |
 | `Card` | surface + radius-lg + shadow | |
 | `EmptyState` | 絵文字 + 案内文 | 参照実装: `ShoppingPage` の empty |
 | `Chip` / `Badge` | タグ表示（PlacesPage）・件数バッジ | |
 | `Avatar` | メンバー表示 | |
-| `ErrorView` | エラー時の再試行 UI | 現状ほぼ未整備。新規実装から導入可 |
+| `ErrorView` | ページ内エラー（取得失敗）の再試行 UI | 描画エラーは `ErrorBoundary` で対応済み |
 
 抽出したらこの表を「既存コンポーネント」へ移動して更新すること。
 
 ## コンポーネントを書くときのルール
 
-1. **関数コンポーネント + named `export default`**。クラスコンポーネント禁止
+1. **関数コンポーネント + named `export default`**。クラスコンポーネント禁止（唯一の例外は `ErrorBoundary`。React の仕様上クラスでしか実装できない）
 2. **props は分割代入**で受け取り、コールバックは `onXxx` 命名（`onClose`, `onSubmit`, `onToggleFavorite`）
 3. **データ取得はページに置く**のが基本。コンポーネントが自分でフェッチするのは、その機能が自己完結している場合のみ（例: `ShoppingItemList` は `listId` を受けて自分でアイテムを取得・購読する）
 4. **状態は最も近い場所に**: グローバル状態は `AuthContext` のみ。新たな Context / 状態管理ライブラリの追加は要相談

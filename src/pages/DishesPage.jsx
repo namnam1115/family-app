@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Modal from '../components/Modal'
 import styles from './DishesPage.module.css'
 
 // ── ユーティリティ ────────────────────────────────────────
@@ -450,83 +451,77 @@ function AddDishModal({ categories, onSubmit, onClose }) {
   })()
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>おかずを追加</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label}>
-            料理名
+    <Modal open onClose={onClose} title="おかずを追加">
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.label}>
+          料理名
+          <input
+            className={styles.input}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="例: 鶏の唐揚げ、麻婆豆腐..."
+            maxLength={100}
+            autoFocus
+            required
+          />
+        </label>
+        <label className={styles.label}>
+          カテゴリ（任意）
+          <select
+            className={styles.input}
+            value={categoryId}
+            onChange={e => setCategoryId(e.target.value)}
+          >
+            <option value="">カテゴリなし</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.label}>
+          参考URL（任意）
+          <input
+            className={styles.input}
+            value={url}
+            onChange={handleUrlChange}
+            placeholder="https://... (YouTube Shorts / TikTok / Web記事)"
+            type="url"
+          />
+        </label>
+        <label className={styles.label}>
+          画像URL（任意）
+          <div className={styles.imageUrlRow}>
             <input
               className={styles.input}
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="例: 鶏の唐揚げ、麻婆豆腐..."
-              maxLength={100}
-              autoFocus
-              required
-            />
-          </label>
-          <label className={styles.label}>
-            カテゴリ（任意）
-            <select
-              className={styles.input}
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-            >
-              <option value="">カテゴリなし</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.label}>
-            参考URL（任意）
-            <input
-              className={styles.input}
-              value={url}
-              onChange={handleUrlChange}
-              placeholder="https://... (YouTube Shorts / TikTok / Web記事)"
+              value={imageUrl}
+              onChange={handleImageUrlChange}
+              placeholder="https://... (サムネイル画像)"
               type="url"
             />
-          </label>
-          <label className={styles.label}>
-            画像URL（任意）
-            <div className={styles.imageUrlRow}>
-              <input
-                className={styles.input}
-                value={imageUrl}
-                onChange={handleImageUrlChange}
-                placeholder="https://... (サムネイル画像)"
-                type="url"
-              />
-              {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
-            </div>
-            <span className={styles.inputHint}>
-              {thumbAutoFetched ? <><IconCheck /> サムネイルを自動取得しました</> : 'URLを入力すると自動でサムネイルを取得します'}
-            </span>
-          </label>
-          {previewUrl && (
-            <div className={styles.thumbPreview}>
-              <img
-                src={previewUrl}
-                alt="サムネイルプレビュー"
-                className={styles.thumbPreviewImg}
-                onError={e => { e.currentTarget.style.display = 'none' }}
-              />
-            </div>
-          )}
-          <div className={styles.formBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
-              {submitting ? '追加中...' : '追加'}
-            </button>
+            {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
           </div>
-        </form>
-      </div>
-    </div>
+          <span className={styles.inputHint}>
+            {thumbAutoFetched ? <><IconCheck /> サムネイルを自動取得しました</> : 'URLを入力すると自動でサムネイルを取得します'}
+          </span>
+        </label>
+        {previewUrl && (
+          <div className={styles.thumbPreview}>
+            <img
+              src={previewUrl}
+              alt="サムネイルプレビュー"
+              className={styles.thumbPreviewImg}
+              onError={e => { e.currentTarget.style.display = 'none' }}
+            />
+          </div>
+        )}
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
+            {submitting ? '追加中...' : '追加'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -545,52 +540,46 @@ function ReviewModal({ dish, onSubmit, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>「{dish.name}」を作った！</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <Modal open onClose={onClose} title={<>「{dish.name}」を作った！</>}>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <div className={styles.label}>
+          評価
+          <div className={styles.starRow}>
+            {[1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                type="button"
+                className={`${styles.starBtn} ${n <= rating ? styles.starActive : ''}`}
+                onClick={() => setRating(n === rating ? 0 : n)}
+                aria-label={`${n}点`}
+              >{n <= rating ? <IconStarFill /> : <IconStar />}</button>
+            ))}
+            {rating > 0 && (
+              <button type="button" className={styles.clearRating} onClick={() => setRating(0)}>
+                クリア
+              </button>
+            )}
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.label}>
-            評価
-            <div className={styles.starRow}>
-              {[1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`${styles.starBtn} ${n <= rating ? styles.starActive : ''}`}
-                  onClick={() => setRating(n === rating ? 0 : n)}
-                  aria-label={`${n}点`}
-                >{n <= rating ? <IconStarFill /> : <IconStar />}</button>
-              ))}
-              {rating > 0 && (
-                <button type="button" className={styles.clearRating} onClick={() => setRating(0)}>
-                  クリア
-                </button>
-              )}
-            </div>
-          </div>
-          <label className={styles.label}>
-            感想（任意）
-            <textarea
-              className={styles.textarea}
-              value={review}
-              onChange={e => setReview(e.target.value)}
-              placeholder="例: 家族に大好評！また作りたい..."
-              maxLength={300}
-              rows={3}
-            />
-          </label>
-          <div className={styles.formBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting}>
-              {submitting ? '記録中...' : '記録する'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <label className={styles.label}>
+          感想（任意）
+          <textarea
+            className={styles.textarea}
+            value={review}
+            onChange={e => setReview(e.target.value)}
+            placeholder="例: 家族に大好評！また作りたい..."
+            maxLength={300}
+            rows={3}
+          />
+        </label>
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting}>
+            {submitting ? '記録中...' : '記録する'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -645,98 +634,92 @@ function EditDishModal({ dish, categories, onSubmit, onDelete, onClose }) {
   })()
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>おかずを編集</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label}>
-            料理名
+    <Modal open onClose={onClose} title="おかずを編集">
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.label}>
+          料理名
+          <input
+            className={styles.input}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="例: 鶏の唐揚げ、麻婆豆腐..."
+            maxLength={100}
+            autoFocus
+            required
+          />
+        </label>
+        <label className={styles.label}>
+          カテゴリ（任意）
+          <select
+            className={styles.input}
+            value={categoryId}
+            onChange={e => setCategoryId(e.target.value)}
+          >
+            <option value="">カテゴリなし</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.label}>
+          参考URL（任意）
+          <input
+            className={styles.input}
+            value={url}
+            onChange={handleUrlChange}
+            placeholder="https://... (YouTube Shorts / TikTok / Web記事)"
+            type="url"
+          />
+        </label>
+        <label className={styles.label}>
+          画像URL（任意）
+          <div className={styles.imageUrlRow}>
             <input
               className={styles.input}
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="例: 鶏の唐揚げ、麻婆豆腐..."
-              maxLength={100}
-              autoFocus
-              required
-            />
-          </label>
-          <label className={styles.label}>
-            カテゴリ（任意）
-            <select
-              className={styles.input}
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-            >
-              <option value="">カテゴリなし</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.label}>
-            参考URL（任意）
-            <input
-              className={styles.input}
-              value={url}
-              onChange={handleUrlChange}
-              placeholder="https://... (YouTube Shorts / TikTok / Web記事)"
+              value={imageUrl}
+              onChange={e => { setImageUrl(e.target.value); setThumbAutoFetched(false) }}
+              placeholder="https://... (サムネイル画像)"
               type="url"
             />
-          </label>
-          <label className={styles.label}>
-            画像URL（任意）
-            <div className={styles.imageUrlRow}>
-              <input
-                className={styles.input}
-                value={imageUrl}
-                onChange={e => { setImageUrl(e.target.value); setThumbAutoFetched(false) }}
-                placeholder="https://... (サムネイル画像)"
-                type="url"
-              />
-              {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
-            </div>
-            <span className={styles.inputHint}>
-              {thumbAutoFetched ? <><IconCheck /> サムネイルを自動取得しました</> : 'URLを入力すると自動でサムネイルを取得します'}
-            </span>
-          </label>
-          {previewUrl && (
-            <div className={styles.thumbPreview}>
-              <img
-                src={previewUrl}
-                alt="サムネイルプレビュー"
-                className={styles.thumbPreviewImg}
-                onError={e => { e.currentTarget.style.display = 'none' }}
-              />
-            </div>
-          )}
-          <div className={styles.formBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
-              {submitting ? '保存中...' : '保存'}
-            </button>
+            {fetchingThumb && <span className={styles.thumbFetching}>取得中...</span>}
           </div>
-        </form>
-
-        <div className={styles.deleteSeparator} />
-        {confirmDelete ? (
-          <div className={styles.deleteConfirm}>
-            <p className={styles.deleteConfirmText}>本当に削除しますか？</p>
-            <div className={styles.formBtns}>
-              <button className={styles.cancelBtn} onClick={() => setConfirmDelete(false)}>キャンセル</button>
-              <button className={styles.deleteDangerBtn} onClick={onDelete}>削除する</button>
-            </div>
+          <span className={styles.inputHint}>
+            {thumbAutoFetched ? <><IconCheck /> サムネイルを自動取得しました</> : 'URLを入力すると自動でサムネイルを取得します'}
+          </span>
+        </label>
+        {previewUrl && (
+          <div className={styles.thumbPreview}>
+            <img
+              src={previewUrl}
+              alt="サムネイルプレビュー"
+              className={styles.thumbPreviewImg}
+              onError={e => { e.currentTarget.style.display = 'none' }}
+            />
           </div>
-        ) : (
-          <button className={styles.deleteOutlineBtn} onClick={() => setConfirmDelete(true)}>
-            <IconTrash /> このおかずを削除
-          </button>
         )}
-      </div>
-    </div>
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
+            {submitting ? '保存中...' : '保存'}
+          </button>
+        </div>
+      </form>
+
+      <div className={styles.deleteSeparator} />
+      {confirmDelete ? (
+        <div className={styles.deleteConfirm}>
+          <p className={styles.deleteConfirmText}>本当に削除しますか？</p>
+          <div className={styles.formBtns}>
+            <button className={styles.cancelBtn} onClick={() => setConfirmDelete(false)}>キャンセル</button>
+            <button className={styles.deleteDangerBtn} onClick={onDelete}>削除する</button>
+          </div>
+        </div>
+      ) : (
+        <button className={styles.deleteOutlineBtn} onClick={() => setConfirmDelete(true)}>
+          <IconTrash /> このおかずを削除
+        </button>
+      )}
+    </Modal>
   )
 }
 
@@ -756,48 +739,41 @@ function ManageCategoriesModal({ categories, onAdd, onDelete, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>カテゴリを管理</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
+    <Modal open onClose={onClose} title="カテゴリを管理">
+      {categories.length > 0 && (
+        <ul className={styles.categoryList}>
+          {categories.map(cat => (
+            <li key={cat.id} className={styles.categoryItem}>
+              <span className={styles.categoryItemName}>{cat.name}</span>
+              <button
+                className={styles.categoryDeleteBtn}
+                onClick={() => onDelete(cat.id)}
+                aria-label={`${cat.name}を削除`}
+              >×</button>
+            </li>
+          ))}
+        </ul>
+      )}
 
-        {categories.length > 0 && (
-          <ul className={styles.categoryList}>
-            {categories.map(cat => (
-              <li key={cat.id} className={styles.categoryItem}>
-                <span className={styles.categoryItemName}>{cat.name}</span>
-                <button
-                  className={styles.categoryDeleteBtn}
-                  onClick={() => onDelete(cat.id)}
-                  aria-label={`${cat.name}を削除`}
-                >×</button>
-              </li>
-            ))}
-          </ul>
-        )}
+      <form onSubmit={handleAdd} className={styles.addCategoryForm}>
+        <input
+          className={styles.input}
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          placeholder="新しいカテゴリ名..."
+          maxLength={30}
+        />
+        <button
+          type="submit"
+          className={styles.saveBtn}
+          disabled={adding || !newName.trim()}
+          style={{ flex: 'none', padding: '0.75rem 1.25rem' }}
+        >
+          追加
+        </button>
+      </form>
 
-        <form onSubmit={handleAdd} className={styles.addCategoryForm}>
-          <input
-            className={styles.input}
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            placeholder="新しいカテゴリ名..."
-            maxLength={30}
-          />
-          <button
-            type="submit"
-            className={styles.saveBtn}
-            disabled={adding || !newName.trim()}
-            style={{ flex: 'none', padding: '0.75rem 1.25rem' }}
-          >
-            追加
-          </button>
-        </form>
-
-        <button className={styles.cancelBtn} onClick={onClose}>閉じる</button>
-      </div>
-    </div>
+      <button className={styles.cancelBtn} onClick={onClose}>閉じる</button>
+    </Modal>
   )
 }

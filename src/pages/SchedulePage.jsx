@@ -7,6 +7,7 @@ import { getHoliday } from '../lib/holidays'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Modal from '../components/Modal'
 import styles from './SchedulePage.module.css'
 
 // ── 定数 ─────────────────────────────────────────────────────
@@ -1706,163 +1707,157 @@ function EventModal({ mode, event, members, memberColorMap, familyId, defaultDat
   const isOccurrence = !!event?.is_occurrence
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>{isEdit ? '予定を編集' : '予定を追加'}</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          {/* 繰り返し予定の編集範囲（#3） */}
-          {isEdit && isOccurrence && (
-            <div className={styles.fieldLabel}>
-              変更範囲
-              <div className={styles.toggleRow}>
-                <button type="button" className={`${styles.toggleBtn} ${editScope === 'single' ? styles.toggleActive : ''}`} onClick={() => setEditScope('single')}>この回だけ</button>
-                <button type="button" className={`${styles.toggleBtn} ${editScope === 'all' ? styles.toggleActive : ''}`} onClick={() => setEditScope('all')}>すべて</button>
-              </div>
-            </div>
-          )}
-          <label className={styles.fieldLabel}>
-            タイトル
-            <input ref={titleRef} list="schedule-title-suggestions" className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="例: 家族でお出かけ、歯医者..." maxLength={100} autoFocus required />
-            {titleSuggestions.length > 0 && (
-              <datalist id="schedule-title-suggestions">
-                {titleSuggestions.map(t => <option key={t} value={t} />)}
-              </datalist>
-            )}
-          </label>
+    <Modal open onClose={onClose} title={isEdit ? '予定を編集' : '予定を追加'}>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        {/* 繰り返し予定の編集範囲（#3） */}
+        {isEdit && isOccurrence && (
           <div className={styles.fieldLabel}>
-            種類
+            変更範囲
             <div className={styles.toggleRow}>
-              <button type="button" className={`${styles.toggleBtn} ${allDay ? styles.toggleActive : ''}`} onClick={() => setAllDay(true)}>終日</button>
-              <button type="button" className={`${styles.toggleBtn} ${!allDay ? styles.toggleActive : ''}`} onClick={() => setAllDay(false)}>時間指定</button>
+              <button type="button" className={`${styles.toggleBtn} ${editScope === 'single' ? styles.toggleActive : ''}`} onClick={() => setEditScope('single')}>この回だけ</button>
+              <button type="button" className={`${styles.toggleBtn} ${editScope === 'all' ? styles.toggleActive : ''}`} onClick={() => setEditScope('all')}>すべて</button>
             </div>
-          </div>
-          {allDay ? (
-            <>
-              <label className={styles.fieldLabel}>開始日<input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required /></label>
-              <label className={styles.fieldLabel}>終了日（任意・複数日の場合）<input className={styles.input} type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} /></label>
-            </>
-          ) : (
-            <>
-              <label className={styles.fieldLabel}>開始<input className={styles.input} type="datetime-local" value={startDt} onChange={e => {
-                const v = e.target.value
-                setStartDt(v)
-                // 開始を動かしたら、終了が開始以前になった場合は開始+1時間へ自動追従
-                if (v && endDt && endDt <= v) {
-                  const base = new Date(v); base.setHours(base.getHours() + 1)
-                  setEndDt(toLocalInput(base))
-                }
-              }} required /></label>
-              <label className={styles.fieldLabel}>終了<input className={styles.input} type="datetime-local" value={endDt} min={startDt} onChange={e => setEndDt(e.target.value)} required /></label>
-              <div className={styles.durationChips}>
-                <span className={styles.durationLabel}>所要</span>
-                <button type="button" className={styles.durationChip} onClick={() => setDuration(30)}>30分</button>
-                <button type="button" className={styles.durationChip} onClick={() => setDuration(60)}>1時間</button>
-                <button type="button" className={styles.durationChip} onClick={() => setDuration(120)}>2時間</button>
-                <button type="button" className={styles.durationChip} onClick={() => setDuration(180)}>3時間</button>
-              </div>
-            </>
-          )}
-          {members.length > 0 && (
-            <div className={styles.fieldLabel}>
-              誰の予定？
-              <div className={styles.memberSelect}>
-                <button type="button" className={`${styles.memberOption} ${!memberId ? styles.memberOptionActive : ''}`} style={!memberId ? { '--active-color': 'var(--primary)' } : {}} onClick={() => setMemberId('')}>
-                  <span className={styles.memberDot} style={{ background: 'var(--gray-300)' }} />家族全員
-                </button>
-                {members.map((m, i) => {
-                  const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
-                  return (
-                    <button key={m.id} type="button" className={`${styles.memberOption} ${memberId === m.id ? styles.memberOptionActive : ''}`} style={memberId === m.id ? { '--active-color': color } : {}} onClick={() => setMemberId(m.id)}>
-                      <span className={styles.memberDot} style={{ background: color }} />{m.name}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {/* カテゴリ（#10） */}
-          <div className={styles.fieldLabel}>
-            カテゴリ（任意）
-            <div className={styles.categorySelect}>
-              <button type="button" className={`${styles.categoryChip} ${!category ? styles.categoryChipActive : ''}`} onClick={() => setCategory('')}>
-                なし
-              </button>
-              {CATEGORIES.map(c => (
-                <button
-                  key={c.key}
-                  type="button"
-                  className={`${styles.categoryChip} ${category === c.key ? styles.categoryChipActive : ''}`}
-                  style={{ '--cat-color': c.color }}
-                  onClick={() => setCategory(c.key)}
-                >
-                  <span className={styles.categoryDot} style={{ background: c.color }} />{c.key}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 繰り返し（#3） */}
-          <label className={styles.fieldLabel}>
-            繰り返し
-            <select className={styles.input} value={recurrence} onChange={e => setRecurrence(e.target.value)}>
-              {RECURRENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
-          {recurrence !== 'none' && (
-            <label className={styles.fieldLabel}>
-              繰り返し終了日（任意・空欄で無期限）
-              <input className={styles.input} type="date" value={recurrenceUntil} min={allDay ? startDate : undefined} onChange={e => setRecurrenceUntil(e.target.value)} />
-            </label>
-          )}
-
-          {/* リマインダー（#4・終日は当日朝基準） */}
-          <label className={styles.fieldLabel}>
-            リマインダー通知
-            <select className={styles.input} value={reminderMinutes} onChange={e => setReminderMinutes(e.target.value)}>
-              {(allDay ? ALLDAY_REMINDER_OPTIONS : REMINDER_OPTIONS).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
-
-          {/* 場所（#9） */}
-          <label className={styles.fieldLabel}>場所（任意）<input className={styles.input} value={location} onChange={e => setLocation(e.target.value)} placeholder="例: 〇〇病院、東京駅..." maxLength={120} /></label>
-          <label className={styles.fieldLabel}>メモ（任意）<input className={styles.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="詳細など..." maxLength={200} /></label>
-          {!isEdit && (
-            <label className={styles.continueToggle}>
-              <input type="checkbox" checked={continueMode} onChange={e => setContinueMode(e.target.checked)} />
-              続けて追加する（保存後に入力欄をリセット）
-            </label>
-          )}
-          <div className={styles.formBtns}>
-            {isEdit && <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>}
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>{continueMode && !isEdit ? '完了' : 'キャンセル'}</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !title.trim()}>{submitting ? '保存中...' : isEdit ? '保存' : continueMode ? '追加して次へ' : '追加'}</button>
-          </div>
-        </form>
-        {isEdit && history.length > 0 && (
-          <div className={styles.historySection}>
-            <p className={styles.historySectionTitle}>変更履歴</p>
-            <ul className={styles.historyList}>
-              {history.map(h => (
-                <li key={h.id} className={styles.historyItem}>
-                  <span className={`${styles.historyAction} ${h.action === 'created' ? styles.historyActionCreated : styles.historyActionUpdated}`}>
-                    {h.action === 'created' ? '作成' : '更新'}
-                  </span>
-                  <span className={styles.historyDate}>
-                    {new Date(h.changed_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  {h.changed_by_name && (
-                    <span className={styles.historyBy}>{h.changed_by_name}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
           </div>
         )}
-      </div>
-    </div>
+        <label className={styles.fieldLabel}>
+          タイトル
+          <input ref={titleRef} list="schedule-title-suggestions" className={styles.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="例: 家族でお出かけ、歯医者..." maxLength={100} autoFocus required />
+          {titleSuggestions.length > 0 && (
+            <datalist id="schedule-title-suggestions">
+              {titleSuggestions.map(t => <option key={t} value={t} />)}
+            </datalist>
+          )}
+        </label>
+        <div className={styles.fieldLabel}>
+          種類
+          <div className={styles.toggleRow}>
+            <button type="button" className={`${styles.toggleBtn} ${allDay ? styles.toggleActive : ''}`} onClick={() => setAllDay(true)}>終日</button>
+            <button type="button" className={`${styles.toggleBtn} ${!allDay ? styles.toggleActive : ''}`} onClick={() => setAllDay(false)}>時間指定</button>
+          </div>
+        </div>
+        {allDay ? (
+          <>
+            <label className={styles.fieldLabel}>開始日<input className={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required /></label>
+            <label className={styles.fieldLabel}>終了日（任意・複数日の場合）<input className={styles.input} type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} /></label>
+          </>
+        ) : (
+          <>
+            <label className={styles.fieldLabel}>開始<input className={styles.input} type="datetime-local" value={startDt} onChange={e => {
+              const v = e.target.value
+              setStartDt(v)
+              // 開始を動かしたら、終了が開始以前になった場合は開始+1時間へ自動追従
+              if (v && endDt && endDt <= v) {
+                const base = new Date(v); base.setHours(base.getHours() + 1)
+                setEndDt(toLocalInput(base))
+              }
+            }} required /></label>
+            <label className={styles.fieldLabel}>終了<input className={styles.input} type="datetime-local" value={endDt} min={startDt} onChange={e => setEndDt(e.target.value)} required /></label>
+            <div className={styles.durationChips}>
+              <span className={styles.durationLabel}>所要</span>
+              <button type="button" className={styles.durationChip} onClick={() => setDuration(30)}>30分</button>
+              <button type="button" className={styles.durationChip} onClick={() => setDuration(60)}>1時間</button>
+              <button type="button" className={styles.durationChip} onClick={() => setDuration(120)}>2時間</button>
+              <button type="button" className={styles.durationChip} onClick={() => setDuration(180)}>3時間</button>
+            </div>
+          </>
+        )}
+        {members.length > 0 && (
+          <div className={styles.fieldLabel}>
+            誰の予定？
+            <div className={styles.memberSelect}>
+              <button type="button" className={`${styles.memberOption} ${!memberId ? styles.memberOptionActive : ''}`} style={!memberId ? { '--active-color': 'var(--primary)' } : {}} onClick={() => setMemberId('')}>
+                <span className={styles.memberDot} style={{ background: 'var(--gray-300)' }} />家族全員
+              </button>
+              {members.map((m, i) => {
+                const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
+                return (
+                  <button key={m.id} type="button" className={`${styles.memberOption} ${memberId === m.id ? styles.memberOptionActive : ''}`} style={memberId === m.id ? { '--active-color': color } : {}} onClick={() => setMemberId(m.id)}>
+                    <span className={styles.memberDot} style={{ background: color }} />{m.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+        {/* カテゴリ（#10） */}
+        <div className={styles.fieldLabel}>
+          カテゴリ（任意）
+          <div className={styles.categorySelect}>
+            <button type="button" className={`${styles.categoryChip} ${!category ? styles.categoryChipActive : ''}`} onClick={() => setCategory('')}>
+              なし
+            </button>
+            {CATEGORIES.map(c => (
+              <button
+                key={c.key}
+                type="button"
+                className={`${styles.categoryChip} ${category === c.key ? styles.categoryChipActive : ''}`}
+                style={{ '--cat-color': c.color }}
+                onClick={() => setCategory(c.key)}
+              >
+                <span className={styles.categoryDot} style={{ background: c.color }} />{c.key}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 繰り返し（#3） */}
+        <label className={styles.fieldLabel}>
+          繰り返し
+          <select className={styles.input} value={recurrence} onChange={e => setRecurrence(e.target.value)}>
+            {RECURRENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </label>
+        {recurrence !== 'none' && (
+          <label className={styles.fieldLabel}>
+            繰り返し終了日（任意・空欄で無期限）
+            <input className={styles.input} type="date" value={recurrenceUntil} min={allDay ? startDate : undefined} onChange={e => setRecurrenceUntil(e.target.value)} />
+          </label>
+        )}
+
+        {/* リマインダー（#4・終日は当日朝基準） */}
+        <label className={styles.fieldLabel}>
+          リマインダー通知
+          <select className={styles.input} value={reminderMinutes} onChange={e => setReminderMinutes(e.target.value)}>
+            {(allDay ? ALLDAY_REMINDER_OPTIONS : REMINDER_OPTIONS).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </label>
+
+        {/* 場所（#9） */}
+        <label className={styles.fieldLabel}>場所（任意）<input className={styles.input} value={location} onChange={e => setLocation(e.target.value)} placeholder="例: 〇〇病院、東京駅..." maxLength={120} /></label>
+        <label className={styles.fieldLabel}>メモ（任意）<input className={styles.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="詳細など..." maxLength={200} /></label>
+        {!isEdit && (
+          <label className={styles.continueToggle}>
+            <input type="checkbox" checked={continueMode} onChange={e => setContinueMode(e.target.checked)} />
+            続けて追加する（保存後に入力欄をリセット）
+          </label>
+        )}
+        <div className={styles.formBtns}>
+          {isEdit && <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>}
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>{continueMode && !isEdit ? '完了' : 'キャンセル'}</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !title.trim()}>{submitting ? '保存中...' : isEdit ? '保存' : continueMode ? '追加して次へ' : '追加'}</button>
+        </div>
+      </form>
+      {isEdit && history.length > 0 && (
+        <div className={styles.historySection}>
+          <p className={styles.historySectionTitle}>変更履歴</p>
+          <ul className={styles.historyList}>
+            {history.map(h => (
+              <li key={h.id} className={styles.historyItem}>
+                <span className={`${styles.historyAction} ${h.action === 'created' ? styles.historyActionCreated : styles.historyActionUpdated}`}>
+                  {h.action === 'created' ? '作成' : '更新'}
+                </span>
+                <span className={styles.historyDate}>
+                  {new Date(h.changed_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {h.changed_by_name && (
+                  <span className={styles.historyBy}>{h.changed_by_name}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Modal>
   )
 }
 
@@ -1964,42 +1959,43 @@ function DayDetailModal({ dateStr, events, memberColorMap, unreadMap = {}, onEve
   const holiday = getHoliday(dateStr)
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.sheet}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>{label}{holiday && <span className={styles.dayHolidayTag}>{holiday}</span>}</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-        <div className={styles.dayList}>
-          {dayEvents.length === 0 ? (
-            <p className={styles.dayEmpty}>予定はありません</p>
-          ) : (
-            dayEvents.map(ev => (
-              <button
-                key={ev.id}
-                className={styles.dayRow}
-                style={{ '--chip-color': ev.shift_type ? (SHIFT_COLORS[ev.shift_type] ?? '#8E81B5') : eventColor(ev, memberColorMap) }}
-                onClick={() => onEventClick(ev)}
-              >
-                <span className={styles.dayRowBar} />
-                <span className={styles.dayRowTime}>{ev.shift_type ? ev.shift_type : eventTimeLabel(ev)}</span>
-                <span className={styles.dayRowBody}>
-                  <span className={styles.dayRowTitle}>
-                    {unreadMap[masterId(ev)] && <span className={styles.unreadDot} aria-label="新着コメント" />}
-                    {ev.is_occurrence && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
-                    {ev.title}
-                  </span>
-                  {ev.member?.name && <span className={styles.dayRowMember}>{ev.member.name}</span>}
+    <Modal
+      open
+      onClose={onClose}
+      title={<>{label}{holiday && <span className={styles.dayHolidayTag}>{holiday}</span>}</>}
+      variant="plain"
+      size="auto"
+      className={styles.sheet}
+    >
+      <div className={styles.dayList}>
+        {dayEvents.length === 0 ? (
+          <p className={styles.dayEmpty}>予定はありません</p>
+        ) : (
+          dayEvents.map(ev => (
+            <button
+              key={ev.id}
+              className={styles.dayRow}
+              style={{ '--chip-color': ev.shift_type ? (SHIFT_COLORS[ev.shift_type] ?? '#8E81B5') : eventColor(ev, memberColorMap) }}
+              onClick={() => onEventClick(ev)}
+            >
+              <span className={styles.dayRowBar} />
+              <span className={styles.dayRowTime}>{ev.shift_type ? ev.shift_type : eventTimeLabel(ev)}</span>
+              <span className={styles.dayRowBody}>
+                <span className={styles.dayRowTitle}>
+                  {unreadMap[masterId(ev)] && <span className={styles.unreadDot} aria-label="新着コメント" />}
+                  {ev.is_occurrence && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
+                  {ev.title}
                 </span>
-              </button>
-            ))
-          )}
-        </div>
-        <div className={styles.dayAddBar}>
-          <button className={styles.saveBtn} onClick={onAdd}>＋ この日に予定を追加</button>
-        </div>
+                {ev.member?.name && <span className={styles.dayRowMember}>{ev.member.name}</span>}
+              </span>
+            </button>
+          ))
+        )}
       </div>
-    </div>
+      <div className={styles.dayAddBar}>
+        <button className={styles.saveBtn} onClick={onAdd}>＋ この日に予定を追加</button>
+      </div>
+    </Modal>
   )
 }
 
@@ -2018,92 +2014,85 @@ function EventDetailModal({ event, familyMember, memberColorMap, onNotifyComment
   })()
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>予定の詳細</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <Modal open onClose={onClose} title="予定の詳細">
+      <div className={styles.detailBody}>
+        <div className={styles.detailTitleRow}>
+          <span className={styles.detailColorBar} style={{ background: color }} />
+          <h3 className={styles.detailTitle}>{event.title}</h3>
         </div>
 
-        <div className={styles.detailBody}>
-          <div className={styles.detailTitleRow}>
-            <span className={styles.detailColorBar} style={{ background: color }} />
-            <h3 className={styles.detailTitle}>{event.title}</h3>
+        <dl className={styles.detailList}>
+          <div className={styles.detailItem}>
+            <dt className={styles.detailLabel}>日時</dt>
+            <dd className={styles.detailValue}>{dateLabel}<br />{eventTimeLabel(event)}</dd>
           </div>
-
-          <dl className={styles.detailList}>
+          {event.recurrence && event.recurrence !== 'none' && (
             <div className={styles.detailItem}>
-              <dt className={styles.detailLabel}>日時</dt>
-              <dd className={styles.detailValue}>{dateLabel}<br />{eventTimeLabel(event)}</dd>
+              <dt className={styles.detailLabel}>繰り返し</dt>
+              <dd className={styles.detailValue}>
+                {RECURRENCE_LABELS[event.recurrence]}
+                {event.recurrence_until && `（${event.recurrence_until}まで）`}
+              </dd>
             </div>
-            {event.recurrence && event.recurrence !== 'none' && (
-              <div className={styles.detailItem}>
-                <dt className={styles.detailLabel}>繰り返し</dt>
-                <dd className={styles.detailValue}>
-                  {RECURRENCE_LABELS[event.recurrence]}
-                  {event.recurrence_until && `（${event.recurrence_until}まで）`}
-                </dd>
-              </div>
-            )}
-            {event.category && (
-              <div className={styles.detailItem}>
-                <dt className={styles.detailLabel}>カテゴリ</dt>
-                <dd className={styles.detailValue}>
-                  <span className={styles.detailChip} style={{ '--cat-color': CATEGORY_COLORS[event.category] ?? '#8E81B5' }}>
-                    <span className={styles.categoryDot} style={{ background: CATEGORY_COLORS[event.category] ?? '#8E81B5' }} />{event.category}
-                  </span>
-                </dd>
-              </div>
-            )}
-            {event.member?.name && (
-              <div className={styles.detailItem}>
-                <dt className={styles.detailLabel}>担当</dt>
-                <dd className={styles.detailValue}>{event.member.name}</dd>
-              </div>
-            )}
-            {event.reminder_minutes != null && (
-              <div className={styles.detailItem}>
-                <dt className={styles.detailLabel}>通知</dt>
-                <dd className={styles.detailValue}>{reminderLabel(event.reminder_minutes, event.all_day)}</dd>
-              </div>
-            )}
-            {event.location && (
-              <div className={styles.detailItem}>
-                <dt className={styles.detailLabel}>場所</dt>
-                <dd className={styles.detailValue}>
-                  {event.location}
-                  <a className={styles.mapLink} href={mapsUrl(event.location)} target="_blank" rel="noopener noreferrer">地図で開く</a>
-                </dd>
-              </div>
-            )}
-            {event.memo && (
-              <div className={styles.detailItem}>
-                <dt className={styles.detailLabel}>メモ</dt>
-                <dd className={styles.detailValue}>{event.memo}</dd>
-              </div>
-            )}
-          </dl>
+          )}
+          {event.category && (
+            <div className={styles.detailItem}>
+              <dt className={styles.detailLabel}>カテゴリ</dt>
+              <dd className={styles.detailValue}>
+                <span className={styles.detailChip} style={{ '--cat-color': CATEGORY_COLORS[event.category] ?? '#8E81B5' }}>
+                  <span className={styles.categoryDot} style={{ background: CATEGORY_COLORS[event.category] ?? '#8E81B5' }} />{event.category}
+                </span>
+              </dd>
+            </div>
+          )}
+          {event.member?.name && (
+            <div className={styles.detailItem}>
+              <dt className={styles.detailLabel}>担当</dt>
+              <dd className={styles.detailValue}>{event.member.name}</dd>
+            </div>
+          )}
+          {event.reminder_minutes != null && (
+            <div className={styles.detailItem}>
+              <dt className={styles.detailLabel}>通知</dt>
+              <dd className={styles.detailValue}>{reminderLabel(event.reminder_minutes, event.all_day)}</dd>
+            </div>
+          )}
+          {event.location && (
+            <div className={styles.detailItem}>
+              <dt className={styles.detailLabel}>場所</dt>
+              <dd className={styles.detailValue}>
+                {event.location}
+                <a className={styles.mapLink} href={mapsUrl(event.location)} target="_blank" rel="noopener noreferrer">地図で開く</a>
+              </dd>
+            </div>
+          )}
+          {event.memo && (
+            <div className={styles.detailItem}>
+              <dt className={styles.detailLabel}>メモ</dt>
+              <dd className={styles.detailValue}>{event.memo}</dd>
+            </div>
+          )}
+        </dl>
 
-          <EventReactions eventId={eid} familyMember={familyMember} />
+        <EventReactions eventId={eid} familyMember={familyMember} />
 
-          <EventComments eventId={eid} familyMember={familyMember} eventTitle={event.title} onCommented={onNotifyComment} />
-        </div>
-
-        {/* 繰り返し予定は「この回だけ削除」を用意（#3） */}
-        {isRecurring && (
-          <div className={styles.recurDeleteRow}>
-            <button type="button" className={styles.recurDeleteBtn} onClick={onDeleteOccurrence}>この回だけ削除</button>
-            <span className={styles.recurDeleteHint}>繰り返し予定（{RECURRENCE_LABELS[event.recurrence]}）</span>
-          </div>
-        )}
-
-        <div className={styles.formBtns}>
-          <button type="button" className={styles.deleteBtn} onClick={onDelete}>{isRecurring ? 'すべて削除' : '削除'}</button>
-          <button type="button" className={styles.cancelBtn} onClick={onClose}>閉じる</button>
-          <button type="button" className={styles.saveBtn} onClick={onEdit}>編集</button>
-        </div>
+        <EventComments eventId={eid} familyMember={familyMember} eventTitle={event.title} onCommented={onNotifyComment} />
       </div>
-    </div>
+
+      {/* 繰り返し予定は「この回だけ削除」を用意（#3） */}
+      {isRecurring && (
+        <div className={styles.recurDeleteRow}>
+          <button type="button" className={styles.recurDeleteBtn} onClick={onDeleteOccurrence}>この回だけ削除</button>
+          <span className={styles.recurDeleteHint}>繰り返し予定（{RECURRENCE_LABELS[event.recurrence]}）</span>
+        </div>
+      )}
+
+      <div className={styles.formBtns}>
+        <button type="button" className={styles.deleteBtn} onClick={onDelete}>{isRecurring ? 'すべて削除' : '削除'}</button>
+        <button type="button" className={styles.cancelBtn} onClick={onClose}>閉じる</button>
+        <button type="button" className={styles.saveBtn} onClick={onEdit}>編集</button>
+      </div>
+    </Modal>
   )
 }
 
@@ -2338,54 +2327,48 @@ function SearchModal({ familyMember, memberColorMap, onSelect, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>予定を検索</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-        <input
-          className={styles.input}
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="タイトル・メモ・場所で検索..."
-          autoFocus
-        />
-        <div className={styles.searchResults}>
-          {loading && <p className={styles.searchHint}>検索中...</p>}
-          {!loading && searched && results.length === 0 && (
-            <p className={styles.searchHint}>「{q.trim()}」に一致する予定はありません</p>
-          )}
-          {!loading && !searched && (
-            <p className={styles.searchHint}>キーワードを入力してください</p>
-          )}
-          {results.map(ev => {
-            const past = ev._eff < toDateStr(new Date())
-            return (
-              <button
-                key={ev.id}
-                className={`${styles.searchRow} ${past ? styles.searchRowPast : ''}`}
-                style={{ '--chip-color': eventColor(ev, memberColorMap) }}
-                onClick={() => onSelect(ev)}
-              >
-                <span className={styles.searchBar} />
-                <span className={styles.searchBody}>
-                  <span className={styles.searchTitle}>
-                    {ev.recurrence && ev.recurrence !== 'none' && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
-                    {ev.title}
-                  </span>
-                  <span className={styles.searchMeta}>
-                    {dateLabel(ev)}
-                    {ev.location && ` ・ ${ev.location}`}
-                    {ev.member?.name && ` ・ ${ev.member.name}`}
-                  </span>
+    <Modal open onClose={onClose} title="予定を検索">
+      <input
+        className={styles.input}
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        placeholder="タイトル・メモ・場所で検索..."
+        autoFocus
+      />
+      <div className={styles.searchResults}>
+        {loading && <p className={styles.searchHint}>検索中...</p>}
+        {!loading && searched && results.length === 0 && (
+          <p className={styles.searchHint}>「{q.trim()}」に一致する予定はありません</p>
+        )}
+        {!loading && !searched && (
+          <p className={styles.searchHint}>キーワードを入力してください</p>
+        )}
+        {results.map(ev => {
+          const past = ev._eff < toDateStr(new Date())
+          return (
+            <button
+              key={ev.id}
+              className={`${styles.searchRow} ${past ? styles.searchRowPast : ''}`}
+              style={{ '--chip-color': eventColor(ev, memberColorMap) }}
+              onClick={() => onSelect(ev)}
+            >
+              <span className={styles.searchBar} />
+              <span className={styles.searchBody}>
+                <span className={styles.searchTitle}>
+                  {ev.recurrence && ev.recurrence !== 'none' && <span className={styles.recurBadge} aria-hidden="true">↻</span>}
+                  {ev.title}
                 </span>
-              </button>
-            )
-          })}
-        </div>
+                <span className={styles.searchMeta}>
+                  {dateLabel(ev)}
+                  {ev.location && ` ・ ${ev.location}`}
+                  {ev.member?.name && ` ・ ${ev.member.name}`}
+                </span>
+              </span>
+            </button>
+          )
+        })}
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -2398,31 +2381,29 @@ function MonthPickerModal({ baseDate, onSelect, onClose }) {
   const todayY = new Date().getFullYear()
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.pickerModal}>
-        <div className={styles.pickerYearRow}>
-          <button className={styles.pickerYearBtn} onClick={() => setYear(y => y - 1)} aria-label="前の年">‹</button>
-          <span className={styles.pickerYear}>{year}年</span>
-          <button className={styles.pickerYearBtn} onClick={() => setYear(y => y + 1)} aria-label="次の年">›</button>
-        </div>
-        <div className={styles.pickerGrid}>
-          {Array.from({ length: 12 }, (_, m) => {
-            const isCur = year === curY && m === curM
-            const isToday = year === todayY && m === todayM
-            return (
-              <button
-                key={m}
-                className={`${styles.pickerMonth} ${isCur ? styles.pickerMonthActive : ''} ${isToday ? styles.pickerMonthToday : ''}`}
-                onClick={() => onSelect(year, m)}
-              >
-                {m + 1}月
-              </button>
-            )
-          })}
-        </div>
-        <button className={styles.cancelBtn} onClick={onClose}>閉じる</button>
+    <Modal open onClose={onClose} variant="plain" size="auto" className={styles.pickerModal}>
+      <div className={styles.pickerYearRow}>
+        <button className={styles.pickerYearBtn} onClick={() => setYear(y => y - 1)} aria-label="前の年">‹</button>
+        <span className={styles.pickerYear}>{year}年</span>
+        <button className={styles.pickerYearBtn} onClick={() => setYear(y => y + 1)} aria-label="次の年">›</button>
       </div>
-    </div>
+      <div className={styles.pickerGrid}>
+        {Array.from({ length: 12 }, (_, m) => {
+          const isCur = year === curY && m === curM
+          const isToday = year === todayY && m === todayM
+          return (
+            <button
+              key={m}
+              className={`${styles.pickerMonth} ${isCur ? styles.pickerMonthActive : ''} ${isToday ? styles.pickerMonthToday : ''}`}
+              onClick={() => onSelect(year, m)}
+            >
+              {m + 1}月
+            </button>
+          )
+        })}
+      </div>
+      <button className={styles.cancelBtn} onClick={onClose}>閉じる</button>
+    </Modal>
   )
 }
 
@@ -2466,32 +2447,29 @@ function PollsModal({ familyMember, onRefetch, onNotify, onClose }) {
   const heading = view === 'create' ? '新しい日程調整' : activePoll ? activePoll.title : '日程調整'
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          {inSub && (
-            <button className={styles.pollBack} onClick={() => { setView('list'); setActivePollId(null) }} aria-label="戻る">‹</button>
-          )}
-          <h2 className={styles.modalTitle}>{heading}</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-
-        {view === 'create' ? (
-          <PollCreate familyMember={familyMember} onNotify={onNotify} onDone={async () => { await loadPolls(); setView('list') }} />
-        ) : activePoll ? (
-          <PollVote
-            poll={activePoll}
-            familyMember={familyMember}
-            onRefetch={onRefetch}
-            onNotify={onNotify}
-            onChanged={loadPolls}
-            onClose={onClose}
-          />
-        ) : (
-          <PollList polls={polls} onCreate={() => setView('create')} onOpen={setActivePollId} />
-        )}
-      </div>
-    </div>
+    <Modal
+      open
+      onClose={onClose}
+      title={heading}
+      headerStart={inSub && (
+        <button className={styles.pollBack} onClick={() => { setView('list'); setActivePollId(null) }} aria-label="戻る">‹</button>
+      )}
+    >
+      {view === 'create' ? (
+        <PollCreate familyMember={familyMember} onNotify={onNotify} onDone={async () => { await loadPolls(); setView('list') }} />
+      ) : activePoll ? (
+        <PollVote
+          poll={activePoll}
+          familyMember={familyMember}
+          onRefetch={onRefetch}
+          onNotify={onNotify}
+          onChanged={loadPolls}
+          onClose={onClose}
+        />
+      ) : (
+        <PollList polls={polls} onCreate={() => setView('create')} onOpen={setActivePollId} />
+      )}
+    </Modal>
   )
 }
 

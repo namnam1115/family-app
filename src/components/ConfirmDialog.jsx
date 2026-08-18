@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import styles from './ConfirmDialog.module.css'
 
 /**
@@ -36,7 +37,8 @@ export default function ConfirmDialog({
 
   if (!open) return null
 
-  return (
+  // Modal のパネル内から呼ばれても重なり順・クリップの影響を受けないよう body 直下へ描画する
+  return createPortal(
     <div
       className={styles.overlay}
       onClick={e => { if (e.target === e.currentTarget) onCancel?.() }}
@@ -59,6 +61,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

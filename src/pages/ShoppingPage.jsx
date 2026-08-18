@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import ShoppingItemList from '../components/ShoppingItemList'
 import NotificationSettings from '../components/NotificationSettings'
 import ConfirmDialog from '../components/ConfirmDialog'
+import Modal from '../components/Modal'
 import BottomNav from '../components/BottomNav'
 import EmptyState from '../components/EmptyState'
 import Toast from '../components/Toast'
@@ -243,30 +244,24 @@ function CreateListModal({ onSubmit, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>新しいリスト</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <Modal open onClose={onClose} title="新しいリスト">
+      <form onSubmit={handleSubmit} className={styles.modalForm}>
+        <input
+          className={styles.modalInput}
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="リスト名を入力..."
+          maxLength={50}
+          autoFocus
+        />
+        <div className={styles.modalBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
+            {submitting ? '作成中...' : '作成'}
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className={styles.modalForm}>
-          <input
-            className={styles.modalInput}
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="リスト名を入力..."
-            maxLength={50}
-            autoFocus
-          />
-          <div className={styles.modalBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
-              {submitting ? '作成中...' : '作成'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }

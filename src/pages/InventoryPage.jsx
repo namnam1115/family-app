@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import {
-  IconInventory, IconShopping, IconClose, IconDot, IconWarning, IconSchedule,
+  IconInventory, IconShopping, IconDot, IconWarning, IconSchedule,
 } from '../lib/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Modal from '../components/Modal'
 import styles from './InventoryPage.module.css'
 
 const CATEGORIES = [
@@ -438,102 +439,95 @@ function ItemModal({ item, familyMember, onClose, onSaved }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>{isEdit ? '品目を編集' : '品目を追加'}</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
+    <Modal open onClose={onClose} title={isEdit ? '品目を編集' : '品目を追加'} variant="sheet">
+      <div className={styles.formBody}>
+        <label className={styles.label}>品名 *</label>
+        <input
+          className={styles.input}
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="例：牛乳、シャンプー"
+          autoFocus
+        />
+
+        <label className={styles.label}>カテゴリ</label>
+        <select className={styles.select} value={category} onChange={e => setCategory(e.target.value)}>
+          {CATEGORIES.filter(c => c.value !== 'all').map(c => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+
+        <label className={styles.label}>初期ストック状態</label>
+        <div className={styles.statusSelectRow}>
+          {['ok', 'low', 'out'].map(s => (
+            <button
+              key={s}
+              className={`${styles.statusSelectBtn} ${stockStatus === s ? styles.statusSelectActive : ''}`}
+              style={stockStatus === s ? { borderColor: STATUS_CONFIG[s].color, color: STATUS_CONFIG[s].color } : {}}
+              onClick={() => setStockStatus(s)}
+            >
+              {STATUS_CONFIG[s].label}
+            </button>
+          ))}
         </div>
 
-        <div className={styles.formBody}>
-          <label className={styles.label}>品名 *</label>
-          <input
-            className={styles.input}
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="例：牛乳、シャンプー"
-            autoFocus
-          />
-
-          <label className={styles.label}>カテゴリ</label>
-          <select className={styles.select} value={category} onChange={e => setCategory(e.target.value)}>
-            {CATEGORIES.filter(c => c.value !== 'all').map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-
-          <label className={styles.label}>初期ストック状態</label>
-          <div className={styles.statusSelectRow}>
-            {['ok', 'low', 'out'].map(s => (
-              <button
-                key={s}
-                className={`${styles.statusSelectBtn} ${stockStatus === s ? styles.statusSelectActive : ''}`}
-                style={stockStatus === s ? { borderColor: STATUS_CONFIG[s].color, color: STATUS_CONFIG[s].color } : {}}
-                onClick={() => setStockStatus(s)}
-              >
-                {STATUS_CONFIG[s].label}
-              </button>
-            ))}
-          </div>
-
-          <label className={styles.label}>賞味期限（任意）</label>
-          <div className={styles.quickDateRow}>
-            {[
-              { label: '今日', days: 0 },
-              { label: '+3日', days: 3 },
-              { label: '+1週間', days: 7 },
-              { label: '+2週間', days: 14 },
-              { label: '+1ヶ月', days: 30 },
-              { label: '+3ヶ月', days: 90 },
-              { label: '+半年', days: 180 },
-              { label: '+1年', days: 365 },
-            ].map(({ label, days }) => (
-              <button
-                key={label}
-                type="button"
-                className={styles.quickDateBtn}
-                onClick={() => setExpiryDate(addDays(days))}
-              >
-                {label}
-              </button>
-            ))}
+        <label className={styles.label}>賞味期限（任意）</label>
+        <div className={styles.quickDateRow}>
+          {[
+            { label: '今日', days: 0 },
+            { label: '+3日', days: 3 },
+            { label: '+1週間', days: 7 },
+            { label: '+2週間', days: 14 },
+            { label: '+1ヶ月', days: 30 },
+            { label: '+3ヶ月', days: 90 },
+            { label: '+半年', days: 180 },
+            { label: '+1年', days: 365 },
+          ].map(({ label, days }) => (
             <button
+              key={label}
               type="button"
-              className={`${styles.quickDateBtn} ${styles.quickDateBtnClear}`}
-              onClick={() => setExpiryDate('')}
+              className={styles.quickDateBtn}
+              onClick={() => setExpiryDate(addDays(days))}
             >
-              なし
+              {label}
             </button>
-          </div>
-          <input
-            className={styles.input}
-            type="date"
-            value={expiryDate}
-            onChange={e => setExpiryDate(e.target.value)}
-          />
-
-          <label className={styles.label}>メモ（任意）</label>
-          <input
-            className={styles.input}
-            type="text"
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="例：〇〇スーパーで購入"
-          />
-
-          {error && <p className={styles.formError}>{error}</p>}
-
+          ))}
           <button
-            className={styles.saveBtn}
-            onClick={handleSave}
-            disabled={saving}
+            type="button"
+            className={`${styles.quickDateBtn} ${styles.quickDateBtnClear}`}
+            onClick={() => setExpiryDate('')}
           >
-            {saving ? '保存中…' : isEdit ? '更新する' : '追加する'}
+            なし
           </button>
         </div>
+        <input
+          className={styles.input}
+          type="date"
+          value={expiryDate}
+          onChange={e => setExpiryDate(e.target.value)}
+        />
+
+        <label className={styles.label}>メモ（任意）</label>
+        <input
+          className={styles.input}
+          type="text"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="例：〇〇スーパーで購入"
+        />
+
+        {error && <p className={styles.formError}>{error}</p>}
+
+        <button
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? '保存中…' : isEdit ? '更新する' : '追加する'}
+        </button>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -547,93 +541,86 @@ function AddToShoppingModal({ items, selectedIds, onToggle, shoppingLists, targe
   })
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.shoppingModal} onClick={e => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>買い物リストに追加</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
-        </div>
+    <Modal open onClose={onClose} title="買い物リストに追加" variant="sheet">
+      <div className={styles.formBody}>
+        <label className={styles.label}>追加先リスト</label>
+        <select className={styles.select} value={targetListId || ''} onChange={e => onListChange(e.target.value)}>
+          <option value="">リストを選択してください</option>
+          {shoppingLists.map(list => (
+            <option key={list.id} value={list.id}>{list.name}</option>
+          ))}
+        </select>
 
-        <div className={styles.formBody}>
-          <label className={styles.label}>追加先リスト</label>
-          <select className={styles.select} value={targetListId || ''} onChange={e => onListChange(e.target.value)}>
-            <option value="">リストを選択してください</option>
-            {shoppingLists.map(list => (
-              <option key={list.id} value={list.id}>{list.name}</option>
-            ))}
-          </select>
-
-          {outItems.length > 0 && (
-            <div className={styles.itemCheckSection}>
-              <div className={styles.sectionTitle}><IconDot style={{ color: 'var(--danger)' }} /> 切れ ({outItems.length}件)</div>
-              <div className={styles.itemCheckList}>
-                {outItems.map(item => (
-                  <label key={item.id} className={styles.checkItem}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(item.id)}
-                      onChange={() => onToggle(item.id)}
-                    />
-                    <span>{item.name}</span>
-                  </label>
-                ))}
-              </div>
+        {outItems.length > 0 && (
+          <div className={styles.itemCheckSection}>
+            <div className={styles.sectionTitle}><IconDot style={{ color: 'var(--danger)' }} /> 切れ ({outItems.length}件)</div>
+            <div className={styles.itemCheckList}>
+              {outItems.map(item => (
+                <label key={item.id} className={styles.checkItem}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => onToggle(item.id)}
+                  />
+                  <span>{item.name}</span>
+                </label>
+              ))}
             </div>
-          )}
-
-          {lowItems.length > 0 && (
-            <div className={styles.itemCheckSection}>
-              <div className={styles.sectionTitle}><IconDot style={{ color: 'var(--warning)' }} /> 少ない ({lowItems.length}件)</div>
-              <div className={styles.itemCheckList}>
-                {lowItems.map(item => (
-                  <label key={item.id} className={styles.checkItem}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(item.id)}
-                      onChange={() => onToggle(item.id)}
-                    />
-                    <span>{item.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {expiryItems.length > 0 && (
-            <div className={styles.itemCheckSection}>
-              <div className={styles.sectionTitle}><IconWarning style={{ color: 'var(--warning)' }} /> 期限切れ・期限間近 ({expiryItems.length}件)</div>
-              <div className={styles.itemCheckList}>
-                {expiryItems.map(item => {
-                  const expInfo = getExpiryInfo(item.expiry_date)
-                  return (
-                    <label key={item.id} className={styles.checkItem}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(item.id)}
-                        onChange={() => onToggle(item.id)}
-                      />
-                      <span>{item.name} <span style={{ fontSize: '0.75rem', color: expInfo.color }}><IconSchedule /> {expInfo.label}</span></span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {error && <p className={styles.formError}>{error}</p>}
-
-          <div className={styles.modalBtns}>
-            <button className={styles.cancelBtn} onClick={onClose} disabled={loading}>キャンセル</button>
-            <button
-              className={styles.saveBtn}
-              onClick={onAddToShopping}
-              disabled={loading || selectedCount === 0 || !targetListId}
-            >
-              {loading ? '追加中…' : `${selectedCount}件を追加`}
-            </button>
           </div>
+        )}
+
+        {lowItems.length > 0 && (
+          <div className={styles.itemCheckSection}>
+            <div className={styles.sectionTitle}><IconDot style={{ color: 'var(--warning)' }} /> 少ない ({lowItems.length}件)</div>
+            <div className={styles.itemCheckList}>
+              {lowItems.map(item => (
+                <label key={item.id} className={styles.checkItem}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => onToggle(item.id)}
+                  />
+                  <span>{item.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {expiryItems.length > 0 && (
+          <div className={styles.itemCheckSection}>
+            <div className={styles.sectionTitle}><IconWarning style={{ color: 'var(--warning)' }} /> 期限切れ・期限間近 ({expiryItems.length}件)</div>
+            <div className={styles.itemCheckList}>
+              {expiryItems.map(item => {
+                const expInfo = getExpiryInfo(item.expiry_date)
+                return (
+                  <label key={item.id} className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => onToggle(item.id)}
+                    />
+                    <span>{item.name} <span style={{ fontSize: '0.75rem', color: expInfo.color }}><IconSchedule /> {expInfo.label}</span></span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {error && <p className={styles.formError}>{error}</p>}
+
+        <div className={styles.modalBtns}>
+          <button className={styles.cancelBtn} onClick={onClose} disabled={loading}>キャンセル</button>
+          <button
+            className={styles.saveBtn}
+            onClick={onAddToShopping}
+            disabled={loading || selectedCount === 0 || !targetListId}
+          >
+            {loading ? '追加中…' : `${selectedCount}件を追加`}
+          </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

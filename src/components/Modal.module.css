@@ -1,0 +1,163 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 20, 50, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 300;
+  animation: modalFadeIn 0.2s ease both;
+}
+
+@media (min-width: 480px) {
+  .overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+}
+
+.panel {
+  width: 100%;
+  position: relative;
+}
+
+.panel:focus {
+  outline: none;
+}
+
+.sm { max-width: 380px; }
+.md { max-width: 480px; }
+.lg { max-width: 640px; }
+
+/* 既定: 不透明カード（買い物・予定・お出かけ・価格・家計・おかず） */
+.card {
+  max-height: 90dvh;
+  overflow-y: auto;
+  animation: modalSlideUp 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.75rem 1.75rem calc(1.75rem + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-radius: 1.75rem 1.75rem 0 0;
+  box-shadow: 0 -8px 48px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+/* ボトムシートのつまみ（モバイルのみ） */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+}
+
+@media (min-width: 480px) {
+  .card {
+    border-radius: 1.75rem;
+    padding-bottom: 1.75rem;
+    animation: modalScaleIn 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+  .card::before { display: none; }
+}
+
+/* グラス調シート（在庫・旅行）。ヘッダーを上部に固定する */
+.sheet {
+  max-height: 92dvh;
+  overflow-y: auto;
+  animation: modalSlideUp 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+@media (min-width: 480px) {
+  .sheet {
+    max-height: 90dvh;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    animation: modalScaleIn 0.25s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card > .header {
+  padding-top: 0.5rem;
+}
+
+.sheet > .header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.sheet .title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.closeBtn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: none;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter 0.2s ease;
+}
+
+.closeBtn:active {
+  filter: brightness(0.94);
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}

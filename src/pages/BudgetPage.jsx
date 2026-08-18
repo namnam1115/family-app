@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Modal from '../components/Modal'
 import styles from './BudgetPage.module.css'
 
 export default function BudgetPage() {
@@ -421,35 +422,29 @@ function AddCategoryModal({ onSubmit, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>費目を追加</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <Modal open onClose={onClose} title="費目を追加">
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.label}>
+          費目名
+          <input
+            className={styles.input}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="例: 水道代、食費、通信費..."
+            maxLength={50}
+            autoFocus
+            required
+          />
+        </label>
+        {error && <p className={styles.errorMsg}>{error}</p>}
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
+            {submitting ? '追加中...' : '追加'}
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label}>
-            費目名
-            <input
-              className={styles.input}
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="例: 水道代、食費、通信費..."
-              maxLength={50}
-              autoFocus
-              required
-            />
-          </label>
-          {error && <p className={styles.errorMsg}>{error}</p>}
-          <div className={styles.formBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
-              {submitting ? '追加中...' : '追加'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -473,69 +468,63 @@ function EntryModal({ categories, members, initialCategoryId, initialData, onSub
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>{isEdit ? '予算を編集' : '予算を追加'}</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <Modal open onClose={onClose} title={isEdit ? '予算を編集' : '予算を追加'}>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.label}>
+          費目
+          <select
+            className={styles.input}
+            value={categoryId}
+            onChange={e => setCategoryId(e.target.value)}
+            required
+          >
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <label className={styles.label}>
+          負担者
+          <select
+            className={styles.input}
+            value={memberId}
+            onChange={e => setMemberId(e.target.value)}
+          >
+            <option value="">共通（家族全体）</option>
+            {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </label>
+        <label className={styles.label}>
+          金額（円）
+          <input
+            className={styles.input}
+            type="number"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            placeholder="例: 5000"
+            min={0}
+            max={9999999}
+            required
+          />
+        </label>
+        <label className={styles.label}>
+          メモ（任意）
+          <input
+            className={styles.input}
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="例: 毎月27日引き落とし"
+            maxLength={100}
+          />
+        </label>
+        <div className={styles.formBtns}>
+          {isEdit && onDelete && (
+            <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>
+          )}
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !categoryId || !amount}>
+            {submitting ? '保存中...' : '保存'}
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label}>
-            費目
-            <select
-              className={styles.input}
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-              required
-            >
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-          <label className={styles.label}>
-            負担者
-            <select
-              className={styles.input}
-              value={memberId}
-              onChange={e => setMemberId(e.target.value)}
-            >
-              <option value="">共通（家族全体）</option>
-              {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-          </label>
-          <label className={styles.label}>
-            金額（円）
-            <input
-              className={styles.input}
-              type="number"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              placeholder="例: 5000"
-              min={0}
-              max={9999999}
-              required
-            />
-          </label>
-          <label className={styles.label}>
-            メモ（任意）
-            <input
-              className={styles.input}
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="例: 毎月27日引き落とし"
-              maxLength={100}
-            />
-          </label>
-          <div className={styles.formBtns}>
-            {isEdit && onDelete && (
-              <button type="button" className={styles.deleteBtn} onClick={onDelete}>削除</button>
-            )}
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !categoryId || !amount}>
-              {submitting ? '保存中...' : '保存'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }

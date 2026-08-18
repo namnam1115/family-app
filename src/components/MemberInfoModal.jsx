@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
 import { IconClose, IconMail, IconSchedule } from '../lib/icons'
+import Modal from './Modal'
 import styles from './MemberInfoModal.module.css'
 
 function formatJoinedAt(joinedAt) {
@@ -19,53 +19,37 @@ function formatJoinedAt(joinedAt) {
  *   onClose: 閉じる
  */
 export default function MemberInfoModal({ member, isSelf, onClose }) {
-  useEffect(() => {
-    if (!member) return
-    function onKey(e) {
-      if (e.key === 'Escape') onClose?.()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [member, onClose])
-
   if (!member) return null
 
   const displayName = member.name || member.email || '名前未設定'
   const joinedLabel = formatJoinedAt(member.joined_at)
 
   return (
-    <div
-      className={styles.overlay}
-      onClick={e => { if (e.target === e.currentTarget) onClose?.() }}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className={styles.dialog}>
-        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="閉じる">
-          <IconClose />
-        </button>
-        <div className={styles.avatarLarge}>
-          {(member.name || member.email || '?')[0].toUpperCase()}
-        </div>
-        <h2 className={styles.name}>
-          {displayName}
-          {isSelf && <span className={styles.selfBadge}>あなた</span>}
-        </h2>
-        <dl className={styles.details}>
-          {member.email && (
-            <div className={styles.detailRow}>
-              <dt><IconMail /></dt>
-              <dd>{member.email}</dd>
-            </div>
-          )}
-          {joinedLabel && (
-            <div className={styles.detailRow}>
-              <dt><IconSchedule /></dt>
-              <dd>{joinedLabel} に参加</dd>
-            </div>
-          )}
-        </dl>
+    <Modal open onClose={onClose} variant="plain" size="auto" className={styles.dialog}>
+      <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="閉じる">
+        <IconClose />
+      </button>
+      <div className={styles.avatarLarge}>
+        {(member.name || member.email || '?')[0].toUpperCase()}
       </div>
-    </div>
+      <h2 className={styles.name}>
+        {displayName}
+        {isSelf && <span className={styles.selfBadge}>あなた</span>}
+      </h2>
+      <dl className={styles.details}>
+        {member.email && (
+          <div className={styles.detailRow}>
+            <dt><IconMail /></dt>
+            <dd>{member.email}</dd>
+          </div>
+        )}
+        {joinedLabel && (
+          <div className={styles.detailRow}>
+            <dt><IconSchedule /></dt>
+            <dd>{joinedLabel} に参加</dd>
+          </div>
+        )}
+      </dl>
+    </Modal>
   )
 }

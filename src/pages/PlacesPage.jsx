@@ -17,6 +17,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Toast from '../components/Toast'
+import Modal from '../components/Modal'
 import styles from './PlacesPage.module.css'
 
 
@@ -1093,79 +1094,73 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>行きたい場所を追加</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label}>
-            場所を検索（マップ連携）
-            <input
-              ref={inputRef}
-              className={styles.input}
-              type="text"
-              defaultValue=""
-              placeholder="店名・施設名で検索（例: 海遊館）"
-              autoComplete="off"
-              autoFocus
-            />
-            <span className={styles.fieldHint}>検索して選ぶと、場所名・住所・地図が自動で入ります</span>
-            {(selectedName || address) && (
-              <p className={styles.acSelected}>
-                <IconPin /> {selectedName || address}
-                {selectedName && address && <span className={styles.acAddress}>{address}</span>}
-              </p>
-            )}
-          </label>
-          <label className={styles.label}>
-            場所名
-            <input
-              className={styles.input}
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="例: 海遊館、一蘭 梅田店..."
-              maxLength={100}
-              required
-            />
-          </label>
-          <label className={styles.label}>
-            カテゴリ
-            <div className={styles.categorySelect}>
-              {Object.entries(CATEGORIES).map(([key, { label, icon: Icon }]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`${styles.categoryOption} ${category === key ? styles.categoryOptionActive : ''}`}
-                  onClick={() => setCategory(key)}
-                ><Icon /> {label}</button>
-              ))}
-            </div>
-          </label>
-          <label className={styles.label}>
-            タグ（任意・複数可）
-            <TagPicker tags={tags} onChange={setTags} suggestions={tagSuggestions} />
-          </label>
-          <label className={styles.label}>
-            メモ（任意）
-            <input
-              className={styles.input}
-              value={memo}
-              onChange={e => setMemo(e.target.value)}
-              placeholder="例: 友達にすすめられた、子どもと行きたい..."
-              maxLength={200}
-            />
-          </label>
-          <div className={styles.formBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
-              {submitting ? '追加中...' : '追加'}
-            </button>
+    <Modal open onClose={onClose} title="行きたい場所を追加">
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.label}>
+          場所を検索（マップ連携）
+          <input
+            ref={inputRef}
+            className={styles.input}
+            type="text"
+            defaultValue=""
+            placeholder="店名・施設名で検索（例: 海遊館）"
+            autoComplete="off"
+            autoFocus
+          />
+          <span className={styles.fieldHint}>検索して選ぶと、場所名・住所・地図が自動で入ります</span>
+          {(selectedName || address) && (
+            <p className={styles.acSelected}>
+              <IconPin /> {selectedName || address}
+              {selectedName && address && <span className={styles.acAddress}>{address}</span>}
+            </p>
+          )}
+        </label>
+        <label className={styles.label}>
+          場所名
+          <input
+            className={styles.input}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="例: 海遊館、一蘭 梅田店..."
+            maxLength={100}
+            required
+          />
+        </label>
+        <label className={styles.label}>
+          カテゴリ
+          <div className={styles.categorySelect}>
+            {Object.entries(CATEGORIES).map(([key, { label, icon: Icon }]) => (
+              <button
+                key={key}
+                type="button"
+                className={`${styles.categoryOption} ${category === key ? styles.categoryOptionActive : ''}`}
+                onClick={() => setCategory(key)}
+              ><Icon /> {label}</button>
+            ))}
           </div>
-        </form>
-      </div>
-    </div>
+        </label>
+        <label className={styles.label}>
+          タグ（任意・複数可）
+          <TagPicker tags={tags} onChange={setTags} suggestions={tagSuggestions} />
+        </label>
+        <label className={styles.label}>
+          メモ（任意）
+          <input
+            className={styles.input}
+            value={memo}
+            onChange={e => setMemo(e.target.value)}
+            placeholder="例: 友達にすすめられた、子どもと行きたい..."
+            maxLength={200}
+          />
+        </label>
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
+            {submitting ? '追加中...' : '追加'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -1184,60 +1179,54 @@ function VisitModal({ place, onSubmit, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>「{place.name}」に行った！</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <Modal open onClose={onClose} title={<>「{place.name}」に行った！</>}>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.label}>
+          訪問日
+          <input
+            className={styles.input}
+            type="date"
+            value={visitedAt}
+            onChange={e => setVisitedAt(e.target.value)}
+          />
+        </label>
+        <div className={styles.label}>
+          評価
+          <div className={styles.starRow}>
+            {[1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                type="button"
+                className={`${styles.starBtn} ${n <= rating ? styles.starActive : ''}`}
+                onClick={() => setRating(n === rating ? 0 : n)}
+                aria-label={`${n}点`}
+              >{n <= rating ? <IconStarFill /> : <IconStar />}</button>
+            ))}
+            {rating > 0 && (
+              <button type="button" className={styles.clearRating} onClick={() => setRating(0)}>
+                クリア
+              </button>
+            )}
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.label}>
-            訪問日
-            <input
-              className={styles.input}
-              type="date"
-              value={visitedAt}
-              onChange={e => setVisitedAt(e.target.value)}
-            />
-          </label>
-          <div className={styles.label}>
-            評価
-            <div className={styles.starRow}>
-              {[1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`${styles.starBtn} ${n <= rating ? styles.starActive : ''}`}
-                  onClick={() => setRating(n === rating ? 0 : n)}
-                  aria-label={`${n}点`}
-                >{n <= rating ? <IconStarFill /> : <IconStar />}</button>
-              ))}
-              {rating > 0 && (
-                <button type="button" className={styles.clearRating} onClick={() => setRating(0)}>
-                  クリア
-                </button>
-              )}
-            </div>
-          </div>
-          <label className={styles.label}>
-            ひとことレビュー（任意）
-            <input
-              className={styles.input}
-              value={review}
-              onChange={e => setReview(e.target.value)}
-              placeholder="例: 最高だった！また行きたい..."
-              maxLength={200}
-            />
-          </label>
-          <div className={styles.formBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting}>
-              {submitting ? '保存中...' : '記録する'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <label className={styles.label}>
+          ひとことレビュー（任意）
+          <input
+            className={styles.input}
+            value={review}
+            onChange={e => setReview(e.target.value)}
+            placeholder="例: 最高だった！また行きたい..."
+            maxLength={200}
+          />
+        </label>
+        <div className={styles.formBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting}>
+            {submitting ? '保存中...' : '記録する'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -1294,12 +1283,8 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>場所を編集</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
-        </div>
+    <>
+      <Modal open onClose={onClose} title="場所を編集">
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.label}>
             場所名
@@ -1362,7 +1347,7 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
             </button>
           </div>
         </form>
-      </div>
+      </Modal>
 
       <ConfirmDialog
         open={confirmDelete}
@@ -1372,7 +1357,7 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
         onConfirm={() => { setConfirmDelete(false); onDelete() }}
         onCancel={() => setConfirmDelete(false)}
       />
-    </div>
+    </>
   )
 }
 

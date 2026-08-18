@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { IconStar, IconStarFill, IconCheck, IconEdit } from '../lib/icons'
 import ConfirmDialog from './ConfirmDialog'
+import Modal from './Modal'
 import Toast from './Toast'
 import styles from './ShoppingItemList.module.css'
 
@@ -579,38 +580,32 @@ function EditItemModal({ item, onSubmit, onClose }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>アイテムを編集</h2>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる">×</button>
+    <Modal open onClose={onClose} title="アイテムを編集">
+      <form onSubmit={handleSubmit} className={styles.modalForm}>
+        <input
+          className={styles.modalInput}
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="商品名を入力..."
+          maxLength={100}
+          autoFocus
+        />
+        <input
+          className={styles.modalInput}
+          type="text"
+          value={memo}
+          onChange={e => setMemo(e.target.value)}
+          placeholder="メモ（任意）"
+          maxLength={200}
+        />
+        <div className={styles.modalBtns}>
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
+          <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
+            {submitting ? '保存中...' : '保存'}
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className={styles.modalForm}>
-          <input
-            className={styles.modalInput}
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="商品名を入力..."
-            maxLength={100}
-            autoFocus
-          />
-          <input
-            className={styles.modalInput}
-            type="text"
-            value={memo}
-            onChange={e => setMemo(e.target.value)}
-            placeholder="メモ（任意）"
-            maxLength={200}
-          />
-          <div className={styles.modalBtns}>
-            <button type="button" className={styles.cancelBtn} onClick={onClose}>キャンセル</button>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !name.trim()}>
-              {submitting ? '保存中...' : '保存'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }

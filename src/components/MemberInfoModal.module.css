@@ -1,22 +1,4 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(30, 20, 50, 0.28);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 200;
-  animation: fadeIn 0.18s ease both;
-}
 
-@media (min-width: 480px) {
-  .overlay {
-    align-items: center;
-    padding: 1rem;
-  }
-}
 
 .dialog {
   position: relative;

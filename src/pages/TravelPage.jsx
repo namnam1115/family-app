@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
-import { IconTravel, IconClose, IconPin, IconMap } from '../lib/icons'
+import { IconTravel, IconPin, IconMap } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
 import JapanMap from '../components/JapanMap'
+import Modal from '../components/Modal'
 import styles from './TravelPage.module.css'
 
 const PREFECTURES = [
@@ -339,62 +340,55 @@ function TripDetailModal({ trip, activities, onAddActivity, onDeleteActivity, on
   }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>{trip.title}</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
+    <Modal open onClose={onClose} title={trip.title} variant="sheet">
+      <div className={styles.modalBody}>
+        <div className={styles.tripInfo}>
+          <div className={styles.dateRange}>{dateRange(trip.start_date, trip.end_date)}</div>
+          {trip.prefecture && <div className={styles.tripPrefecture}><IconPin /> {trip.prefecture}</div>}
+          <div className={styles.scheduleStatus}><IconTravel /> スケジュールに自動登録済み</div>
         </div>
 
-        <div className={styles.modalBody}>
-          <div className={styles.tripInfo}>
-            <div className={styles.dateRange}>{dateRange(trip.start_date, trip.end_date)}</div>
-            {trip.prefecture && <div className={styles.tripPrefecture}><IconPin /> {trip.prefecture}</div>}
-            <div className={styles.scheduleStatus}><IconTravel /> スケジュールに自動登録済み</div>
-          </div>
-
-          <div className={styles.activitiesSection}>
-            <h3 className={styles.sectionTitle}>活動記録</h3>
-            <div className={styles.activityList}>
-              {activities.map((activity, idx) => (
-                <div key={activity.id} className={styles.activityItem}>
-                  <div className={styles.activityNum}>{idx + 1}.</div>
-                  <div className={styles.activityContent}>
-                    <div className={styles.activityTitle}>{activity.title}</div>
-                    {activity.memo && <div className={styles.activityMemo}>{activity.memo}</div>}
-                  </div>
-                  <button className={styles.deleteActivityBtn} onClick={() => onDeleteActivity(activity.id)}>×</button>
+        <div className={styles.activitiesSection}>
+          <h3 className={styles.sectionTitle}>活動記録</h3>
+          <div className={styles.activityList}>
+            {activities.map((activity, idx) => (
+              <div key={activity.id} className={styles.activityItem}>
+                <div className={styles.activityNum}>{idx + 1}.</div>
+                <div className={styles.activityContent}>
+                  <div className={styles.activityTitle}>{activity.title}</div>
+                  {activity.memo && <div className={styles.activityMemo}>{activity.memo}</div>}
                 </div>
-              ))}
-            </div>
+                <button className={styles.deleteActivityBtn} onClick={() => onDeleteActivity(activity.id)}>×</button>
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div className={styles.addActivitySection}>
-            <input
-              type="text"
-              className={styles.activityInput}
-              placeholder="活動名（例：中華街）"
-              value={newTitle}
-              onChange={e => setNewTitle(e.target.value)}
-            />
-            <input
-              type="text"
-              className={styles.activityInput}
-              placeholder="コメント（例：肉まん食べた）"
-              value={newMemo}
-              onChange={e => setNewMemo(e.target.value)}
-            />
-            {error && <p className={styles.error}>{error}</p>}
-            <button className={styles.addActivityBtn} onClick={handleAddActivity}>＋ 活動を追加</button>
-          </div>
+        <div className={styles.addActivitySection}>
+          <input
+            type="text"
+            className={styles.activityInput}
+            placeholder="活動名（例：中華街）"
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+          />
+          <input
+            type="text"
+            className={styles.activityInput}
+            placeholder="コメント（例：肉まん食べた）"
+            value={newMemo}
+            onChange={e => setNewMemo(e.target.value)}
+          />
+          {error && <p className={styles.error}>{error}</p>}
+          <button className={styles.addActivityBtn} onClick={handleAddActivity}>＋ 活動を追加</button>
+        </div>
 
-          <div className={styles.actionBtns}>
-            <button className={styles.editBtn} onClick={onEdit}>編集</button>
-            <button className={styles.deleteBtn} onClick={onDelete}>削除</button>
-          </div>
+        <div className={styles.actionBtns}>
+          <button className={styles.editBtn} onClick={onEdit}>編集</button>
+          <button className={styles.deleteBtn} onClick={onDelete}>削除</button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -430,72 +424,65 @@ function TripFormModal({ trip, onClose, onSave }) {
   }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>{isEdit ? '旅行を編集' : '新しい旅行を追加'}</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="閉じる"><IconClose /></button>
-        </div>
+    <Modal open onClose={onClose} title={isEdit ? '旅行を編集' : '新しい旅行を追加'} variant="sheet">
+      <div className={styles.modalBody}>
+        <label className={styles.label}>旅行名 *</label>
+        <input
+          type="text"
+          className={styles.input}
+          placeholder="例：横浜旅行"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          autoFocus
+        />
 
-        <div className={styles.modalBody}>
-          <label className={styles.label}>旅行名 *</label>
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="例：横浜旅行"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            autoFocus
-          />
+        <label className={styles.label}>開始日 *</label>
+        <input
+          type="date"
+          className={styles.input}
+          value={startDate}
+          onChange={e => setStartDate(e.target.value)}
+        />
 
-          <label className={styles.label}>開始日 *</label>
-          <input
-            type="date"
-            className={styles.input}
-            value={startDate}
-            onChange={e => setStartDate(e.target.value)}
-          />
+        <label className={styles.label}>終了日 *</label>
+        <input
+          type="date"
+          className={styles.input}
+          value={endDate}
+          onChange={e => setEndDate(e.target.value)}
+        />
 
-          <label className={styles.label}>終了日 *</label>
-          <input
-            type="date"
-            className={styles.input}
-            value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-          />
+        <label className={styles.label}>旅行先（任意）</label>
+        <select
+          className={styles.input}
+          value={prefecture}
+          onChange={e => setPrefecture(e.target.value)}
+        >
+          <option value="">都道府県を選択</option>
+          {PREFECTURES.map(pref => (
+            <option key={pref} value={pref}>{pref}</option>
+          ))}
+        </select>
 
-          <label className={styles.label}>旅行先（任意）</label>
-          <select
-            className={styles.input}
-            value={prefecture}
-            onChange={e => setPrefecture(e.target.value)}
-          >
-            <option value="">都道府県を選択</option>
-            {PREFECTURES.map(pref => (
-              <option key={pref} value={pref}>{pref}</option>
-            ))}
-          </select>
+        <label className={styles.label}>メモ（任意）</label>
+        <textarea
+          className={styles.textarea}
+          placeholder="旅行の概要や特記事項"
+          value={memo}
+          onChange={e => setMemo(e.target.value)}
+          rows="3"
+        />
 
-          <label className={styles.label}>メモ（任意）</label>
-          <textarea
-            className={styles.textarea}
-            placeholder="旅行の概要や特記事項"
-            value={memo}
-            onChange={e => setMemo(e.target.value)}
-            rows="3"
-          />
+        {error && <p className={styles.error}>{error}</p>}
 
-          {error && <p className={styles.error}>{error}</p>}
-
-          <button
-            className={styles.saveBtn}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? '保存中…' : isEdit ? '更新する' : '追加する'}
-          </button>
-        </div>
+        <button
+          className={styles.saveBtn}
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? '保存中…' : isEdit ? '更新する' : '追加する'}
+        </button>
       </div>
-    </div>
+    </Modal>
   )
 }
