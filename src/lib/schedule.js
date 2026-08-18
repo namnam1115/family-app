@@ -160,6 +160,29 @@ export function addByRule(date, rule, n) {
   return d
 }
 
+// 表示範囲の開始に届くまでの繰り返し回数を概算する。
+// 先頭から総当たりすると、毎日の予定では回数が日数分だけ増えて頭打ちになるため、
+// 必要な回数を逆算してそこから展開を始める。
+function startIndexFor(baseStart, rule, rangeStartStr, spanDays) {
+  const rangeStart = new Date(`${rangeStartStr}T00:00:00`)
+  const diffDays = Math.floor((rangeStart - baseStart) / 86400000)
+  if (diffDays <= 0) return 0
+
+  let n
+  if (rule === 'daily') n = diffDays
+  else if (rule === 'weekly') n = Math.floor(diffDays / 7)
+  else if (rule === 'monthly') {
+    n = (rangeStart.getFullYear() - baseStart.getFullYear()) * 12
+      + (rangeStart.getMonth() - baseStart.getMonth())
+  } else if (rule === 'yearly') n = rangeStart.getFullYear() - baseStart.getFullYear()
+  else return 0
+
+  // 範囲開始より前に始まって範囲内まで続く回を取りこぼさないよう手前に戻す
+  // （月末クランプで概算が 1 回ずれることもあるため余裕を持たせる）
+  const back = rule === 'daily' ? spanDays + 1 : 2
+  return Math.max(0, n - back)
+}
+
 // 繰り返し予定を表示範囲内のオカレンス群に展開する（#3）
 // 単発イベントはそのまま [event] を返す。
 
@@ -169,13 +192,23 @@ export function expandEvent(event, rangeStartStr, rangeEndStr) {
   const isTimed = !event.all_day
   const until = event.recurrence_until || null
   const baseStart = isTimed ? new Date(event.start_datetime) : new Date(`${event.start_date}T00:00:00`)
+  if (isNaN(baseStart.getTime())) return []
   const durMs = isTimed ? (new Date(event.end_datetime) - new Date(event.start_datetime)) : 0
   const durDays = isTimed ? 0
     : Math.round((new Date(event.end_date || event.start_date) - new Date(event.start_date)) / 86400000)
+  const spanDays = isTimed ? Math.ceil(durMs / 86400000) : durDays
 
   const exceptions = new Set(event.recurrence_exceptions || [])
   const out = []
-  for (let n = 0; n < 800; n++) {
+  const startN = startIndexFor(baseStart, event.recurrence, rangeStartStr, spanDays)
+  // 範囲内に現れうる回数の上限（最も密な daily でも 1 日 1 回）
+  const rangeDays = Math.round(
+    (new Date(`${rangeEndStr}T00:00:00`) - new Date(`${rangeStartStr}T00:00:00`)) / 86400000
+  )
+  const maxIter = Math.max(1, rangeDays) + spanDays + 8
+
+  for (let i = 0; i < maxIter; i++) {
+    const n = startN + i
     const occStart = addByRule(baseStart, event.recurrence, n)
     const occStartStr = toDateStr(occStart)
     if (occStartStr > rangeEndStr) break
