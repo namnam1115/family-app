@@ -1040,6 +1040,14 @@
   font-size: 0.62rem;
 }
 
+/* 月セルは狭いため、時刻を出すと予定名がほぼ消える。
+   時刻より予定名を優先し、時刻は日別表示や詳細で確認してもらう */
+@media (max-width: 430px) {
+  .eventChipCompact .eventTime {
+    display: none;
+  }
+}
+
 /* ── 月表示 ── */
 .monthWrapper {
   display: flex;

@@ -250,9 +250,12 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--ink);
+  /* 右のボタン列が固定幅のため、1 行だと長い品名がすぐ切れる。2 行まで許す */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .expiryTag {

@@ -14,6 +14,11 @@
 }
 
 .listTitle {
+  /* 上のタブにも同じリスト名が出ているため、ここは 1 行に収めて控えめにする */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 700;
@@ -633,4 +638,10 @@
   width: max(100%, 44px);
   height: max(100%, 44px);
   transform: translate(-50%, -50%);
+}
+
+@media (max-width: 430px) {
+  .listTitle {
+    font-size: 1.05rem;
+  }
 }
