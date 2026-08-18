@@ -110,3 +110,27 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* 「他N件を見る」— 件数を絞ったときだけ出る */
+.moreBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0.125rem;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.moreBtn:active {
+  background: var(--surface-2);
+}

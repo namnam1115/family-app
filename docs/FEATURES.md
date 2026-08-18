@@ -22,7 +22,7 @@
 ### ホーム（HomePage）
 - 未ログイン: Google ログインボタン
 - ログイン済み・家族未所属: `GroupSetup`（家族作成 or 招待リンク案内）
-- 所属済み: アプリランチャー（`AppCard` グリッド）+ `FamilyInfo`（メンバー・招待リンク共有、メンバーアイコンタップで `MemberInfoModal` に詳細表示）+ `TodaySchedule`（今日の予定サマリー）
+- 所属済み: アプリランチャー（`AppCard` グリッド）+ `FamilyInfo`（メンバー・招待リンク共有、メンバーアイコンタップで `MemberInfoModal` に詳細表示）+ `TodaySchedule`（今日の予定サマリー。最大 4 件、超過分は「他 N 件を見る」）
 - ヘッダーの検索ボタンから `GlobalSearch`（アプリ横断検索）。予定・買い物・在庫・おかず・お出かけ・価格をまとめて部分一致検索し、選ぶとそのアプリへ遷移
 
 ### 買い物リスト（ShoppingPage）

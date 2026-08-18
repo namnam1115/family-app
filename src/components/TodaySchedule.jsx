@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase'
 import { IconChevronRight } from '../lib/icons'
 import styles from './TodaySchedule.module.css'
 
+// ホームに出す予定の最大件数（超えた分は「他N件」に畳む）
+const MAX_VISIBLE = 4
+
 const MEMBER_COLORS = [
   '#8E81B5', '#C2826A', '#5A9E82', '#C49A5A',
   '#6B9EC2', '#C26B8E', '#6BC2B4', '#9E6BC2',
@@ -85,7 +88,13 @@ export default function TodaySchedule() {
     .filter(e => !e.all_day)
     .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))
 
-  const isEmpty = allDay.length === 0 && timed.length === 0
+  // 終日 → 時間順。ホームはランチャーなので、多い日でもアプリ一覧を押し出さないよう件数を絞る
+  const rows = [
+    ...allDay.map(ev => ({ ev, timeLabel: '終日' })),
+    ...timed.map(ev => ({ ev, timeLabel: formatTime(ev.start_datetime) })),
+  ]
+  const visible = rows.slice(0, MAX_VISIBLE)
+  const hiddenCount = rows.length - visible.length
 
   return (
     <section className={styles.section}>
@@ -97,12 +106,11 @@ export default function TodaySchedule() {
         </button>
       </div>
 
-      {isEmpty ? (
+      {rows.length === 0 ? (
         <p className={styles.empty}>本日の予定はありません</p>
       ) : (
         <div className={styles.eventList}>
-          {/* 終日イベント */}
-          {allDay.map(ev => {
+          {visible.map(({ ev, timeLabel }) => {
             const color = ev.shift_type
               ? SHIFT_COLORS[ev.shift_type] ?? '#8E81B5'
               : ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'
@@ -113,7 +121,7 @@ export default function TodaySchedule() {
                 style={{ '--ev-color': color }}
                 onClick={() => navigate('/schedule')}
               >
-                <span className={styles.timeSlot}>終日</span>
+                <span className={styles.timeSlot}>{timeLabel}</span>
                 <span className={styles.eventDot} />
                 <span className={styles.eventTitle}>{ev.title}</span>
                 {ev.member?.name && (
@@ -125,27 +133,11 @@ export default function TodaySchedule() {
             )
           })}
 
-          {/* 時間指定イベント */}
-          {timed.map(ev => {
-            const color = ev.member_id ? memberColorMap[ev.member_id] : '#8E81B5'
-            return (
-              <div
-                key={ev.id}
-                className={styles.eventRow}
-                style={{ '--ev-color': color }}
-                onClick={() => navigate('/schedule')}
-              >
-                <span className={styles.timeSlot}>{formatTime(ev.start_datetime)}</span>
-                <span className={styles.eventDot} />
-                <span className={styles.eventTitle}>{ev.title}</span>
-                {ev.member?.name && (
-                  <span className={styles.memberTag} style={{ background: `${color}22`, color }}>
-                    {ev.member.name}
-                  </span>
-                )}
-              </div>
-            )
-          })}
+          {hiddenCount > 0 && (
+            <button className={styles.moreBtn} onClick={() => navigate('/schedule')}>
+              他 {hiddenCount} 件を見る <IconChevronRight />
+            </button>
+          )}
         </div>
       )}
     </section>
