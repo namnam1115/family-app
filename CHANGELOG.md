@@ -25,6 +25,7 @@
 - Push 通知の `tag` が `shopping-reminder` 固定だったため、買い物リマインダーと予定リマインダー／予定変更通知が互いを上書きして消えていた問題を修正（種類・イベント単位のタグを Edge Function から送出）
 
 ### Changed
+- 2735 行あった `SchedulePage` を分割。定数と日付・繰り返し展開ロジックを `src/lib/schedule.js`（React 非依存の純関数）へ、月 / 週 / アジェンダ表示と各モーダルを `src/components/schedule/` へ切り出し、ページ本体は 817 行に
 - 旅行記録の活動記録を旅行ごとの N+1 クエリから 1 クエリのまとめ取得に変更
 - 価格比較の取得・Realtime 購読に `family_id` の明示フィルタを追加（従来は RLS 任せ）
 - ルート単位でコード分割（`React.lazy` + `Suspense`）。ホーム以外のページを遅延読み込みにし、初回ダウンロードを JS 約 825KB → 約 495KB / CSS 約 212KB → 約 21KB に削減

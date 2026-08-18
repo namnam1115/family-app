@@ -26,6 +26,7 @@
 | `Toast` | 画面下部の一時通知（失敗通知・任意アクション） | ShoppingPage ほか |
 | `OfflineBanner` | オフライン時の上部バナー（アプリ全体で 1 つ） | `App.jsx` |
 | `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択 | TravelPage |
+| `schedule/*` | 予定表の画面部品（月 / 週 / アジェンダ・各モーダル） | SchedulePage |
 | `Modal` | 全ページ共通モーダル（ボトムシート↔中央表示、Esc / 背景タップで閉じる、フォーカストラップ、背景スクロールロック） | 全ページのモーダル |
 | `ErrorBoundary` | 描画エラー時のフォールバック UI（再試行 / ホームへ） | `App.jsx`（アプリ全体 + ルート単位） |
 | `ErrorNotice` | データ取得失敗時のページ内表示（再読み込み） | `useFamilyData` の `error` と組で使う |
@@ -70,10 +71,12 @@ src/
 │   └── AuthContext.jsx  # 認証・家族状態（唯一のグローバル状態）
 ├── pages/               # ルーティング単位。Foo.jsx + Foo.module.css
 ├── components/          # 複数ページで使う共通コンポーネント
+│   └── schedule/        # 予定表の画面部品（+ Schedule.module.css）。SchedulePage 専用
 ├── hooks/               # （将来）useXxx カスタムフック。3 箇所目の重複ロジックから
 ├── lib/                 # 外部サービスクライアント（supabase, pushNotifications）
 └── utils/               # 純粋なユーティリティ（googleMaps）
 ```
 
+- 1 ページが大きくなりすぎた場合のみ、`components/<ページ名>/` に画面部品を切り出してよい（例: `components/schedule/`）。CSS Module はその配下に 1 枚置き、ページと部品で共有する
 - 新しい階層（`features/` 等）への再編成は行わない。この構成の中で増やす
 - ページ数がさらに増えて破綻し始めたら、その時に再編成を**提案**する（勝手にやらない）
