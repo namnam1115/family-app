@@ -14,7 +14,7 @@ Apple Human Interface Guidelines を参考にした、**ミニマルで温かな
 
 | トークン | ライト値 | 意味 |
 |---|---|---|
-| `--primary` | `#7C71A8` 鈍色花 | ブランド色。主ボタン・アクティブ状態・リンク |
+| `--primary` | `#74699F` 鈍色花 | ブランド色。主ボタン・アクティブ状態・リンク |
 | `--primary-light` / `--primary-mid` / `--primary-dark` / `--primary-glow` | — | primary の派生 |
 | `--accent` / `--accent-light` | `#C0806A` 紅鳶 | 補助アクセント（多用しない） |
 | `--accent-soft` / `--accent-soft-2` | — | 淡い面塗り |
@@ -31,8 +31,12 @@ Apple Human Interface Guidelines を参考にした、**ミニマルで温かな
 | `--border` / `--border-strong` | 罫線。ヘアライン基本 |
 | `--glass` / `--glass-border` / `--glass-blur` | ガラス面（ヘッダー等、控えめに） |
 | `--grad-primary` / `--grad-primary-soft` | ブランドグラデーション |
+| `--on-primary` / `--on-accent` / `--on-danger` / `--on-success` / `--on-warning` | 単色のブランド背景に載せる文字色 |
 
 **ルール**: 色の直書き（`#fff`, `rgba(0,0,0,.5)` 等）は禁止。該当トークンがなければ DESIGN.md の更新を提案する。
+
+**単色のブランド背景に文字を載せるときは `--on-*` を使う**（`background: var(--primary)` なら `color: var(--on-primary)`）。ダークモードではブランド色が明るく反転するため、`color: #fff` を直書きするとコントラストが 2 台まで落ちて読めなくなる。
+グラデーション `--grad-primary` は両モードとも同じ濃さなので、こちらに載せる文字は `#fff` のままでよい。
 
 ## タイポグラフィ
 
@@ -95,6 +99,7 @@ Apple Human Interface Guidelines を参考にした、**ミニマルで温かな
 
 - キーボードフォーカス可視化: グローバル `:focus-visible` に任せる。`outline: none` の上書き禁止
 - アイコンのみボタン・閉じるボタンに `aria-label`、クリック可能な非 button 要素には `role="button"`
-- コントラスト: 本文は `--ink`、`--ink-3` を本文に使わない（補足専用）
+- コントラスト: 本文は `--ink`、`--ink-3` を本文に使わない（補足専用）。主要な組み合わせは WCAG AA（4.5:1）を満たすようトークン値を調整済み — 値を変えるときは両モードで比を再確認する
+- 単色のブランド背景の文字色は `--on-*` トークンを使う（上記カラーパレット参照）
 - タップターゲットは 44×44px 目安
 - `prefers-reduced-motion` 対応はグローバル設定済み（壊さない）

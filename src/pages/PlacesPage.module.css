@@ -1112,7 +1112,7 @@
 
 .deleteBtn:hover {
   background: var(--danger);
-  color: white;
+  color: var(--on-danger);
 }
 
 .cancelBtn {
@@ -1685,7 +1685,7 @@
 
 .tagPickerChip button:hover {
   background: var(--danger);
-  color: white;
+  color: var(--on-danger);
 }
 
 /* ── タグのトグル選択（複数選択） ── */
@@ -1794,7 +1794,7 @@
   padding: 0 5px;
   border-radius: var(--radius-full);
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   font-size: 0.7rem;
   font-weight: 700;
 }

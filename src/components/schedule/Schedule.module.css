@@ -757,7 +757,7 @@
 
 .deleteBtn:hover {
   background: var(--danger);
-  color: white;
+  color: var(--on-danger);
 }
 
 .cancelBtn {
@@ -1545,8 +1545,8 @@
 
 .agendaDateToday .agendaDateNum {
   background: var(--primary);
-  color: #fff;
-  -webkit-text-fill-color: #fff;
+  color: var(--on-primary);
+  -webkit-text-fill-color: var(--on-primary);
   width: 1.8rem;
   height: 1.8rem;
   border-radius: 50%;
@@ -1790,7 +1790,7 @@
   border: none;
   border-radius: 0.75rem;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   font-size: 0.85rem;
   font-weight: 700;
   padding: 0 1rem;

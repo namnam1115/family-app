@@ -102,7 +102,7 @@
 
 .toggleOff {
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
 }
 
 /* ── スケジュール設定 ── */
@@ -167,7 +167,7 @@
   width: 100%;
   padding: 0.75rem;
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
   border: none;
   border-radius: var(--radius);
   font-size: 0.95rem;

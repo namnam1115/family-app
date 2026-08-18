@@ -489,7 +489,7 @@
 }
 .deleteBtn {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 .cancelBtn:hover { opacity: 0.8; }
 .deleteBtn:hover { opacity: 0.88; }
@@ -511,7 +511,7 @@
 .addToShoppingBtn {
   pointer-events: auto;
   background: linear-gradient(135deg, var(--success), var(--success));
-  color: #fff;
+  color: var(--on-success);
   border: none;
   border-radius: var(--radius-full);
   padding: 0.8rem 1.2rem;

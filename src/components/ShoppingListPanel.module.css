@@ -25,7 +25,7 @@
   height: 28px;
   border-radius: 50%;
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
   border: none;
   font-size: 1.1rem;
   line-height: 1;
@@ -82,7 +82,7 @@
 .saveBtn {
   background: var(--primary);
   border: none;
-  color: white;
+  color: var(--on-primary);
 }
 
 .saveBtn:disabled {

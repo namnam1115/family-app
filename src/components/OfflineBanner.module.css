@@ -11,7 +11,7 @@
   padding: 0.5rem 1rem;
   padding-top: max(0.5rem, env(safe-area-inset-top));
   background: var(--warning);
-  color: #fff;
+  color: var(--on-warning);
   font-size: 0.82rem;
   font-weight: 600;
   text-align: center;

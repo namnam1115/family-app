@@ -62,7 +62,7 @@
 .btn {
   padding: 0.625rem 1.5rem;
   background: var(--primary);
-  color: white;
+  color: var(--on-primary);
   border: none;
   border-radius: var(--radius);
   font-size: 1rem;

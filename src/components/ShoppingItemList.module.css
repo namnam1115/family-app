@@ -209,7 +209,7 @@
   width: 80px;
   background: var(--danger);
   border: none;
-  color: white;
+  color: var(--on-danger);
   font-size: 0.85rem;
   font-weight: 700;
   touch-action: manipulation;

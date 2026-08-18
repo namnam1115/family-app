@@ -17,7 +17,7 @@
   color-scheme: light dark;
 
   /* === Primary - 鈍色花 Noshimehana (muted lavender-purple) === */
-  --primary: #7C71A8;
+  --primary: #74699F;
   --primary-light: #B7AFD3;
   --primary-mid: #948AC0;
   --primary-dark: #5F5590;
@@ -33,7 +33,7 @@
 
   /* === Status === */
   --success: #4E9A78;
-  --danger: #C15C54;
+  --danger: #B5504A;
   --warning: #C69645;
 
   /* === Neutrals — warm greige, light ramp === */
@@ -41,7 +41,7 @@
   --gray-100: #F5F2EE;
   --gray-200: #ECE8E3;
   --gray-300: #D8D2CA;
-  --gray-400: #9A938B;
+  --gray-400: #8B847C;
   --gray-500: #6E6862;
   --gray-600: #514B45;
   --gray-700: #38332F;
@@ -54,7 +54,7 @@
   --surface-2: #F5F2EE;
   --ink: #211E1B;
   --ink-2: #6E6862;
-  --ink-3: #9A938B;
+  --ink-3: #746D67;
   --border: #ECE8E3;
   --border-strong: #E2DCD4;
 
@@ -65,8 +65,8 @@
   --glass-blur: blur(12px) saturate(140%);
 
   /* === Gradients (calm) === */
-  --grad-primary: linear-gradient(135deg, #7C71A8 0%, #C0806A 100%);
-  --grad-primary-rev: linear-gradient(135deg, #C0806A 0%, #7C71A8 100%);
+  --grad-primary: linear-gradient(135deg, #74699F 0%, #A66650 100%);
+  --grad-primary-rev: linear-gradient(135deg, #A66650 0%, #74699F 100%);
   --grad-primary-soft: linear-gradient(135deg, #EFEBF5 0%, #F4E9E3 100%);
   --grad-bg: linear-gradient(180deg, #FBFAF8 0%, #F7F4F0 100%);
 
@@ -85,6 +85,16 @@
   /* 画面下部に固定するグローバルナビ（BottomNav）の高さ。
      各ページのスクロール領域はこの分だけ下部に余白を確保する。 */
   --bottomnav-h: calc(4rem + env(safe-area-inset-bottom));
+
+  /* === On-color foregrounds ===
+     単色の背景（--primary 等）に載せる文字色。ダークモードではブランド色が
+     明るくなるため、白のままだとコントラストが 2 台まで落ちる。ここで反転させる。
+     グラデーション（--grad-primary）は両モードとも同じ濃さなので #fff のままでよい。 */
+  --on-primary: #FFFFFF;
+  --on-accent: #211E1B;
+  --on-danger: #FFFFFF;
+  --on-success: #211E1B;
+  --on-warning: #211E1B;
 
   /* === Shadows — minimal, not flat === */
   --shadow: 0 1px 2px rgba(33, 30, 27, 0.05);
@@ -121,7 +131,7 @@
     --gray-100: #221F1C;
     --gray-200: #2E2A26;
     --gray-300: #3A362F;
-    --gray-400: #8E877E;
+    --gray-400: #948C83;
     --gray-500: #A9A29A;
     --gray-600: #C3BCB3;
     --gray-700: #DAD4CC;
@@ -133,9 +143,16 @@
     --surface-2: #262320;
     --ink: #F1EDE7;
     --ink-2: #ABA49B;
-    --ink-3: #7E776E;
+    --ink-3: #948C83;
     --border: #2E2A26;
     --border-strong: #383430;
+
+    /* ブランド色が明るくなるため、載せる文字は濃色に反転する */
+    --on-primary: #1B1A17;
+    --on-accent: #1B1A17;
+    --on-danger: #1B1A17;
+    --on-success: #1B1A17;
+    --on-warning: #1B1A17;
 
     --glass: rgba(30, 28, 25, 0.72);
     --glass-light: rgba(30, 28, 25, 0.5);

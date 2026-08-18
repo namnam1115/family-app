@@ -706,7 +706,7 @@
   font-weight: 600;
   background: var(--danger);
   border: none;
-  color: white;
+  color: var(--on-danger);
   transition: all 0.2s ease;
   touch-action: manipulation;
 }
