@@ -84,14 +84,8 @@ export default function TravelPage() {
   )
 
   async function createTrip(payload) {
-    const { data: trip, error: err } = await supabase
-      .from('travel_trips')
-      .insert(payload)
-      .select()
-      .single()
-
-    if (err) throw err
-
+    // 予定を先に作ってから旅行に紐付ける。逆順だと途中で失敗したときに
+    // 予定のない旅行が残り、以後の編集が予定へ反映されなくなる
     const { data: event, error: eventErr } = await supabase
       .from('schedule_events')
       .insert({
@@ -102,15 +96,20 @@ export default function TravelPage() {
         end_date: payload.end_date,
         memo: payload.memo || null,
       })
-      .select()
+      .select('id')
       .single()
 
     if (eventErr) throw eventErr
 
-    await supabase
+    const { error: err } = await supabase
       .from('travel_trips')
-      .update({ schedule_event_id: event.id })
-      .eq('id', trip.id)
+      .insert({ ...payload, schedule_event_id: event.id })
+
+    if (err) {
+      // 旅行を作れなかった予定は残さない
+      await supabase.from('schedule_events').delete().eq('id', event.id)
+      throw err
+    }
 
     await fetchTrips()
   }
@@ -143,11 +142,13 @@ export default function TravelPage() {
   async function deleteTrip(tripId) {
     const trip = trips.find(t => t.id === tripId)
 
-    await supabase.from('travel_trips').delete().eq('id', tripId)
-
+    // 予定から先に消す。旅行の削除に失敗しても、予定だけが取り残されない
+    // （schedule_event_id は ON DELETE SET NULL で自動的に外れる）
     if (trip?.schedule_event_id) {
       await supabase.from('schedule_events').delete().eq('id', trip.schedule_event_id)
     }
+
+    await supabase.from('travel_trips').delete().eq('id', tripId)
 
     setSelectedTrip(null)
     setDeleteConfirmId(null)

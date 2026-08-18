@@ -3,8 +3,7 @@ import styles from './OfflineBanner.module.css'
 
 /**
  * オフライン時に画面上部へ控えめに表示するバナー（アプリ全体で1つ）。
- * リアルタイム同期アプリのため「今つながっていない」ことを明示し、
- * 保存が反映されないのは不具合ではなく通信状態だと分かるようにする。
+ * オフライン中の変更はキューされず失敗するため、「後で同期される」とは書かない。
  */
 export default function OfflineBanner() {
   const [online, setOnline] = useState(
@@ -27,7 +26,7 @@ export default function OfflineBanner() {
   return (
     <div className={styles.banner} role="status" aria-live="polite">
       <span className={styles.dot} aria-hidden="true" />
-      オフラインです。変更はオンライン復帰後に同期されます。
+      オフラインです。この間の変更は保存されません。
     </div>
   )
 }
