@@ -129,6 +129,8 @@
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   -webkit-appearance: none;
+  /* input には擬似要素を付けられないため、実寸で 44px を確保する */
+  min-height: 44px;
 }
 
 .searchInput:focus {
@@ -1438,4 +1440,40 @@
   font-size: 0.8rem;
   text-align: center;
   color: var(--success);
+}
+
+/* ── タップ領域の確保（見た目は変えない） ──
+   指で押せる範囲を 44px 以上にする。行内に並ぶ要素は縦だけ広げる
+   （横に広げると隣の要素の領域を奪うため）。 */
+.backBtn,
+.viewToggleBtn,
+.storeBtn,
+.addBtn,
+.searchInput,
+.chip {
+  position: relative;
+}
+
+.backBtn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+.viewToggleBtn::after,
+.storeBtn::after,
+.addBtn::after,
+.searchInput::after,
+.chip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: max(100%, 44px);
+  transform: translateY(-50%);
 }

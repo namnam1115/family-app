@@ -504,3 +504,35 @@
   font-size: 1rem;
   flex-shrink: 0;
 }
+
+/* ── タップ領域の確保（見た目は変えない） ──
+   指で押せる範囲を 44px 以上にする。行内に並ぶ要素は縦だけ広げる
+   （横に広げると隣の要素の領域を奪うため）。 */
+.backBtn,
+.addBtn,
+.prefectureFilter,
+.mapToggleBtn {
+  position: relative;
+}
+
+.backBtn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+.addBtn::after,
+.prefectureFilter::after,
+.mapToggleBtn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: max(100%, 44px);
+  transform: translateY(-50%);
+}

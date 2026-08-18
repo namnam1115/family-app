@@ -92,3 +92,23 @@
 .inviteBtn:active {
   transform: scale(0.98);
 }
+
+/* ── タップ領域の確保（見た目は変えない） ──
+   指で押せる範囲を 44px 以上にする。行内に並ぶ要素は縦だけ広げる
+   （横に広げると隣の要素の領域を奪うため）。 */
+.avatar,
+.inviteBtn {
+  position: relative;
+}
+
+
+.avatar::after,
+.inviteBtn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: max(100%, 44px);
+  transform: translateY(-50%);
+}

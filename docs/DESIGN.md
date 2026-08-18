@@ -101,5 +101,18 @@ Apple Human Interface Guidelines を参考にした、**ミニマルで温かな
 - アイコンのみボタン・閉じるボタンに `aria-label`、クリック可能な非 button 要素には `role="button"`
 - コントラスト: 本文は `--ink`、`--ink-3` を本文に使わない（補足専用）。主要な組み合わせは WCAG AA（4.5:1）を満たすようトークン値を調整済み — 値を変えるときは両モードで比を再確認する
 - 単色のブランド背景の文字色は `--on-*` トークンを使う（上記カラーパレット参照）
-- タップターゲットは 44×44px 目安
+- **タップターゲットは 44×44px 以上。** 見た目を小さく保ちたいときは擬似要素で当たり判定だけ広げる:
+
+  ```css
+  .iconBtn { position: relative; }
+  .iconBtn::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: max(100%, 44px); height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  ```
+
+  行内に並ぶ要素（チップ・タブ）は縦だけ広げる（`left: 0; width: 100%; height: max(100%, 44px)`）。横に広げると隣の当たり判定を奪う。
+  `<input>` は擬似要素を持てないため `min-height: 44px` を直接指定する。
+  例外: カレンダーの月セル内チップなど、密度が本質的な UI は対象外
 - `prefers-reduced-motion` 対応はグローバル設定済み（壊さない）
