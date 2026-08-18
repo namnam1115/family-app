@@ -79,6 +79,7 @@ Deno.serve(async (req: Request) => {
         title: '🛒 買い物リマインダー',
         body,
         url: '/shopping',
+        tag: 'shopping-reminder',
       })
 
       for (const sub of subs as { endpoint: string; p256dh: string; auth: string }[]) {

@@ -6,24 +6,29 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data.json()
   } catch {
-    data = { title: '買い物リスト', body: event.data.text() }
+    data = { body: event.data.text() }
   }
 
+  const url = data.url || '/'
+  // tag が同じ通知は OS 上で上書きされる。種類ごとに別タグを送る想定で、
+  // 未指定時は URL 単位に分けて別種の通知が消し合わないようにする。
+  const tag = data.tag || `family-app:${url}`
+
   event.waitUntil(
-    self.registration.showNotification(data.title || '🛒 買い物リスト', {
-      body: data.body || '重要なアイテムが残っています',
+    self.registration.showNotification(data.title || '家族プラットフォーム', {
+      body: data.body || '',
       icon: '/pwa-192x192.png',
       badge: '/pwa-192x192.png',
-      tag: 'shopping-reminder',
+      tag,
       renotify: true,
-      data: { url: data.url || '/shopping' },
+      data: { url },
     })
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification.data?.url || '/shopping'
+  const url = event.notification.data?.url || '/'
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {

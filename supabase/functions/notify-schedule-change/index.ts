@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 // 予定の追加・更新・コメント時に、本人以外の家族デバイスへ即時 push する。
-// body: { family_id, actor_name, actor_user_id, action: 'created'|'updated'|'commented', title }
+// body: { family_id, actor_name, actor_user_id, action: 'created'|'updated'|'commented', title, event_id? }
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -23,7 +23,7 @@ Deno.serve(async (req: Request) => {
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    const { family_id, actor_name, actor_user_id, action, title } = await req.json()
+    const { family_id, actor_name, actor_user_id, action, title, event_id } = await req.json()
     if (!family_id || !action) {
       return new Response(JSON.stringify({ error: 'family_id and action required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -75,7 +75,12 @@ Deno.serve(async (req: Request) => {
         notifTitle = '📅 予定の追加'
         body = `${who} が「${title}」を追加しました`
     }
-    const payload = JSON.stringify({ title: notifTitle, body, url: '/schedule' })
+    const payload = JSON.stringify({
+      title: notifTitle,
+      body,
+      url: '/schedule',
+      tag: `schedule-change:${action}:${event_id ?? title ?? ''}`,
+    })
 
     let sent = 0
     for (const sub of subs as { endpoint: string; p256dh: string; auth: string; user_id: string }[]) {

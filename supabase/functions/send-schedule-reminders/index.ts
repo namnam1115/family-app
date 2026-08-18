@@ -138,6 +138,7 @@ Deno.serve(async (req: Request) => {
           title: '📅 まもなく予定',
           body: `${timeLabel} ${ev.title}`,
           url: '/schedule',
+          tag: `schedule-reminder:${ev.id}:${occ.occDateStr}`,
         })
 
         for (const sub of subs) {
