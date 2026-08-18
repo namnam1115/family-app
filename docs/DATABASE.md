@@ -5,9 +5,10 @@ Supabase PostgreSQL。**全テーブルで RLS（Row Level Security）を有効�
 ## セキュリティの中核
 
 ```sql
--- 002_rls_policies.sql — 現在ユーザーの family_id を返すヘルパー
+-- 002_rls_policies.sql（030 で search_path を固定）— 現在ユーザーの family_id を返すヘルパー
 create or replace function get_my_family_id()
 returns uuid language sql security definer stable
+set search_path = public, pg_temp
 as $$
   select family_id from family_members where user_id = auth.uid() limit 1;
 $$;
@@ -15,7 +16,9 @@ $$;
 
 - ユーザーは **最大 1 家族**に所属（`family_members.user_id` に unique 制約）
 - 家族スコープの全テーブルの RLS は `family_id = get_my_family_id()` パターン
-- 例外: `families` の SELECT は認証済み全員に許可（招待リンク `/join/:familyId` で未所属ユーザーが検索するため。UUID は推測困難）。`push_subscriptions` は `user_id = auth.uid()`（本人のみ）
+- `security definer` の関数は必ず `set search_path` を付ける（付けないと呼び出し側の search_path に依存する）
+- `push_subscriptions` は USING が `user_id = auth.uid()`、**WITH CHECK は `user_id = auth.uid() and family_id = get_my_family_id()`**（030）。family_id を検証しないと、他家族の ID で登録してその家族のプッシュを受信できてしまう
+- 例外: `families` の SELECT は認証済み全員に許可（招待リンク `/join/:familyId` で未所属ユーザーが検索するため。UUID は推測困難）
 
 ## テーブル一覧
 
