@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { IconTravel, IconPin, IconMap } from '../lib/icons'
 import { supabase } from '../lib/supabase'
+import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import { useAuth } from '../contexts/AuthContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ErrorNotice from '../components/ErrorNotice'
 import JapanMap from '../components/JapanMap'
 import Modal from '../components/Modal'
 import styles from './TravelPage.module.css'
@@ -43,9 +45,6 @@ export default function TravelPage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
 
-  const [trips, setTrips] = useState([])
-  const [activitiesMap, setActivitiesMap] = useState({})
-  const [loading, setLoading] = useState(true)
   const [selectedTrip, setSelectedTrip] = useState(null)
   const [showTripModal, setShowTripModal] = useState(false)
   const [editingTrip, setEditingTrip] = useState(null)
@@ -53,58 +52,36 @@ export default function TravelPage() {
   const [prefectureFilter, setPrefectureFilter] = useState('all')
   const [showMap, setShowMap] = useState(true)
 
-  const fid = familyMember?.family_id
+  const {
+    data: { trips, activitiesMap },
+    loading,
+    error: loadError,
+    refetch: fetchTrips,
+    familyId: fid,
+  } = useFamilyData(
+    async familyId => {
+      const trips = await unwrap(
+        supabase.from('travel_trips').select('*').eq('family_id', familyId).order('start_date', { ascending: false })
+      )
+      // 旅行ごとに問い合わせず、活動記録は 1 クエリでまとめて取得する
+      const activities = trips.length
+        ? await unwrap(
+            supabase.from('travel_activities').select('*')
+              .in('trip_id', trips.map(t => t.id)).order('order_index')
+          )
+        : []
+      const activitiesMap = Object.fromEntries(trips.map(t => [t.id, []]))
+      for (const activity of activities) activitiesMap[activity.trip_id]?.push(activity)
+      return { trips, activitiesMap }
+    },
+    ['travel_trips'],
+    { trips: [], activitiesMap: {} },
+  )
 
   const visitedPrefectures = useMemo(
     () => new Set(trips.map(t => t.prefecture).filter(Boolean)),
     [trips]
   )
-
-  const fetchTrips = useCallback(async () => {
-    if (!fid) return
-    const { data } = await supabase
-      .from('travel_trips')
-      .select('*')
-      .eq('family_id', fid)
-      .order('start_date', { ascending: false })
-    setTrips(data ?? [])
-    setLoading(false)
-
-    if (data) {
-      const activitiesData = await Promise.all(
-        data.map(trip =>
-          supabase
-            .from('travel_activities')
-            .select('*')
-            .eq('trip_id', trip.id)
-            .order('order_index')
-        )
-      )
-      const map = {}
-      data.forEach((trip, idx) => {
-        map[trip.id] = activitiesData[idx].data ?? []
-      })
-      setActivitiesMap(map)
-    }
-  }, [fid])
-
-  useEffect(() => {
-    fetchTrips()
-  }, [fetchTrips])
-
-  useEffect(() => {
-    if (!fid) return
-    const channel = supabase
-      .channel('travel_rt')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'travel_trips',
-        filter: `family_id=eq.${fid}`,
-      }, fetchTrips)
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [fid, fetchTrips])
 
   async function createTrip(payload) {
     const { data: trip, error: err } = await supabase
@@ -241,6 +218,8 @@ export default function TravelPage() {
       <main className={styles.main}>
         {loading ? (
           <LoadingSpinner inline />
+        ) : loadError ? (
+          <ErrorNotice onRetry={fetchTrips} />
         ) : trips.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}><IconTravel /></span>

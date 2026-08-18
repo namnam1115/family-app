@@ -15,6 +15,26 @@ Edge Functions 側（Supabase ダッシュボードで設定）: `VAPID_PUBLIC_K
 
 ## クエリの標準パターン
 
+### 一覧取得は `useFamilyData` を使う
+
+家族スコープの「初回取得 + Realtime 購読 + 再取得」は `src/hooks/useFamilyData.js` に集約している。
+新規ページはこのフックから書き始めること（`supabase.channel()` を自前で書くのは、行単位の差分適用など
+再フェッチでは非効率な場合だけ。例: `DishesPage`）。
+
+```js
+const { data: items, loading, error, refetch } = useFamilyData(
+  familyId => unwrap(
+    supabase.from('inventory_items').select('*').eq('family_id', familyId).order('name')
+  ),
+  ['inventory_items'],   // この配列のテーブルの family_id 一致の変更を購読し、変化したら再取得
+  [],                    // 取得前の初期値
+)
+```
+
+- `unwrap(query)` は `error` を例外にして返り値を `data` だけにするヘルパー。フックが catch してログ + `error` に載せる
+- 複数テーブルをまとめて取る場合は fetcher でオブジェクトを返す（`{ trips, activitiesMap }` など）
+- `error` が立ったら `ErrorNotice`（再読み込みボタン付き）を出す。ローディングは `LoadingSpinner inline`
+
 ### 取得（SELECT）
 
 ```js
@@ -43,9 +63,9 @@ if (error) {
 }
 ```
 
-### Realtime 購読
+### Realtime 購読（フックを使わない場合）
 
-ページの `useEffect` でチャンネルを作り、**必ずクリーンアップで解除**する:
+`useFamilyData` で足りないときだけ、ページの `useEffect` でチャンネルを作り、**必ずクリーンアップで解除**する:
 
 ```js
 useEffect(() => {

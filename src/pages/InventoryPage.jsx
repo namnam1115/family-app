@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import {
@@ -6,9 +6,11 @@ import {
 } from '../lib/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ErrorNotice from '../components/ErrorNotice'
 import Modal from '../components/Modal'
 import styles from './InventoryPage.module.css'
 
@@ -69,8 +71,6 @@ export default function InventoryPage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
 
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -84,37 +84,14 @@ export default function InventoryPage() {
   const [targetListId, setTargetListId] = useState(null)
   const [shoppingError, setShoppingError] = useState('')
 
-  const fid = familyMember?.family_id
-
-  const fetchItems = useCallback(async () => {
-    if (!fid) return
-    const { data } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .eq('family_id', fid)
-      .order('category')
-      .order('name')
-    setItems(data ?? [])
-    setLoading(false)
-  }, [fid])
-
-  useEffect(() => {
-    fetchItems()
-  }, [fetchItems])
-
-  useEffect(() => {
-    if (!fid) return
-    const channel = supabase
-      .channel('inventory_rt')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'inventory_items',
-        filter: `family_id=eq.${fid}`,
-      }, fetchItems)
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [fid, fetchItems])
+  const { data: items, loading, error: loadError, refetch: fetchItems, familyId: fid, setData: setItems } =
+    useFamilyData(
+      familyId => unwrap(
+        supabase.from('inventory_items').select('*').eq('family_id', familyId).order('category').order('name')
+      ),
+      ['inventory_items'],
+      [],
+    )
 
   const cycleStatus = (current) => {
     const cycle = { ok: 'low', low: 'out', out: 'ok' }
@@ -226,6 +203,8 @@ export default function InventoryPage() {
       <main className={styles.main}>
         {loading ? (
           <LoadingSpinner inline />
+        ) : loadError ? (
+          <ErrorNotice onRetry={fetchItems} />
         ) : filtered.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}><IconInventory /></span>

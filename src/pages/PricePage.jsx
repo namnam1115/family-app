@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import {
@@ -29,9 +29,11 @@ import { PiCow, PiShrimp, PiOrange, PiLeaf, PiAvocado, PiPepper, PiCheese } from
 // Game Icons（鶏のみ）
 import { GiChicken } from 'react-icons/gi'
 import { supabase } from '../lib/supabase'
+import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ErrorNotice from '../components/ErrorNotice'
 import Modal from '../components/Modal'
 import styles from './PricePage.module.css'
 
@@ -87,9 +89,6 @@ const ICON_GROUPS = [
 export default function PricePage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
-  const [stores, setStores] = useState([])
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
   const [view, setView] = useState('list') // 'list' | 'grid'
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -97,41 +96,23 @@ export default function PricePage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const fetchStores = useCallback(async () => {
-    const { data } = await supabase
-      .from('price_stores')
-      .select('*')
-      .order('sort_order')
-      .order('name')
-    if (data) setStores(data)
-  }, [])
-
-  const fetchItems = useCallback(async () => {
-    const { data } = await supabase
-      .from('price_items')
-      .select('*')
-      .order('product_name')
-      .order('store_name')
-    if (data) setItems(data)
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    setLoading(true)
-    Promise.all([fetchStores(), fetchItems()])
-  }, [fetchStores, fetchItems])
-
-  useEffect(() => {
-    const ch1 = supabase
-      .channel('price_items_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_items' }, fetchItems)
-      .subscribe()
-    const ch2 = supabase
-      .channel('price_stores_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'price_stores' }, fetchStores)
-      .subscribe()
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
-  }, [fetchItems, fetchStores])
+  const {
+    data: { stores, items },
+    loading,
+    error: loadError,
+    refetch: fetchAll,
+    setData,
+  } = useFamilyData(
+    async familyId => {
+      const [stores, items] = await Promise.all([
+        unwrap(supabase.from('price_stores').select('*').eq('family_id', familyId).order('sort_order').order('name')),
+        unwrap(supabase.from('price_items').select('*').eq('family_id', familyId).order('product_name').order('store_name')),
+      ])
+      return { stores, items }
+    },
+    ['price_stores', 'price_items'],
+    { stores: [], items: [] },
+  )
 
   async function handleUpsert({ storeName, productName, price, note, category, icon }) {
     const payload = {
@@ -163,7 +144,7 @@ export default function PricePage() {
         .eq('family_id', familyMember.family_id)
         .eq('product_name', productName)
     }
-    if (!error) await fetchItems()
+    if (!error) await fetchAll()
     return error
   }
 
@@ -172,11 +153,11 @@ export default function PricePage() {
       .update({ icon })
       .eq('family_id', familyMember.family_id)
       .eq('product_name', productName)
-    await fetchItems()
+    await fetchAll()
   }
 
   async function handleDeleteItem(id) {
-    setItems(prev => prev.filter(i => i.id !== id))
+    setData(prev => ({ ...prev, items: prev.items.filter(i => i.id !== id) }))
     await supabase.from('price_items').delete().eq('id', id)
   }
 
@@ -185,12 +166,12 @@ export default function PricePage() {
       family_id: familyMember.family_id,
       name: name.trim(),
     })
-    if (!error) await fetchStores()
+    if (!error) await fetchAll()
     return error
   }
 
   async function handleDeleteProduct(productName) {
-    setItems(prev => prev.filter(i => i.product_name !== productName))
+    setData(prev => ({ ...prev, items: prev.items.filter(i => i.product_name !== productName) }))
     await supabase
       .from('price_items')
       .delete()
@@ -199,8 +180,10 @@ export default function PricePage() {
   }
 
   async function handleDeleteStore(id, name) {
-    setStores(prev => prev.filter(s => s.id !== id))
-    setItems(prev => prev.filter(i => i.store_name !== name))
+    setData(prev => ({
+      stores: prev.stores.filter(s => s.id !== id),
+      items: prev.items.filter(i => i.store_name !== name),
+    }))
     await supabase.from('price_items')
       .delete().eq('store_name', name).eq('family_id', familyMember.family_id)
     await supabase.from('price_stores').delete().eq('id', id)
@@ -314,6 +297,8 @@ export default function PricePage() {
       <main className={styles.main}>
         {loading ? (
           <LoadingSpinner inline />
+        ) : loadError ? (
+          <ErrorNotice onRetry={fetchAll} />
         ) : stores.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}><IconShop /></span>

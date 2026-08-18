@@ -1,75 +1,69 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { IconShopping, IconBell } from '../lib/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import ShoppingItemList from '../components/ShoppingItemList'
 import NotificationSettings from '../components/NotificationSettings'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Modal from '../components/Modal'
 import BottomNav from '../components/BottomNav'
 import EmptyState from '../components/EmptyState'
+import ErrorNotice from '../components/ErrorNotice'
 import Toast from '../components/Toast'
 import styles from './ShoppingPage.module.css'
 
 export default function ShoppingPage() {
   const navigate = useNavigate()
   const { familyMember } = useAuth()
-  const [lists, setLists] = useState([])
   const [selectedListId, setSelectedListId] = useState(null)
-  const [loadingLists, setLoadingLists] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [showNotifSettings, setShowNotifSettings] = useState(false)
   const [confirmDeleteList, setConfirmDeleteList] = useState(null) // list object
   const [toast, setToast] = useState(null) // { message, variant }
 
-  const fetchLists = useCallback(async () => {
-    if (!familyMember?.family_id) return
-    const { data, error } = await supabase
-      .from('shopping_lists')
-      .select('id, name, created_at, created_by, is_favorite')
-      .eq('family_id', familyMember.family_id)
-      .order('created_at', { ascending: false })
-    if (!error && data) {
-      const { data: uncheckedItems } = await supabase
-        .from('shopping_items')
-        .select('list_id')
-        .in('list_id', data.map(l => l.id))
-        .eq('checked', false)
+  const sortLists = (a, b) => {
+    if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1
+    return b.uncheckedCount - a.uncheckedCount
+  }
+
+  const {
+    data: lists,
+    loading: loadingLists,
+    error: loadError,
+    refetch: fetchLists,
+    setData: setLists,
+  } = useFamilyData(
+    async familyId => {
+      const lists = await unwrap(
+        supabase.from('shopping_lists')
+          .select('id, name, created_at, created_by, is_favorite')
+          .eq('family_id', familyId).order('created_at', { ascending: false })
+      )
+      const uncheckedItems = lists.length
+        ? await unwrap(
+            supabase.from('shopping_items').select('list_id')
+              .in('list_id', lists.map(l => l.id)).eq('checked', false)
+          )
+        : []
       const countMap = {}
-      if (uncheckedItems) {
-        uncheckedItems.forEach(item => {
-          countMap[item.list_id] = (countMap[item.list_id] || 0) + 1
-        })
+      for (const item of uncheckedItems) {
+        countMap[item.list_id] = (countMap[item.list_id] || 0) + 1
       }
-      const withCounts = data.map(l => ({ ...l, uncheckedCount: countMap[l.id] || 0 }))
       // お気に入り優先、同条件内は未購入数の多い順
-      withCounts.sort((a, b) => {
-        if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1
-        return b.uncheckedCount - a.uncheckedCount
-      })
-      setLists(withCounts)
-    }
-    setLoadingLists(false)
-  }, [familyMember?.family_id])
+      return lists.map(l => ({ ...l, uncheckedCount: countMap[l.id] || 0 })).sort(sortLists)
+    },
+    ['shopping_lists'],
+    [],
+  )
 
   useEffect(() => {
     if (lists.length > 0 && !selectedListId) {
       setSelectedListId(lists[0].id)
     }
   }, [lists, selectedListId])
-
-  useEffect(() => { fetchLists() }, [fetchLists])
-
-  useEffect(() => {
-    if (!familyMember?.family_id) return
-    const channel = supabase
-      .channel('shopping_lists_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_lists', filter: `family_id=eq.${familyMember.family_id}` }, fetchLists)
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [familyMember?.family_id, fetchLists])
 
   async function handleCreateList(name) {
     const { data, error } = await supabase
@@ -87,27 +81,13 @@ export default function ShoppingPage() {
     const list = lists.find(l => l.id === listId)
     if (!list) return
     const is_favorite = !list.is_favorite
-    setLists(prev => {
-      const updated = prev.map(l => l.id === listId ? { ...l, is_favorite } : l)
-      updated.sort((a, b) => {
-        if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1
-        return b.uncheckedCount - a.uncheckedCount
-      })
-      return updated
-    })
+    setLists(prev => prev.map(l => l.id === listId ? { ...l, is_favorite } : l).sort(sortLists))
     const { error } = await supabase.from('shopping_lists').update({ is_favorite }).eq('id', listId)
     if (error) {
       console.error('お気に入り更新エラー:', error)
       setToast({ message: 'お気に入りの更新に失敗しました。通信環境を確認してください。', variant: 'error' })
       // ロールバック
-      setLists(prev => {
-        const rolled = prev.map(l => l.id === listId ? { ...l, is_favorite: !is_favorite } : l)
-        rolled.sort((a, b) => {
-          if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1
-          return b.uncheckedCount - a.uncheckedCount
-        })
-        return rolled
-      })
+      setLists(prev => prev.map(l => l.id === listId ? { ...l, is_favorite: !is_favorite } : l).sort(sortLists))
     }
   }
 
@@ -167,7 +147,9 @@ export default function ShoppingPage() {
 
         {/* コンテンツ */}
         <main className={styles.content}>
-          {selectedListId ? (
+          {loadError ? (
+            <ErrorNotice onRetry={fetchLists} />
+          ) : selectedListId ? (
             <ShoppingItemList
               listId={selectedListId}
               listName={selectedList?.name}

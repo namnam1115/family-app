@@ -28,6 +28,7 @@
 | `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択 | TravelPage |
 | `Modal` | 全ページ共通モーダル（ボトムシート↔中央表示、Esc / 背景タップで閉じる、フォーカストラップ、背景スクロールロック） | 全ページのモーダル |
 | `ErrorBoundary` | 描画エラー時のフォールバック UI（再試行 / ホームへ） | `App.jsx`（アプリ全体 + ルート単位） |
+| `ErrorNotice` | データ取得失敗時のページ内表示（再読み込み） | `useFamilyData` の `error` と組で使う |
 
 ## 共通化ロードマップ
 
@@ -45,7 +46,6 @@
 | `EmptyState` | 絵文字 + 案内文 | 参照実装: `ShoppingPage` の empty |
 | `Chip` / `Badge` | タグ表示（PlacesPage）・件数バッジ | |
 | `Avatar` | メンバー表示 | |
-| `ErrorView` | ページ内エラー（取得失敗）の再試行 UI | 描画エラーは `ErrorBoundary` で対応済み |
 
 抽出したらこの表を「既存コンポーネント」へ移動して更新すること。
 

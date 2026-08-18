@@ -1,53 +1,41 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import { IconBudget, IconChart, IconPeople } from '../lib/icons'
 import { supabase } from '../lib/supabase'
+import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ErrorNotice from '../components/ErrorNotice'
 import Modal from '../components/Modal'
 import styles from './BudgetPage.module.css'
 
 export default function BudgetPage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
-  const [categories, setCategories] = useState([])
-  const [entries, setEntries] = useState([])
-  const [members, setMembers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [view, setView] = useState('category')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddEntry, setShowAddEntry] = useState(null) // null | true | categoryId string
   const [editEntry, setEditEntry] = useState(null)
 
-  const fetchAll = useCallback(async () => {
-    if (!familyMember?.family_id) return
-    const fid = familyMember.family_id
-    const [{ data: cats }, { data: ents }, { data: mems }] = await Promise.all([
-      supabase.from('budget_categories').select('*').eq('family_id', fid).order('sort_order').order('created_at'),
-      supabase.from('budget_entries').select('*, budget_categories(name), family_members(id, name)').eq('family_id', fid),
-      supabase.from('family_members').select('id, name').eq('family_id', fid),
-    ])
-    if (cats) setCategories(cats)
-    if (ents) setEntries(ents)
-    if (mems) setMembers(mems)
-    setLoading(false)
-  }, [familyMember?.family_id])
-
-  useEffect(() => { fetchAll() }, [fetchAll])
-
-  useEffect(() => {
-    if (!familyMember?.family_id) return
-    const fid = familyMember.family_id
-    const ch1 = supabase.channel('budget_cats_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_categories', filter: `family_id=eq.${fid}` }, fetchAll)
-      .subscribe()
-    const ch2 = supabase.channel('budget_entries_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_entries', filter: `family_id=eq.${fid}` }, fetchAll)
-      .subscribe()
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
-  }, [familyMember?.family_id, fetchAll])
+  const {
+    data: { categories, entries, members },
+    loading,
+    error: loadError,
+    refetch: fetchAll,
+  } = useFamilyData(
+    async familyId => {
+      const [categories, entries, members] = await Promise.all([
+        unwrap(supabase.from('budget_categories').select('*').eq('family_id', familyId).order('sort_order').order('created_at')),
+        unwrap(supabase.from('budget_entries').select('*, budget_categories(name), family_members(id, name)').eq('family_id', familyId)),
+        unwrap(supabase.from('family_members').select('id, name').eq('family_id', familyId)),
+      ])
+      return { categories, entries, members }
+    },
+    ['budget_categories', 'budget_entries'],
+    { categories: [], entries: [], members: [] },
+  )
 
   async function handleAddCategory(name) {
     const maxOrder = categories.reduce((m, c) => Math.max(m, c.sort_order), -1)
@@ -124,6 +112,8 @@ export default function BudgetPage() {
       <main className={styles.main}>
         {loading ? (
           <LoadingSpinner inline />
+        ) : loadError ? (
+          <ErrorNotice onRetry={fetchAll} />
         ) : view === 'category' ? (
           <CategoryView
             categories={categories}

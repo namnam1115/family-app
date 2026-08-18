@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import {
@@ -11,11 +11,13 @@ import {
   IconView, IconMoney, IconCheck,
 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
+import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import { useAuth } from '../contexts/AuthContext'
 import { loadGoogleMapsScript } from '../utils/googleMaps'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ErrorNotice from '../components/ErrorNotice'
 import Toast from '../components/Toast'
 import Modal from '../components/Modal'
 import styles from './PlacesPage.module.css'
@@ -124,9 +126,6 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 export default function PlacesPage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
-  const [places, setPlaces] = useState([])
-  const [members, setMembers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')   // 'all'|'want'|'visited'
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [subcategoryFilter, setSubcategoryFilter] = useState('all')
@@ -145,38 +144,29 @@ export default function PlacesPage() {
   const [recommendPlace, setRecommendPlace] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
 
-  const fetchAll = useCallback(async () => {
-    if (!familyMember?.family_id) return
-    const fid = familyMember.family_id
-    const [{ data: pl }, { data: mem }] = await Promise.all([
-      supabase
-        .from('wish_places')
-        .select('*, added_by_member:family_members!wish_places_added_by_fkey(id, name)')
-        .eq('family_id', fid)
-        .order('created_at', { ascending: false }),
-      supabase.from('family_members').select('id, name').eq('family_id', fid),
-    ])
-    if (pl) setPlaces(pl)
-    if (mem) setMembers(mem)
-    setLoading(false)
-  }, [familyMember?.family_id])
-
-  useEffect(() => { fetchAll() }, [fetchAll])
+  const {
+    data: { places, members },
+    loading,
+    error: loadError,
+    refetch: fetchAll,
+  } = useFamilyData(
+    async familyId => {
+      const [places, members] = await Promise.all([
+        unwrap(
+          supabase.from('wish_places')
+            .select('*, added_by_member:family_members!wish_places_added_by_fkey(id, name)')
+            .eq('family_id', familyId).order('created_at', { ascending: false })
+        ),
+        unwrap(supabase.from('family_members').select('id, name').eq('family_id', familyId)),
+      ])
+      return { places, members }
+    },
+    ['wish_places'],
+    { places: [], members: [] },
+  )
 
   // Google Maps スクリプトをページロード時に事前読み込み
   useEffect(() => { loadGoogleMapsScript().catch(() => {}) }, [])
-
-  useEffect(() => {
-    if (!familyMember?.family_id) return
-    const ch = supabase
-      .channel('wish_places_rt')
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'wish_places',
-        filter: `family_id=eq.${familyMember.family_id}`,
-      }, fetchAll)
-      .subscribe()
-    return () => supabase.removeChannel(ch)
-  }, [familyMember?.family_id, fetchAll])
 
   // 「今日はここ！」のおすすめ場所を維持・再抽選
   useEffect(() => {
@@ -490,6 +480,8 @@ export default function PlacesPage() {
           <MapView places={filtered} />
         ) : loading ? (
           <LoadingSpinner inline />
+        ) : loadError ? (
+          <ErrorNotice onRetry={fetchAll} />
         ) : (
           <>
             {isBrowsing && (
