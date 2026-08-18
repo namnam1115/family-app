@@ -68,9 +68,7 @@
   letter-spacing: 0.01em;
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1393,7 +1391,9 @@
   color: var(--primary);
   -webkit-text-fill-color: var(--primary);
   font-size: 1rem;
-  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: -0.12em;
+  margin-right: 0.35rem;
 }
 
 /* 比較シート・アイコンピッカーの閉じるボタン */
