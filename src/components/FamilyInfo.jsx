@@ -6,9 +6,9 @@ import MemberInfoModal from './MemberInfoModal'
 import styles from './FamilyInfo.module.css'
 
 export default function FamilyInfo() {
-  const { familyMember } = useAuth()
+  const { familyMember, createInviteToken } = useAuth()
   const [members, setMembers] = useState([])
-  const [inviteCopied, setInviteCopied] = useState(false)
+  const [inviteState, setInviteState] = useState('idle') // idle | loading | copied | error
   const [selectedMember, setSelectedMember] = useState(null)
 
   useEffect(() => {
@@ -26,12 +26,19 @@ export default function FamilyInfo() {
     fetchMembers()
   }, [familyMember?.family_id])
 
-  function copyInviteLink() {
-    const url = `${window.location.origin}/join/${familyMember.family_id}`
-    navigator.clipboard.writeText(url).then(() => {
-      setInviteCopied(true)
-      setTimeout(() => setInviteCopied(false), 2000)
-    })
+  async function copyInviteLink() {
+    setInviteState('loading')
+    try {
+      // 招待リンクは家族 ID ではなく使い捨てのトークンで発行する（有効期限 7 日）
+      const token = await createInviteToken()
+      await navigator.clipboard.writeText(`${window.location.origin}/join/${token}`)
+      setInviteState('copied')
+      setTimeout(() => setInviteState('idle'), 2000)
+    } catch (err) {
+      console.error('招待リンク発行エラー:', err)
+      setInviteState('error')
+      setTimeout(() => setInviteState('idle'), 3000)
+    }
   }
 
   if (!familyMember) return null
@@ -55,8 +62,15 @@ export default function FamilyInfo() {
           <span className={styles.memberCount}>{members.length}名</span>
         </div>
       </div>
-      <button className={styles.inviteBtn} onClick={copyInviteLink}>
-        {inviteCopied ? <><IconCheck /> コピー</> : '招待'}
+      <button
+        className={styles.inviteBtn}
+        onClick={copyInviteLink}
+        disabled={inviteState === 'loading'}
+      >
+        {inviteState === 'copied' ? <><IconCheck /> コピー</>
+          : inviteState === 'loading' ? '発行中...'
+          : inviteState === 'error' ? '失敗'
+          : '招待'}
       </button>
       <MemberInfoModal
         member={selectedMember}

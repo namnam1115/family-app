@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './GroupSetup.module.css'
 
-// 招待リンク（例: https://.../join/<id>）や貼り付けた文字列から family_id を取り出す
-function extractFamilyId(raw) {
+// 招待リンク（例: https://.../join/<token>）や貼り付けた文字列から招待トークンを取り出す
+function extractInviteToken(raw) {
   const s = raw.trim()
   if (!s) return null
   const m = s.match(/join\/([^/?#\s]+)/)
   if (m) return m[1]
-  // URL でなければ、そのまま ID とみなす
+  // URL でなければ、そのままトークンとみなす
   return s
 }
 
@@ -24,9 +24,9 @@ export default function GroupSetup() {
 
   function handleJoin(e) {
     e.preventDefault()
-    const id = extractFamilyId(inviteLink)
-    if (!id) { setError('招待リンクを入力してください。'); return }
-    navigate(`/join/${id}`)
+    const token = extractInviteToken(inviteLink)
+    if (!token) { setError('招待リンクを入力してください。'); return }
+    navigate(`/join/${token}`)
   }
 
   async function handleCreate(e) {

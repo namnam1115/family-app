@@ -7,11 +7,12 @@ import { IconHome } from '../lib/icons'
 import styles from './JoinPage.module.css'
 
 export default function JoinPage() {
-  const { familyId } = useParams()
-  const { user, loading, familyMember, signInWithGoogle, joinFamily } = useAuth()
+  const { token } = useParams()
+  const { user, loading, familyMember, joinFamily, fetchInvite } = useAuth()
   const navigate = useNavigate()
   const [status, setStatus] = useState('idle') // idle | joining | done | error
   const [errorMsg, setErrorMsg] = useState('')
+  const [familyName, setFamilyName] = useState('')
 
   // ログイン済み＆グループ参加済みならホームへ
   useEffect(() => {
@@ -19,6 +20,15 @@ export default function JoinPage() {
       navigate('/', { replace: true })
     }
   }, [loading, user, familyMember, navigate])
+
+  // 未ログインでも、どの家族への招待かを先に表示する
+  useEffect(() => {
+    let cancelled = false
+    fetchInvite(token)
+      .then(invite => { if (!cancelled && invite) setFamilyName(invite.family_name) })
+      .catch(err => console.error('招待情報の取得エラー:', err))
+    return () => { cancelled = true }
+  }, [token, fetchInvite])
 
   // ログイン済み＆グループ未所属 → 自動的に参加試行
   useEffect(() => {
@@ -30,7 +40,7 @@ export default function JoinPage() {
   async function handleJoin() {
     setStatus('joining')
     try {
-      await joinFamily(familyId)
+      await joinFamily(token)
       setStatus('done')
       setTimeout(() => navigate('/', { replace: true }), 1500)
     } catch (err) {
@@ -43,7 +53,7 @@ export default function JoinPage() {
     try {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/join/${familyId}` },
+        options: { redirectTo: `${window.location.origin}/join/${token}` },
       })
     } catch (err) {
       setErrorMsg('ログインに失敗しました。')
@@ -60,6 +70,10 @@ export default function JoinPage() {
         <span className={styles.icon}><IconHome /></span>
         <h1 className={styles.title}>家族グループへの招待</h1>
 
+        {familyName && status !== 'error' && (
+          <p className={styles.desc}><strong>{familyName}</strong> への招待です。</p>
+        )}
+
         {status === 'done' && (
           <p className={styles.success}>参加しました！ホームへ移動します...</p>
         )}
@@ -74,8 +88,7 @@ export default function JoinPage() {
         {status === 'idle' && !user && (
           <>
             <p className={styles.desc}>
-              家族グループへの招待リンクを開きました。
-              <br />Googleでログインして参加してください。
+              Googleでログインすると参加できます。
             </p>
             <button className={styles.googleBtn} onClick={handleSignIn}>
               <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">

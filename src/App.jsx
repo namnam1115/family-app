@@ -37,7 +37,7 @@ export default function App() {
           <OfflineBanner />
           <Routes>
             <Route path="/" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
-            <Route path="/join/:familyId" element={<LazyRoute><JoinPage /></LazyRoute>} />
+            <Route path="/join/:token" element={<LazyRoute><JoinPage /></LazyRoute>} />
             <Route
               path="/shopping"
               element={

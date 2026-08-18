@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -63,53 +63,37 @@ export function AuthProvider({ children }) {
   }
 
   async function createFamily(name) {
-    const { data: family, error: familyError } = await supabase
-      .from('families')
-      .insert({ name })
-      .select()
-      .single()
-    if (familyError) throw familyError
-
-    const { error: memberError } = await supabase
-      .from('family_members')
-      .insert({
-        family_id: family.id,
-        user_id: user.id,
-        name: user.user_metadata?.full_name || user.email,
-        email: user.email,
-      })
-    if (memberError) throw memberError
-
+    // 家族の作成とメンバー登録は RPC 内で一括して行う（031）
+    const { error } = await supabase.rpc('create_family_with_owner', {
+      p_name: name,
+      p_member_name: user.user_metadata?.full_name || user.email,
+    })
+    if (error) throw error
     await fetchFamilyMember(user.id)
   }
 
-  async function joinFamily(familyId) {
-    const { data: family, error: familyError } = await supabase
-      .from('families')
-      .select('id, name')
-      .eq('id', familyId)
-      .maybeSingle()
-    if (familyError) throw familyError
-    if (!family) throw new Error('家族グループが見つかりません')
+  // JoinPage が useEffect の依存に入れるため、参照を固定しておく
+  /** 招待トークンから家族名を引く（参加前の確認用）。無効なら null */
+  const fetchInvite = useCallback(async (token) => {
+    const { data, error } = await supabase.rpc('get_family_invite', { p_token: token })
+    if (error) throw error
+    return data?.[0] ?? null
+  }, [])
 
-    const { data: existing } = await supabase
-      .from('family_members')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    if (existing) throw new Error('すでに家族グループに参加しています')
-
-    const { error: memberError } = await supabase
-      .from('family_members')
-      .insert({
-        family_id: familyId,
-        user_id: user.id,
-        name: user.user_metadata?.full_name || user.email,
-        email: user.email,
-      })
-    if (memberError) throw memberError
-
+  async function joinFamily(token) {
+    const { error } = await supabase.rpc('join_family_with_invite', {
+      p_token: token,
+      p_member_name: user.user_metadata?.full_name || user.email,
+    })
+    if (error) throw error
     await fetchFamilyMember(user.id)
+  }
+
+  /** 招待リンク用のトークンを発行する（有効な招待があれば使い回される） */
+  async function createInviteToken() {
+    const { data, error } = await supabase.rpc('create_family_invite')
+    if (error) throw error
+    return data
   }
 
   const value = {
@@ -120,6 +104,8 @@ export function AuthProvider({ children }) {
     signOut,
     createFamily,
     joinFamily,
+    fetchInvite,
+    createInviteToken,
     refetchFamilyMember: () => user && fetchFamilyMember(user.id),
   }
 

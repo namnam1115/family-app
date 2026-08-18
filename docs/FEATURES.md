@@ -7,7 +7,7 @@
 | パス | ページ | 認証 | 主なテーブル |
 |---|---|---|---|
 | `/` | HomePage（アプリランチャー + 認証） | 不要（未ログイン時はログイン UI） | families, family_members |
-| `/join/:familyId` | JoinPage（招待リンクで家族参加） | 不要（参加時にログイン誘導） | families, family_members |
+| `/join/:token` | JoinPage（招待トークンで家族参加） | 不要（参加時にログイン誘導） | family_invites, families, family_members |
 | `/shopping` | ShoppingPage 買い物リスト | 必要 | shopping_lists, shopping_items |
 | `/price` | PricePage 価格比較 | 必要 | price_stores, price_items |
 | `/budget` | BudgetPage 家計 | 必要 | budget_categories, budget_entries |

@@ -18,7 +18,12 @@ $$;
 - 家族スコープの全テーブルの RLS は `family_id = get_my_family_id()` パターン
 - `security definer` の関数は必ず `set search_path` を付ける（付けないと呼び出し側の search_path に依存する）
 - `push_subscriptions` は USING が `user_id = auth.uid()`、**WITH CHECK は `user_id = auth.uid() and family_id = get_my_family_id()`**（030）。family_id を検証しないと、他家族の ID で登録してその家族のプッシュを受信できてしまう
-- 例外: `families` の SELECT は認証済み全員に許可（招待リンク `/join/:familyId` で未所属ユーザーが検索するため。UUID は推測困難）
+- 家族の作成・参加は **`security definer` の RPC 経由のみ**（031）。`families` / `family_members` への直接 INSERT ポリシーは持たない
+  - `create_family_with_owner(p_name, p_member_name)` — 家族作成 + 作成者をメンバー登録
+  - `create_family_invite()` — 招待トークン発行（有効な招待があれば使い回す。期限 7 日）
+  - `get_family_invite(p_token)` — 招待トークンから家族名を引く（参加前の確認用）
+  - `join_family_with_invite(p_token, p_member_name)` — 招待トークンで参加
+- `families` の SELECT は `id = get_my_family_id()`。**認証済み全員に開放してはいけない**（全家族を列挙できてしまい、招待リンクの推測困難性が意味をなくす）
 
 ## テーブル一覧
 
@@ -26,6 +31,7 @@ $$;
 |---|---|---|---|
 | `families` | 家族グループ | name | |
 | `family_members` | メンバー | family_id, user_id (UK), name, email | |
+| `family_invites` | 招待トークン | token (PK), family_id, created_by, expires_at, revoked_at | |
 | `family_settings` | 家族ごとの通知設定 | notification_enabled, notification_hour (0-23) | |
 | `shopping_lists` | 買い物リスト | family_id, name, created_by, is_favorite | ✅ |
 | `shopping_items` | 買い物アイテム | list_id, name, memo, added_by, checked, checked_at, important | ✅ |

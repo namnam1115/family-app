@@ -24,6 +24,7 @@
 - 家族参加フローに招待リンク貼り付け欄を追加（`GroupSetup`）
 
 ### Security
+- 招待の仕組みを家族 ID から使い捨ての招待トークン（有効期限 7 日）に変更（マイグレーション 031）。従来は `families` の SELECT が認証済み全員に開放されていたため全家族を列挙でき、`family_members` の INSERT が `user_id` しか検証していなかったため、未所属ユーザーが任意の家族に参加してそのデータを閲覧できる状態だった。家族の作成・参加は `security definer` の RPC 経由のみとし、`families` の SELECT は自分の家族に限定した。招待リンクは `/join/:token` 形式になる
 - `push_subscriptions` の WITH CHECK に `family_id = get_my_family_id()` を追加（マイグレーション 030）。従来は他家族の family_id で自分の端末を登録でき、その家族のプッシュ通知（予定タイトル・買い物アイテム名）を受信できる状態だった。既に混入している家族外の購読行も同マイグレーションで削除する
 - `get_my_family_id()` に `set search_path` を設定（security definer 関数の基本対策）
 
