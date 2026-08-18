@@ -811,3 +811,24 @@
   gap: 0.05em;
   color: var(--warning);
 }
+
+/* おかずから買い物リストへ送る導線 */
+.toShoppingBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 36px;
+  padding: 0 0.75rem;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.toShoppingBtn:active {
+  filter: brightness(0.96);
+}

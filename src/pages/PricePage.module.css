@@ -1411,3 +1411,33 @@
   transition: all 0.2s ease;
   touch-action: manipulation;
 }
+
+/* 比較シートから買い物リストへ送る導線 */
+.addToShoppingBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.75rem;
+  background: var(--grad-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.925rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.addToShoppingBtn:active {
+  filter: brightness(0.95);
+}
+
+.addedMessage {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--success);
+}

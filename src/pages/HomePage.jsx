@@ -7,15 +7,17 @@ import AppCard from '../components/AppCard'
 import FamilyInfo from '../components/FamilyInfo'
 import TodaySchedule from '../components/TodaySchedule'
 import BottomNav from '../components/BottomNav'
+import GlobalSearch from '../components/GlobalSearch'
 import {
   IconHome, IconShopping, IconPrice, IconPlaces, IconDishes,
-  IconBudget, IconSchedule, IconInventory, IconTravel, IconMemo,
+  IconBudget, IconSchedule, IconInventory, IconTravel, IconMemo, IconSearch,
 } from '../lib/icons'
 import styles from './HomePage.module.css'
 
 export default function HomePage() {
   const { user, loading, familyMember, signInWithGoogle, signOut } = useAuth()
   const [authError, setAuthError] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
   const navigate = useNavigate()
 
   if (loading) return <LoadingSpinner />
@@ -152,6 +154,12 @@ export default function HomePage() {
       <header className={styles.header}>
         <span className={styles.headerLogo}><IconHome /></span>
         <span className={styles.headerTitle}>家族プラットフォーム</span>
+        <button
+          className={styles.searchBtn}
+          onClick={() => setShowSearch(true)}
+          aria-label="家族のデータを検索"
+          title="検索"
+        ><IconSearch /></button>
         <button className={styles.signOutBtn} onClick={signOut}>ログアウト</button>
       </header>
       <main className={styles.main}>
@@ -173,6 +181,13 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+      {showSearch && (
+        <GlobalSearch
+          familyId={familyMember.family_id}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
+
       <BottomNav />
     </div>
   )

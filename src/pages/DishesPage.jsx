@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import {
   IconDishes, IconSearch, IconGear, IconCheck, IconCheckCircle, IconReview, IconLink,
-  IconEdit, IconTrash, IconStar, IconStarFill, IconYoutube, IconMusic, IconWeb,
+  IconEdit, IconTrash, IconStar, IconStarFill, IconYoutube, IconMusic, IconWeb, IconShopping,
 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
+import AddToShoppingListModal from '../components/AddToShoppingListModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Modal from '../components/Modal'
 import styles from './DishesPage.module.css'
@@ -70,6 +71,7 @@ export default function DishesPage() {
   const [reviewTarget, setReviewTarget] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
   const [showManageCategories, setShowManageCategories] = useState(false)
+  const [shoppingTarget, setShoppingTarget] = useState(null)
 
   const fetchAll = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -248,6 +250,7 @@ export default function DishesPage() {
                 dish={dish}
                 onReview={() => setReviewTarget(dish)}
                 onEdit={() => setEditTarget(dish)}
+                onAddToShopping={() => setShoppingTarget(dish)}
               />
             ))}
           </ul>
@@ -289,6 +292,19 @@ export default function DishesPage() {
         />
       )}
 
+      {shoppingTarget && (
+        <AddToShoppingListModal
+          items={[{
+            key: shoppingTarget.id,
+            name: shoppingTarget.name,
+            memo: shoppingTarget.url || null,
+          }]}
+          familyMember={familyMember}
+          title="材料を買い物リストに追加"
+          onClose={() => setShoppingTarget(null)}
+        />
+      )}
+
       <BottomNav />
     </div>
   )
@@ -296,7 +312,7 @@ export default function DishesPage() {
 
 // ── 料理カード ────────────────────────────────────────────
 
-function DishCard({ dish, onReview, onEdit }) {
+function DishCard({ dish, onReview, onEdit, onAddToShopping }) {
   const thumbnailUrl = getThumbnailUrl(dish)
   const platform = getPlatform(dish.url)
   const platformInfo = platform ? PLATFORM_LABELS[platform] : null
@@ -365,6 +381,14 @@ function DishCard({ dish, onReview, onEdit }) {
                 作った！
               </button>
             )}
+            <button
+              type="button"
+              className={styles.toShoppingBtn}
+              onClick={onAddToShopping}
+              aria-label={`${dish.name}を買い物リストに追加`}
+            >
+              <IconShopping /> 買い物へ
+            </button>
           </div>
           <button
             className={styles.editBtn}

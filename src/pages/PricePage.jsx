@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
 import {
   IconPrice, IconChart, IconList, IconShop, IconSearch,
-  IconGrocery, IconDaily, IconBox, IconEdit, IconCheckBold, IconClose,
+  IconGrocery, IconDaily, IconBox, IconEdit, IconCheckBold, IconClose, IconShopping,
 } from '../lib/icons'
 // Tabler Icons（線画・メイン）
 import {
@@ -33,6 +33,7 @@ import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import { useAuth } from '../contexts/AuthContext'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
+import AddToShoppingListModal from '../components/AddToShoppingListModal'
 import ErrorNotice from '../components/ErrorNotice'
 import Modal from '../components/Modal'
 import styles from './PricePage.module.css'
@@ -349,6 +350,7 @@ export default function PricePage() {
           lookup={lookup}
           cheapestInfo={cheapestInfo}
           productIcon={productIcon}
+          familyMember={familyMember}
           onUpsert={handleUpsert}
           onDeleteItem={handleDeleteItem}
           onDeleteProduct={name => { handleDeleteProduct(name); setSelectedProduct(null) }}
@@ -418,11 +420,13 @@ function ProductListView({ products, cheapestInfo, productIcon, onSelect }) {
 }
 
 // ── 店舗別比較シート ──────────────────────────────────────
-function CompareSheet({ product, storeNames, lookup, cheapestInfo, productIcon, onUpsert, onDeleteItem, onDeleteProduct, onIconUpdate, onClose }) {
+function CompareSheet({ product, storeNames, lookup, cheapestInfo, productIcon, familyMember, onUpsert, onDeleteItem, onDeleteProduct, onIconUpdate, onClose }) {
   const best = cheapestInfo[product]
   const registeredCount = storeNames.filter(s => lookup[product]?.[s]).length
   const [confirmState, setConfirmState] = useState(null)
   const [showIconPicker, setShowIconPicker] = useState(false)
+  const [showAddToShopping, setShowAddToShopping] = useState(false)
+  const [addedMessage, setAddedMessage] = useState('')
   const icon = productIcon[product] || null
 
   return (
@@ -469,6 +473,16 @@ function CompareSheet({ product, storeNames, lookup, cheapestInfo, productIcon, 
         </ul>
 
         <button
+          type="button"
+          className={styles.addToShoppingBtn}
+          onClick={() => setShowAddToShopping(true)}
+        >
+          <IconShopping /> 買い物リストに追加
+        </button>
+
+        {addedMessage && <p className={styles.addedMessage}>{addedMessage}</p>}
+
+        <button
           className={styles.deleteProductSheetBtn}
           onClick={() => setConfirmState({
             message: `「${product}」をリストから削除しますか？全店舗の価格データも削除されます。`,
@@ -478,6 +492,20 @@ function CompareSheet({ product, storeNames, lookup, cheapestInfo, productIcon, 
           この商品をリストから削除
         </button>
       </div>
+
+      {showAddToShopping && (
+        <AddToShoppingListModal
+          items={[{
+            key: product,
+            name: product,
+            // 最安店とその価格をメモに残し、店頭で判断できるようにする
+            memo: best ? `最安: ${best.store} ${formatPrice(best.price)}` : null,
+          }]}
+          familyMember={familyMember}
+          onAdded={() => setAddedMessage('買い物リストに追加しました')}
+          onClose={() => setShowAddToShopping(false)}
+        />
+      )}
 
       {showIconPicker && (
         <IconPicker

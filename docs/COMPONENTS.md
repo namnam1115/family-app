@@ -27,6 +27,8 @@
 | `OfflineBanner` | オフライン時の上部バナー（アプリ全体で 1 つ） | `App.jsx` |
 | `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択 | TravelPage |
 | `schedule/*` | 予定表の画面部品（月 / 週 / アジェンダ・各モーダル） | SchedulePage |
+| `AddToShoppingListModal` | 他アプリから買い物リストへ品物を送る | PricePage / DishesPage |
+| `GlobalSearch` | アプリ横断検索モーダル | HomePage |
 | `Modal` | 全ページ共通モーダル（ボトムシート↔中央表示、Esc / 背景タップで閉じる、フォーカストラップ、背景スクロールロック） | 全ページのモーダル |
 | `ErrorBoundary` | 描画エラー時のフォールバック UI（再試行 / ホームへ） | `App.jsx`（アプリ全体 + ルート単位） |
 | `ErrorNotice` | データ取得失敗時のページ内表示（再読み込み） | `useFamilyData` の `error` と組で使う |
