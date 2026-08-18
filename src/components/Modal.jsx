@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 import { IconClose } from '../lib/icons'
 import styles from './Modal.module.css'
 
+// 入れ子で開いたモーダルのうち、最前面のものだけが Esc に反応するようにする
+const openStack = []
+
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
@@ -36,17 +39,24 @@ export default function Modal({
   const panelRef = useRef(null)
   const titleId = useId()
 
+  // onClose は呼び出し側でインライン関数になりがちなので、
+  // 依存に含めて毎レンダー登録し直さないよう ref 経由で参照する
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!open) return
 
     const previouslyFocused = document.activeElement
     const { overflow } = document.body.style
     document.body.style.overflow = 'hidden'
+    const token = {}
+    openStack.push(token)
 
     function onKeyDown(e) {
+      if (openStack[openStack.length - 1] !== token) return
       if (e.key === 'Escape') {
-        e.stopPropagation()
-        onClose?.()
+        onCloseRef.current?.()
         return
       }
       if (e.key !== 'Tab') return
@@ -78,10 +88,11 @@ export default function Modal({
 
     return () => {
       document.removeEventListener('keydown', onKeyDown)
+      openStack.splice(openStack.indexOf(token), 1)
       document.body.style.overflow = overflow
       previouslyFocused?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
