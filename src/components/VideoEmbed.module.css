@@ -1,0 +1,109 @@
+.frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+/* 縦動画（TikTok / YouTube Shorts）は再生時のみ縦長に切り替える */
+.vertical {
+  aspect-ratio: 9 / 16;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.player {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.posterBtn {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* サムネイルが無い / 期限切れで読めない時の代替。中央は再生ボタンが占めるので下寄せにする */
+.placeholder {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  height: 100%;
+  padding-bottom: 0.6rem;
+  background: var(--grad-primary-soft);
+  color: var(--ink-2);
+}
+
+.placeholderIcon {
+  font-size: 0.95rem;
+}
+
+.placeholderLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.playOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  transition: transform 0.2s ease;
+}
+
+/* サムネイル画像の上に重なるため、テーマではなく明暗のコントラストで固定する */
+.playOverlay svg {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: var(--radius-full);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
+
+.posterBtn:hover .playOverlay,
+.posterBtn:focus-visible .playOverlay {
+  transform: scale(1.08);
+}
+
+.stopBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--glass);
+  color: var(--ink);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+@media (max-width: 420px) {
+  .playOverlay {
+    font-size: 2.5rem;
+  }
+}
