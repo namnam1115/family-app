@@ -20,6 +20,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorNotice from '../components/ErrorNotice'
 import Toast from '../components/Toast'
 import Modal from '../components/Modal'
+import PlaceDetailModal from '../components/places/PlaceDetailModal'
 import styles from './PlacesPage.module.css'
 
 
@@ -133,6 +134,7 @@ export default function PlacesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [visitTarget, setVisitTarget] = useState(null)      // place object
+  const [detailTarget, setDetailTarget] = useState(null)    // place object
   const [editTarget, setEditTarget] = useState(null)        // place object
   const [searchTitle, setSearchTitle] = useState(null)      // タイトルの簡易Web検索（文字列）
   const [toast, setToast] = useState(null)                  // { message, variant }
@@ -313,6 +315,12 @@ export default function PlacesPage() {
   const wantPlaces = places.filter(p => p.status === 'want')
   const recentPlaces = places.slice(0, 6)
 
+  // 詳細モーダルは開いている間に Realtime 更新が来ても最新の内容を映す（距離は開いた時の値を保持）
+  const latestDetail = detailTarget ? places.find(p => p.id === detailTarget.id) : null
+  const detailPlace = latestDetail
+    ? { ...latestDetail, _distanceKm: detailTarget._distanceKm }
+    : detailTarget
+
   function toggleTag(t) {
     setSelectedTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
   }
@@ -486,10 +494,10 @@ export default function PlacesPage() {
           <>
             {isBrowsing && (
               <div className={styles.discoverArea}>
-                <RecommendCard place={recommendPlace} onReroll={handleReroll} onOpen={setEditTarget} onSearchTitle={() => setSearchTitle(recommendPlace?.name)} />
+                <RecommendCard place={recommendPlace} onReroll={handleReroll} onOpen={setDetailTarget} onSearchTitle={() => setSearchTitle(recommendPlace?.name)} />
                 <DiscoverStrip activeTags={selectedTags} onSelectTag={handleDiscoverTagSelect} />
                 {recentPlaces.length > 0 && (
-                  <RecentRow places={recentPlaces} onOpen={setEditTarget} />
+                  <RecentRow places={recentPlaces} onOpen={setDetailTarget} />
                 )}
                 <NearbySection onLocate={handleNearbyLocate} />
               </div>
@@ -533,7 +541,7 @@ export default function PlacesPage() {
                     <PlaceCard
                       key={place.id}
                       place={place}
-                      onEdit={() => setEditTarget(place)}
+                      onOpenDetail={() => setDetailTarget(place)}
                       onVisit={() => setVisitTarget(place)}
                       onSearchTitle={() => setSearchTitle(place.name)}
                     />
@@ -550,6 +558,18 @@ export default function PlacesPage() {
           tagSuggestions={tagSuggestions}
           onSubmit={async data => { await handleAdd(data); setShowAdd(false) }}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {detailPlace && (
+        <PlaceDetailModal
+          place={detailPlace}
+          category={CATEGORIES[detailPlace.category] ?? CATEGORIES.other}
+          subcategoryLabel={getSubcategoryLabel(detailPlace.category, detailPlace.subcategory)}
+          onEdit={() => { setEditTarget(detailPlace); setDetailTarget(null) }}
+          onVisit={() => { setVisitTarget(detailPlace); setDetailTarget(null) }}
+          onSearchTitle={() => { setSearchTitle(detailPlace.name); setDetailTarget(null) }}
+          onClose={() => setDetailTarget(null)}
         />
       )}
 
@@ -806,7 +826,7 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
 }
 
 // ── 場所カード ────────────────────────────────────────────
-function PlaceCard({ place, onEdit, onVisit, onSearchTitle }) {
+function PlaceCard({ place, onOpenDetail, onVisit, onSearchTitle }) {
   const cat = CATEGORIES[place.category] ?? CATEGORIES.other
   const subLabel = getSubcategoryLabel(place.category, place.subcategory)
   const isVisited = place.status === 'visited'
@@ -822,7 +842,7 @@ function PlaceCard({ place, onEdit, onVisit, onSearchTitle }) {
   }
 
   return (
-    <li className={`${styles.card} ${isVisited ? styles.cardVisited : ''}`} onClick={onEdit}>
+    <li className={`${styles.card} ${isVisited ? styles.cardVisited : ''}`} onClick={onOpenDetail}>
       <div className={styles.cardTop}>
         <span className={styles.categoryBadge}><cat.icon /> {cat.label}</span>
         {place._distanceKm != null && (
