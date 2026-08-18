@@ -593,7 +593,7 @@
 @media (min-width: 1024px) {
   .header,
   .viewTabs {
-    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2 + 1rem));
   }
 
   .listWrapper {

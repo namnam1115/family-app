@@ -204,7 +204,7 @@
     padding-inline: max(1.5rem, calc((100% - var(--max-w)) / 2 + 1rem));
   }
   .main {
-    padding: 1.75rem 2rem;
+    padding: 1.75rem 1rem;
   }
   .appGrid {
     grid-template-columns: repeat(4, 1fr);

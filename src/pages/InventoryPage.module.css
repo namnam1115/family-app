@@ -582,6 +582,14 @@
 
 /* ── Desktop layout ── */
 @media (min-width: 1024px) {
+  /* 全幅のバーは content 側（max-width + 1rem の内側余白）と左端を揃える */
+  .header,
+  .searchBar,
+  .summaryBar,
+  .catTabs {
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2 + 1rem));
+  }
+
   .main {
     max-width: var(--max-w);
     margin: 0 auto;
@@ -597,10 +605,11 @@
     break-inside: avoid;
   }
 
+  /* デスクトップでは面を張らず、ボタンだけを置く */
   .floatingBar {
-    position: static;
     padding: 0;
     background: none;
+    border-top: none;
   }
 
   .addToShoppingBtn {

@@ -1358,12 +1358,12 @@
 
 @media (min-width: 1024px) {
   .header {
-    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2 + 1rem));
   }
   .filterBar {
     flex-direction: row;
     align-items: center;
-    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2));
+    padding-inline: max(1.25rem, calc((100% - var(--max-w)) / 2 + 1rem));
     gap: 1rem;
   }
   .searchWrapper {
@@ -1375,7 +1375,7 @@
     padding: 0.5rem 0;
   }
   .main {
-    padding-inline: max(1rem, calc((100% - var(--max-w)) / 2));
+    padding-inline: max(1rem, calc((100% - var(--max-w)) / 2 + 1rem));
   }
   .productList {
     grid-template-columns: repeat(3, 1fr);
