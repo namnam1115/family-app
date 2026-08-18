@@ -36,6 +36,7 @@ export {
   BsStar as IconStar,
   BsStarFill as IconStarFill,
   BsLink as IconLink,
+  BsPlayCircleFill as IconPlayCircle,
   BsBoxArrowUpRight as IconExternal,
   BsChatText as IconReview,
   BsTrash as IconTrash,

@@ -45,6 +45,8 @@
 
 ### 食べたいおかず（DishesPage）
 - カテゴリ別の食べたい料理リスト。レシピ URL から OG 画像を自動取得（Edge Function `fetch-og-image` → Storage 永続化）
+- 一覧のカードから動画をその場で再生（`VideoEmbed`）。YouTube / YouTube Shorts / TikTok の動画 URL を埋め込みプレイヤーで開き、同時に再生されるのは 1 本だけ
+- サムネイル画像の読み込みに失敗した場合（TikTok の CDN URL は期限切れになる）はプレースホルダーを表示して再生導線を残し、裏で `fetch-og-image` を呼んで永続 URL に自動で貼り替える
 - 「作った」記録（cooked_at）、5 段階評価とレビュー
 - カードの「買い物へ」から買い物リストへ追加（レシピ URL をメモに）
 

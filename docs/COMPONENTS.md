@@ -28,6 +28,7 @@
 | `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択 | TravelPage |
 | `schedule/*` | 予定表の画面部品（月 / 週 / アジェンダ・各モーダル） | SchedulePage |
 | `AddToShoppingListModal` | 他アプリから買い物リストへ品物を送る | PricePage / DishesPage |
+| `VideoEmbed` | 動画（YouTube / TikTok）のサムネイル表示と、その場での埋め込み再生。再生状態は親が持つ | DishesPage |
 | `GlobalSearch` | アプリ横断検索モーダル | HomePage |
 | `Modal` | 全ページ共通モーダル（ボトムシート↔中央表示、Esc / 背景タップで閉じる、フォーカストラップ、背景スクロールロック） | 全ページのモーダル |
 | `ErrorBoundary` | 描画エラー時のフォールバック UI（再試行 / ホームへ） | `App.jsx`（アプリ全体 + ルート単位） |

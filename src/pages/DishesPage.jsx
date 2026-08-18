@@ -11,33 +11,15 @@ import BottomNav from '../components/BottomNav'
 import AddToShoppingListModal from '../components/AddToShoppingListModal'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Modal from '../components/Modal'
+import VideoEmbed from '../components/VideoEmbed'
+import { getPlatform, getVideoEmbed, getYouTubeThumbnail } from '../utils/videoEmbed'
 import styles from './DishesPage.module.css'
 
 // ── ユーティリティ ────────────────────────────────────────
 
-function extractYouTubeId(url) {
-  if (!url) return null
-  const shortsMatch = url.match(/youtube\.com\/shorts\/([^?&/]+)/)
-  if (shortsMatch) return shortsMatch[1]
-  const shortMatch = url.match(/youtu\.be\/([^?&/]+)/)
-  if (shortMatch) return shortMatch[1]
-  const watchMatch = url.match(/[?&]v=([^?&/]+)/)
-  if (watchMatch) return watchMatch[1]
-  return null
-}
-
 function getThumbnailUrl(dish) {
   if (dish.image_url) return dish.image_url
-  const ytId = extractYouTubeId(dish.url)
-  if (ytId) return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
-  return null
-}
-
-function getPlatform(url) {
-  if (!url) return null
-  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube'
-  if (url.includes('tiktok.com')) return 'tiktok'
-  return 'web'
+  return getYouTubeThumbnail(dish.url)
 }
 
 const PLATFORM_LABELS = {
@@ -72,6 +54,8 @@ export default function DishesPage() {
   const [editTarget, setEditTarget] = useState(null)
   const [showManageCategories, setShowManageCategories] = useState(false)
   const [shoppingTarget, setShoppingTarget] = useState(null)
+  const [playingId, setPlayingId] = useState(null)
+  const refreshedThumbIds = useRef(new Set())
 
   const fetchAll = useCallback(async () => {
     if (!familyMember?.family_id) return
@@ -169,6 +153,30 @@ export default function DishesPage() {
     await supabase.from('dishes').delete().eq('id', id)
   }
 
+  // TikTok等のサムネイルURLは時間が経つと無効になるため、
+  // 表示に失敗したら取り直して永続URL（Storage）に差し替える
+  async function handleThumbnailError(dish) {
+    if (!dish.url || refreshedThumbIds.current.has(dish.id)) return
+    refreshedThumbIds.current.add(dish.id)
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-og-image', {
+        body: { url: dish.url },
+      })
+      if (error || !data?.image || data.image === dish.image_url) return
+      const { error: updateError } = await supabase
+        .from('dishes')
+        .update({ image_url: data.image })
+        .eq('id', dish.id)
+      if (updateError) {
+        console.error('サムネイル更新エラー:', updateError)
+        return
+      }
+      setDishes(prev => prev.map(d => d.id === dish.id ? { ...d, image_url: data.image } : d))
+    } catch (err) {
+      console.error('サムネイル再取得エラー:', err)
+    }
+  }
+
   async function handleAddCategory(name) {
     await supabase.from('dish_categories').insert({
       family_id: familyMember.family_id,
@@ -248,6 +256,10 @@ export default function DishesPage() {
               <DishCard
                 key={dish.id}
                 dish={dish}
+                playing={playingId === dish.id}
+                onPlay={() => setPlayingId(dish.id)}
+                onStop={() => setPlayingId(null)}
+                onThumbnailError={() => handleThumbnailError(dish)}
                 onReview={() => setReviewTarget(dish)}
                 onEdit={() => setEditTarget(dish)}
                 onAddToShopping={() => setShoppingTarget(dish)}
@@ -312,37 +324,36 @@ export default function DishesPage() {
 
 // ── 料理カード ────────────────────────────────────────────
 
-function DishCard({ dish, onReview, onEdit, onAddToShopping }) {
+function DishCard({ dish, playing, onPlay, onStop, onThumbnailError, onReview, onEdit, onAddToShopping }) {
   const thumbnailUrl = getThumbnailUrl(dish)
   const platform = getPlatform(dish.url)
   const platformInfo = platform ? PLATFORM_LABELS[platform] : null
   const hasReview = !!dish.cooked_at
+  const hasMedia = !!thumbnailUrl || !!getVideoEmbed(dish.url)
 
   return (
     <li className={styles.card}>
-      {thumbnailUrl && (
-        <div className={styles.thumbnailWrapper}>
-          <img
-            src={thumbnailUrl}
-            alt={dish.name}
-            className={styles.thumbnail}
-            loading="lazy"
-            onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
-          />
-          {platformInfo && (
-            <span className={styles.platformBadge}>
-              <platformInfo.icon /> {platformInfo.label}
-            </span>
-          )}
-        </div>
-      )}
+      <VideoEmbed
+        url={dish.url}
+        posterUrl={thumbnailUrl}
+        title={dish.name}
+        playing={playing}
+        onPlay={onPlay}
+        onStop={onStop}
+        onPosterError={onThumbnailError}
+        badge={platformInfo && (
+          <span className={styles.platformBadge}>
+            <platformInfo.icon /> {platformInfo.label}
+          </span>
+        )}
+      />
 
       <div className={styles.cardBody}>
         <div className={styles.cardTop}>
           {dish.category && (
             <span className={styles.categoryBadge}>{dish.category.name}</span>
           )}
-          {!thumbnailUrl && platformInfo && (
+          {!hasMedia && platformInfo && (
             <span className={styles.platformBadgeInline}>
               <platformInfo.icon /> {platformInfo.label}
             </span>
@@ -469,10 +480,7 @@ function AddDishModal({ categories, onSubmit, onClose }) {
     setThumbAutoFetched(false)
   }
 
-  const previewUrl = imageUrl || (() => {
-    const ytId = extractYouTubeId(url)
-    return ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null
-  })()
+  const previewUrl = imageUrl || getYouTubeThumbnail(url)
 
   return (
     <Modal open onClose={onClose} title="おかずを追加">
@@ -652,10 +660,7 @@ function EditDishModal({ dish, categories, onSubmit, onDelete, onClose }) {
     debounceRef.current = setTimeout(() => fetchThumbnail(val), 800)
   }
 
-  const previewUrl = imageUrl || (() => {
-    const ytId = extractYouTubeId(url)
-    return ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null
-  })()
+  const previewUrl = imageUrl || getYouTubeThumbnail(url)
 
   return (
     <Modal open onClose={onClose} title="おかずを編集">
