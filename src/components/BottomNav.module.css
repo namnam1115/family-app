@@ -1,8 +1,8 @@
 .nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* .page（flex 縦積み）の最後の子として通常フローに置く。
+     固定配置 + 固定値の余白予約だと、実際のバーの高さ（safe-area 込み）と
+     予約幅がずれるため、レイアウトに高さを測らせる。 */
+  flex-shrink: 0;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
@@ -14,8 +14,6 @@
   -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--glass-border);
   box-shadow: 0 -1px 16px color-mix(in srgb, var(--primary) 6%, transparent);
-  /* モーダルのオーバーレイ（z-index 100 以上）より下、ページ内容より上 */
-  z-index: 50;
 }
 
 .tab {

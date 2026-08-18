@@ -4,8 +4,6 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--grad-bg);
-  /* 画面下固定の BottomNav 分の余白を確保 */
-  padding-bottom: var(--bottomnav-h);
 }
 
 /* ── Header ── */
@@ -496,20 +494,16 @@
 
 /* ── Floating button ── */
 .floatingBar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 0.75rem 1rem 1rem;
-  background: linear-gradient(to top, var(--surface), var(--surface));
+  /* BottomNav と同じく通常フローに置く（固定配置だとナビに重なる） */
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: center;
-  z-index: 50;
-  pointer-events: none;
 }
 
 .addToShoppingBtn {
-  pointer-events: auto;
   background: linear-gradient(135deg, var(--success), var(--success));
   color: var(--on-success);
   border: none;
