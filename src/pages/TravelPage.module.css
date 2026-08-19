@@ -119,7 +119,7 @@
   backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
-  max-height: 42vh;
+  max-height: 52vh;
   overflow-y: auto;
 }
 
