@@ -1,0 +1,60 @@
+.list {
+  position: fixed;
+  z-index: 1200;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.option:hover,
+.optionActive {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.optionIcon {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 0.85rem;
+}
+
+.optionText {
+  min-width: 0;
+}
+
+.optionMain {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.optionSub {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--warning);
+}

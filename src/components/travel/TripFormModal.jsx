@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import Modal from '../Modal'
-import { loadGoogleMapsScript } from '../../utils/googleMaps'
+import PlaceSearchInput from '../PlaceSearchInput'
 import { MEMBER_COLORS } from '../../lib/schedule'
 import { PREFECTURES } from '../../lib/travel'
 import styles from './Travel.module.css'
@@ -180,9 +180,11 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
         />
 
         <label className={styles.label} htmlFor="trip-lodging">宿泊先（任意・Google マップ検索）</label>
-        <LodgingSearchInput
+        <PlaceSearchInput
+          id="trip-lodging"
+          inputClassName={styles.input}
+          placeholder="ホテル名・施設名で検索（例：横浜ベイホテル）"
           defaultValue={form.lodging}
-          address={form.lodging_address}
           onPick={({ name, address, lat, lng }) => {
             setForm(prev => ({ ...prev, lodging: name, lodging_address: address, lodging_lat: lat, lodging_lng: lng }))
           }}
@@ -191,6 +193,7 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
             setForm(prev => ({ ...prev, lodging: value, lodging_address: '', lodging_lat: null, lodging_lng: null }))
           }}
         />
+        {form.lodging_address && <p className={styles.hint}>{form.lodging_address}</p>}
 
         <label className={styles.label} htmlFor="trip-party">参加人数（任意）</label>
         <input
@@ -238,53 +241,3 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
   )
 }
 
-/**
- * 宿泊先の入力欄。Google Places のオートコンプリートを付け、
- * 候補を選ぶと施設名・住所・座標をまとめて返す。
- * API キー未設定や読み込み失敗時は、ただのテキスト入力として使える。
- */
-function LodgingSearchInput({ defaultValue, address, onPick, onType }) {
-  const inputRef = useRef(null)
-  const pickRef = useRef(onPick)
-  pickRef.current = onPick
-
-  useEffect(() => {
-    let mounted = true
-    loadGoogleMapsScript().then(async () => {
-      if (!mounted || !inputRef.current) return
-      await window.google.maps.importLibrary('places')
-      const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-        componentRestrictions: { country: 'jp' },
-        fields: ['formatted_address', 'geometry', 'name'],
-      })
-      autocomplete.addListener('place_changed', () => {
-        if (!mounted) return
-        const place = autocomplete.getPlace()
-        const location = place.geometry?.location
-        pickRef.current({
-          name: place.name || inputRef.current?.value || '',
-          address: place.formatted_address || '',
-          lat: location ? location.lat() : null,
-          lng: location ? location.lng() : null,
-        })
-      })
-    }).catch(() => { /* キー未設定などのときは通常の入力欄として使う */ })
-    return () => { mounted = false }
-  }, [])
-
-  return (
-    <>
-      <input
-        id="trip-lodging"
-        ref={inputRef}
-        type="text"
-        className={styles.input}
-        placeholder="ホテル名・施設名で検索（例：横浜ベイホテル）"
-        autoComplete="off"
-        defaultValue={defaultValue}
-        onChange={e => onType(e.target.value)}
-      />
-      {address && <p className={styles.hint}>{address}</p>}
-    </>
-  )
-}

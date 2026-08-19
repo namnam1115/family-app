@@ -9,7 +9,7 @@
 | `VITE_SUPABASE_URL` | Supabase プロジェクト URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon キー（RLS 前提で公開可） |
 | `VITE_VAPID_PUBLIC_KEY` | Web Push 公開鍵（`src/lib/pushNotifications.js`） |
-| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps JS API（`src/utils/googleMaps.js`。お出かけリストの地図・住所検索、旅行の宿泊先検索）。未設定でも各入力欄は通常のテキスト入力として動く |
+| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps JS API（`src/utils/googleMaps.js`。お出かけリストの地図・住所検索、旅行の宿泊先検索）。未設定でも各入力欄は通常のテキスト入力として動く。呼び出し制限は下記「Places Autocomplete の使い方」を参照 |
 
 Edge Functions 側（Supabase ダッシュボードで設定）: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` / `SUPABASE_SERVICE_ROLE_KEY`。
 
@@ -111,3 +111,28 @@ useEffect(() => {
 
 - **Google Maps JS API**: `src/utils/googleMaps.js` の `loadGoogleMapsScript()` でシングルトンロード。`loading=async` + `importLibrary()` で必要ライブラリのみ読み込む。新たに地図機能を使う場合もこの関数を経由する
 - 新しい外部 API の追加は原則 Edge Function 経由にする（API キー秘匿・CORS 回避のため）
+
+
+## Places Autocomplete の使い方（課金を無料枠に収める）
+
+場所検索は **必ず `components/PlaceSearchInput` を使う**。`google.maps.places.Autocomplete`
+ウィジェットを直接使わないこと（1 文字入力するたびにリクエストが飛ぶ）。
+
+無料枠は Essentials SKU で **月 10,000 コール**。`utils/placesAutocomplete.js` で次の制限をかけている。
+
+| 制限 | 既定値 | 目的 |
+|---|---|---|
+| デバウンス | 450ms | 入力が落ち着いてから 1 回だけ問い合わせる |
+| 最小文字数 | 2 文字 | 1 文字での無駄な検索をしない |
+| 同一クエリのキャッシュ | セッション中 | 打ち直し・バックスペースで再検索しない |
+| セッショントークン | 候補取得 → 詳細取得 | 1 セッションとして扱わせる |
+| 1 日の上限 | 100 リクエスト | 端末ごと（localStorage 記録） |
+| 1 か月の上限 | 1,000 リクエスト | 無料枠の 10%。上限到達後は候補を出さず手入力に任せる |
+
+これで「9 文字を打って 1 件選ぶ」操作が **11 リクエスト → 2 リクエスト**になる。
+
+**Google Cloud Console 側でも必ず併用すること**（アプリ側の上限は端末ごとの目安でしかない）:
+
+- API キーに HTTP リファラー制限と API 制限（Maps JavaScript API / Places API のみ）をかける
+- 「割り当て」で Places API の 1 日あたりリクエスト上限を設定する（真のハードリミット）
+- 請求先アカウントに予算アラートを設定する

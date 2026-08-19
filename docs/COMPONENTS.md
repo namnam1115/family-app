@@ -31,6 +31,7 @@
 | `places/PlaceDetailModal` | お出かけリストの場所詳細（読み取り専用）。地図 / Web検索 / 訪問記録 / 編集への導線 | PlacesPage |
 | `AddToShoppingListModal` | 他アプリから買い物リストへ品物を送る | PricePage / DishesPage |
 | `VideoEmbed` | 動画（YouTube / TikTok）のサムネイル表示と、その場での埋め込み再生。再生状態は親が持つ | DishesPage |
+| `PlaceSearchInput` | Google Places の場所検索入力欄（デバウンス・呼び出し上限つき。候補リストはポータル表示で呼び出し側のレイアウトを崩さない） | PlacesPage / 旅行の宿泊先 |
 | `GlobalSearch` | アプリ横断検索モーダル | HomePage |
 | `Modal` | 全ページ共通モーダル（ボトムシート↔中央表示、Esc / 背景タップで閉じる、フォーカストラップ、背景スクロールロック） | 全ページのモーダル |
 | `ErrorBoundary` | 描画エラー時のフォールバック UI（再試行 / ホームへ） | `App.jsx`（アプリ全体 + ルート単位） |
