@@ -43,7 +43,7 @@ Apple Human Interface Guidelines を参考にした、**ミニマルで温かな
 - 本文: システムフォントスタック（-apple-system → Hiragino Sans → Noto Sans JP）。`body` に設定済みで指定不要
 - 見出し・ブランド表現: `--font-display`（Shippori Mincho B1 の和文セリフ）。ページタイトルやロゴ的な箇所のみ
 - 基本サイズ 1rem / 行間 1.55 / letter-spacing 0.01em（body 既定）
-- input 類は `font-size: 16px` 未満にしない（iOS のズーム発動防止。`index.css` で設定済み）
+- input 類は `font-size: 16px` 未満にしない（iOS ではフォーカス時にページが拡大され、横にずれる）。`index.css` に `input, select, textarea { font-size: 16px }` があるが、**ページ側の CSS Module でクラス指定すると上書きされる**ため、入力欄に font-size を書くときは 16px 以上にすること
 
 ## 余白・レイアウト
 

@@ -21,6 +21,8 @@ export {
 
   // ── 操作・UI ─────────────────────────────────
   BsPlusLg as IconAdd,
+  BsDashLg as IconMinus,
+  BsArrowCounterclockwise as IconReset,
   BsSearch as IconSearch,
   BsSliders as IconFilter,
   BsGear as IconGear,

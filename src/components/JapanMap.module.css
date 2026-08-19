@@ -5,21 +5,79 @@
   gap: 0.6rem;
 }
 
-.svg {
+.canvas {
+  position: relative;
   width: 100%;
   max-width: 220px;
-  height: auto;
 }
 
 @media (min-width: 480px) {
-  .svg {
+  .canvas {
     max-width: 300px;
   }
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 等倍のうちは地図の上でも縦スクロールできるようにし、ピンチだけ地図側で受ける */
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.svgPanning {
+  /* 拡大中はドラッグで地図を動かすため、ブラウザのスクロールに渡さない */
+  touch-action: none;
+  cursor: grab;
+}
+
+.svgPanning:active {
+  cursor: grabbing;
+}
+
+.zoomBtns {
+  /* 北海道と重ならないよう、地図の余白になる右下に置く */
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.zoomBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.8rem;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zoomBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.zoomBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .pref {
   stroke: var(--surface);
   stroke-width: 1;
+  /* 拡大しても県境の太さを一定に保つ */
+  vector-effect: non-scaling-stroke;
   cursor: pointer;
   transition: fill 0.15s ease, opacity 0.15s ease;
   -webkit-tap-highlight-color: transparent;
