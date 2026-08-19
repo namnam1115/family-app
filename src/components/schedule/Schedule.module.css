@@ -1784,7 +1784,7 @@
   border-radius: 0.75rem;
   background: var(--surface);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 16px;
 }
 
 .commentInput:focus {

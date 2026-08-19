@@ -216,7 +216,7 @@
   flex: 1;
   border: none;
   outline: none;
-  font-size: 0.875rem;
+  font-size: 16px;
   color: var(--ink);
   background: transparent;
   min-width: 0;
@@ -330,7 +330,7 @@
   flex: 1;
   border: none;
   outline: none;
-  font-size: 0.875rem;
+  font-size: 16px;
   color: var(--gray-800);
   background: transparent;
   min-width: 0;
@@ -450,7 +450,7 @@
   border: 1.5px solid var(--gray-200);
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 0.5rem center;
   color: var(--gray-500);
-  font-size: 0.82rem;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -1892,7 +1892,7 @@
   min-width: 0;
   border: none;
   outline: none;
-  font-size: 0.82rem;
+  font-size: 16px;
   color: var(--gray-800);
   background: transparent;
 }
@@ -2009,7 +2009,7 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 0.9rem;
+  font-size: 16px;
   color: var(--ink);
 }
 
