@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Modal from '../Modal'
+import { loadGoogleMapsScript } from '../../utils/googleMaps'
 import { MEMBER_COLORS } from '../../lib/schedule'
 import { PREFECTURES } from '../../lib/travel'
 import styles from './Travel.module.css'
@@ -25,11 +26,16 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
     companion_member_ids: trip?.companion_member_ids ?? [],
     transport: trip?.transport ?? '',
     lodging: trip?.lodging ?? '',
+    lodging_address: trip?.lodging_address ?? '',
+    lodging_lat: trip?.lodging_lat ?? null,
+    lodging_lng: trip?.lodging_lng ?? null,
+    party_size: trip?.party_size != null ? String(trip.party_size) : '',
     budget: trip?.budget != null ? String(trip.budget) : '',
     memo: trip?.memo ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const memberCount = form.companion_member_ids.length
 
   function update(key, value) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -50,6 +56,7 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
     if (!form.end_date) { setError('終了日を選択してください'); return }
     if (form.end_date < form.start_date) { setError('終了日は開始日以降にしてください'); return }
     if (form.budget && !Number.isFinite(Number(form.budget))) { setError('予算は数値で入力してください'); return }
+    if (form.party_size && !(Number(form.party_size) > 0)) { setError('参加人数は1以上で入力してください'); return }
 
     setSaving(true)
     setError('')
@@ -63,6 +70,10 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
         companion_member_ids: form.companion_member_ids,
         transport: form.transport.trim() || null,
         lodging: form.lodging.trim() || null,
+        lodging_address: form.lodging_address.trim() || null,
+        lodging_lat: form.lodging_lat,
+        lodging_lng: form.lodging_lng,
+        party_size: form.party_size === '' ? null : Number(form.party_size),
         budget: form.budget === '' ? null : Number(form.budget),
         memo: form.memo.trim() || null,
       })
@@ -168,14 +179,30 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
           onChange={e => update('transport', e.target.value)}
         />
 
-        <label className={styles.label} htmlFor="trip-lodging">宿泊先（任意）</label>
+        <label className={styles.label} htmlFor="trip-lodging">宿泊先（任意・Google マップ検索）</label>
+        <LodgingSearchInput
+          defaultValue={form.lodging}
+          address={form.lodging_address}
+          onPick={({ name, address, lat, lng }) => {
+            setForm(prev => ({ ...prev, lodging: name, lodging_address: address, lodging_lat: lat, lodging_lng: lng }))
+          }}
+          onType={value => {
+            // 手で書き換えたら、前に選んだ場所の住所・座標は合わなくなるので外す
+            setForm(prev => ({ ...prev, lodging: value, lodging_address: '', lodging_lat: null, lodging_lng: null }))
+          }}
+        />
+
+        <label className={styles.label} htmlFor="trip-party">参加人数（任意）</label>
         <input
-          id="trip-lodging"
-          type="text"
+          id="trip-party"
+          type="number"
+          inputMode="numeric"
+          min="1"
+          step="1"
           className={styles.input}
-          placeholder="例：〇〇ホテル（15時チェックイン）"
-          value={form.lodging}
-          onChange={e => update('lodging', e.target.value)}
+          placeholder={memberCount > 0 ? `未入力なら同行者の人数（${memberCount}人）` : '例：4'}
+          value={form.party_size}
+          onChange={e => update('party_size', e.target.value)}
         />
 
         <label className={styles.label} htmlFor="trip-budget">予算（任意・円）</label>
@@ -208,5 +235,56 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
         </button>
       </div>
     </Modal>
+  )
+}
+
+/**
+ * 宿泊先の入力欄。Google Places のオートコンプリートを付け、
+ * 候補を選ぶと施設名・住所・座標をまとめて返す。
+ * API キー未設定や読み込み失敗時は、ただのテキスト入力として使える。
+ */
+function LodgingSearchInput({ defaultValue, address, onPick, onType }) {
+  const inputRef = useRef(null)
+  const pickRef = useRef(onPick)
+  pickRef.current = onPick
+
+  useEffect(() => {
+    let mounted = true
+    loadGoogleMapsScript().then(async () => {
+      if (!mounted || !inputRef.current) return
+      await window.google.maps.importLibrary('places')
+      const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+        componentRestrictions: { country: 'jp' },
+        fields: ['formatted_address', 'geometry', 'name'],
+      })
+      autocomplete.addListener('place_changed', () => {
+        if (!mounted) return
+        const place = autocomplete.getPlace()
+        const location = place.geometry?.location
+        pickRef.current({
+          name: place.name || inputRef.current?.value || '',
+          address: place.formatted_address || '',
+          lat: location ? location.lat() : null,
+          lng: location ? location.lng() : null,
+        })
+      })
+    }).catch(() => { /* キー未設定などのときは通常の入力欄として使う */ })
+    return () => { mounted = false }
+  }, [])
+
+  return (
+    <>
+      <input
+        id="trip-lodging"
+        ref={inputRef}
+        type="text"
+        className={styles.input}
+        placeholder="ホテル名・施設名で検索（例：横浜ベイホテル）"
+        autoComplete="off"
+        defaultValue={defaultValue}
+        onChange={e => onType(e.target.value)}
+      />
+      {address && <p className={styles.hint}>{address}</p>}
+    </>
   )
 }

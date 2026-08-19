@@ -653,3 +653,20 @@
   font-size: 0.82rem;
   white-space: nowrap;
 }
+
+.infoSub {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+.mapLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+}

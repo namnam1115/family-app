@@ -3,7 +3,7 @@ import Modal from '../Modal'
 import ItineraryList from './ItineraryList'
 import PrepList from './PrepList'
 import { IconPin, IconTravel } from '../../lib/icons'
-import { MEMBER_COLORS } from '../../lib/schedule'
+import { MEMBER_COLORS, mapsUrl } from '../../lib/schedule'
 import { PHASES, dateRange, daysUntil, formatYen, tripDates, tripPhase } from '../../lib/travel'
 import styles from './Travel.module.css'
 
@@ -52,6 +52,11 @@ export default function TripDetailModal({
     })
     .filter(Boolean)
   const hasCompanions = companionMembers.length > 0 || !!trip.companions
+  // 参加人数は手入力を優先し、未入力なら同行者に選んだメンバー数を使う
+  const partySize = trip.party_size ?? (trip.companion_member_ids?.length ?? 0)
+  const lodgingQuery = trip.lodging_lat != null && trip.lodging_lng != null
+    ? `${trip.lodging_lat},${trip.lodging_lng}`
+    : (trip.lodging_address || trip.lodging)
   const donePrep = prepItems.filter(item => item.done).length
 
   return (
@@ -116,7 +121,20 @@ export default function TripDetailModal({
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>宿泊先</span>
-                <span className={styles.infoValue}>{trip.lodging || '未設定'}</span>
+                <span className={styles.infoValue}>
+                  {trip.lodging || '未設定'}
+                  {trip.lodging_address && <span className={styles.infoSub}>{trip.lodging_address}</span>}
+                  {trip.lodging && (
+                    <a
+                      className={styles.mapLink}
+                      href={mapsUrl(lodgingQuery)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <IconPin /> 地図で開く
+                    </a>
+                  )}
+                </span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>メモ</span>
@@ -159,6 +177,20 @@ export default function TripDetailModal({
                     <span className={`${styles.costValue} ${overBudget ? styles.costOver : ''}`}>
                       {formatYen(Math.abs(budget - spent))}
                     </span>
+                  </div>
+                </>
+              )}
+              {partySize > 0 && (
+                <>
+                  {budget > 0 && (
+                    <div className={styles.costRow}>
+                      <span>1人あたり予算（{partySize}人）</span>
+                      <span className={styles.costValue}>{formatYen(budget / partySize)}</span>
+                    </div>
+                  )}
+                  <div className={styles.costRow}>
+                    <span>1人あたり費用（{partySize}人）</span>
+                    <span className={styles.costValue}>{formatYen(spent / partySize)}</span>
                   </div>
                 </>
               )}

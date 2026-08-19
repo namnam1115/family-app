@@ -21,7 +21,7 @@ Copy `.env.example` to `.env` and fill in:
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_VAPID_PUBLIC_KEY=       # Required for push notifications
-VITE_GOOGLE_MAPS_API_KEY=    # Required for PlacesPage map features
+VITE_GOOGLE_MAPS_API_KEY=    # Required for PlacesPage map features / TravelPage 宿泊先検索
 ```
 
 ## Architecture

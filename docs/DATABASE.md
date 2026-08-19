@@ -51,7 +51,7 @@ $$;
 | `schedule_notify_prefs` | ユーザー毎の変更通知 ON/OFF | user_id (PK), family_id, notify_on_change | |
 | `schedule_reminder_log` | リマインダー送信ログ（二重送信防止） | event_id, occurrence_date, sent_at, PK(event_id, occurrence_date)。service role 専用 | |
 | `inventory_items` | 在庫 | family_id, name, quantity, unit, category, stock_status (ok/low/out), expiry_date, note | |
-| `travel_trips` | 旅行（計画・記録） | family_id, title, start_date, end_date, prefecture, memo, schedule_event_id, companions（家族以外の同行者テキスト）, companion_member_ids uuid[]（同行する家族メンバー）, transport, lodging, budget | ✅ |
+| `travel_trips` | 旅行（計画・記録） | family_id, title, start_date, end_date, prefecture, memo, schedule_event_id, companions（家族以外の同行者テキスト）, companion_member_ids uuid[]（同行する家族メンバー）, transport, lodging, lodging_address, lodging_lat, lodging_lng, budget, party_size（未入力なら同行者数） | ✅ |
 | `travel_activities` | 旅行の行程 | trip_id, family_id, day_index（何日目・0始まり）, order_index, start_time ('HH:MM' text), title, place, cost, memo, done | ✅ |
 | `travel_prep_items` | 旅行の準備リスト | trip_id, family_id, category (packing/todo), title, assignee, order_index, done | ✅ |
 | `wish_places` | お出かけしたい場所 | family_id, name, url, lat, lng, tags text[], added_by → family_members ほか（⚠️ 下記参照） | ✅（コード上購読） |

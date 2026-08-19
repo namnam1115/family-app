@@ -9,7 +9,7 @@
 | `VITE_SUPABASE_URL` | Supabase プロジェクト URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon キー（RLS 前提で公開可） |
 | `VITE_VAPID_PUBLIC_KEY` | Web Push 公開鍵（`src/lib/pushNotifications.js`） |
-| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps JS API（`src/utils/googleMaps.js`、お出かけリストの地図） |
+| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps JS API（`src/utils/googleMaps.js`。お出かけリストの地図・住所検索、旅行の宿泊先検索）。未設定でも各入力欄は通常のテキスト入力として動く |
 
 Edge Functions 側（Supabase ダッシュボードで設定）: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` / `SUPABASE_SERVICE_ROLE_KEY`。
 
