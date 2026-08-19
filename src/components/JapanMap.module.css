@@ -8,19 +8,16 @@
 .canvas {
   position: relative;
   width: 100%;
-  max-width: 220px;
-}
-
-@media (min-width: 480px) {
-  .canvas {
-    max-width: 300px;
-  }
+  /* 画面が広いときだけ上限をかける。スマホでは横幅いっぱいに使う */
+  max-width: 560px;
 }
 
 .svg {
   display: block;
   width: 100%;
-  height: auto;
+  /* 横幅いっぱいを基本にしつつ、画面が低いときは縦にはみ出さないよう抑える */
+  height: min(88vw, 40vh, 440px);
+  min-height: 200px;
   /* 等倍のうちは地図の上でも縦スクロールできるようにし、ピンチだけ地図側で受ける */
   touch-action: pan-y;
   -webkit-tap-highlight-color: transparent;

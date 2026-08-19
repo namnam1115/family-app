@@ -7,18 +7,30 @@ const [BASE_X, BASE_Y, BASE_W, BASE_H] = JAPAN_MAP_VIEWBOX.split(/\s+/).map(Numb
 const MAX_ZOOM = 8
 const TAP_SLOP = 6 // これ以上動いたらタップではなくドラッグとみなす
 
-function clampView(view) {
-  const w = Math.min(Math.max(view.w, BASE_W / MAX_ZOOM), BASE_W)
-  const h = w * (BASE_H / BASE_W)
+const BASE_VIEW = { x: BASE_X, y: BASE_Y, w: BASE_W, h: BASE_H }
+
+/**
+ * 表示枠の縦横比に合わせた「地図全体が入る viewBox」。
+ * viewBox 側を枠に合わせるので、拡大したときに枠の幅をすべて使える
+ * （縦横比が違うと preserveAspectRatio が左右に余白を作ってしまう）。
+ */
+function fitView(aspect, base) {
+  const baseAspect = base.w / base.h
+  const w = aspect > baseAspect ? base.h * aspect : base.w
+  const h = aspect > baseAspect ? base.h : base.w / aspect
+  return { x: base.x - (w - base.w) / 2, y: base.y - (h - base.h) / 2, w, h }
+}
+
+function clampView(view, fit) {
+  const w = Math.min(Math.max(view.w, fit.w / MAX_ZOOM), fit.w)
+  const h = w * (fit.h / fit.w)
   return {
     w,
     h,
-    x: Math.min(Math.max(view.x, BASE_X), BASE_X + BASE_W - w),
-    y: Math.min(Math.max(view.y, BASE_Y), BASE_Y + BASE_H - h),
+    x: Math.min(Math.max(view.x, fit.x), fit.x + fit.w - w),
+    y: Math.min(Math.max(view.y, fit.y), fit.y + fit.h - h),
   }
 }
-
-const BASE_VIEW = { x: BASE_X, y: BASE_Y, w: BASE_W, h: BASE_H }
 
 /**
  * 日本地図（都道府県 SVG）。訪問済みのハイライトとタップ選択に加え、
@@ -26,23 +38,62 @@ const BASE_VIEW = { x: BASE_X, y: BASE_Y, w: BASE_W, h: BASE_H }
  * 拡大は viewBox の操作なのでページ全体の表示倍率には影響しない。
  */
 export default function JapanMap({ visited, selected, onSelect }) {
+  const [fit, setFit] = useState(BASE_VIEW)
   const [view, setView] = useState(BASE_VIEW)
   const svgRef = useRef(null)
+  const groupRef = useRef(null)
   const pointers = useRef(new Map())
   const pinch = useRef(null)
   const dragged = useRef(false)
   const captured = useRef(false)
 
-  const zoomed = view.w < BASE_W - 0.5
+  const zoomed = view.w < fit.w - 0.5
   const zoomedRef = useRef(zoomed)
   zoomedRef.current = zoomed
+  const fitRef = useRef(fit)
+  fitRef.current = fit
+
+  /** 実際に描かれている範囲。viewBox には上下に余白があり、そのままでは地図が小さくなる */
+  function contentBox() {
+    const box = groupRef.current?.getBBox?.()
+    if (!box?.width || !box?.height) return BASE_VIEW
+    const margin = Math.max(box.width, box.height) * 0.02
+    return { x: box.x - margin, y: box.y - margin, w: box.width + margin * 2, h: box.height + margin * 2 }
+  }
+
+  // 表示枠の縦横比が変わったら（回転・画面幅の変化）表示範囲を作り直す
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const observer = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect
+      if (!width || !height) return
+      const next = fitView(width / height, contentBox())
+      const previousFit = fitRef.current
+      if (Math.abs(next.w - previousFit.w) < 1 && Math.abs(next.h - previousFit.h) < 1) return
+      setFit(next)
+      // 拡大の倍率と中心は保ったまま、新しい枠に合わせ直す
+      // （iOS のアドレスバー開閉で表示が飛ばないようにするため）
+      setView(prev => {
+        const scale = prev.w / previousFit.w
+        const centerX = prev.x + prev.w / 2
+        const centerY = prev.y + prev.h / 2
+        const w = next.w * scale
+        const h = w * (next.h / next.w)
+        return clampView({ x: centerX - w / 2, y: centerY - h / 2, w, h }, next)
+      })
+    })
+    observer.observe(svg)
+    return () => observer.disconnect()
+  }, [])
 
   /** クライアント座標(px)基準の拡大と移動を 1 回の更新にまとめる */
   function applyGesture({ factor = 1, originX = 0, originY = 0, dxPx = 0, dyPx = 0 }) {
     const rect = svgRef.current?.getBoundingClientRect()
     if (!rect || !rect.width) return
     setView(prev => {
-      const zoomedView = clampView({ ...prev, w: prev.w / factor })
+      const currentFit = fitRef.current
+      const zoomedView = clampView({ ...prev, w: prev.w / factor }, currentFit)
       // 拡大の中心が指（またはカーソル）の位置に留まるよう原点をずらす
       const ratioX = (originX - rect.left) / rect.width
       const ratioY = (originY - rect.top) / rect.height
@@ -56,7 +107,7 @@ export default function JapanMap({ visited, selected, onSelect }) {
         ...centered,
         x: centered.x - dxPx * unitsPerPx,
         y: centered.y - dyPx * unitsPerPx,
-      })
+      }, currentFit)
     })
   }
 
@@ -162,6 +213,7 @@ export default function JapanMap({ visited, selected, onSelect }) {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
+          <g ref={groupRef}>
           {JAPAN_PREFECTURE_PATHS.map(pref => {
             const isVisited = visited.has(pref.name)
             const isSelected = selected === pref.name
@@ -190,6 +242,7 @@ export default function JapanMap({ visited, selected, onSelect }) {
               </path>
             )
           })}
+          </g>
         </svg>
 
         <div className={styles.zoomBtns}>
@@ -203,7 +256,7 @@ export default function JapanMap({ visited, selected, onSelect }) {
             type="button"
             className={styles.zoomBtn}
             aria-label="地図の表示を元に戻す"
-            onClick={() => setView(BASE_VIEW)}
+            onClick={() => setView(fit)}
             disabled={!zoomed}
           >
             <IconReset />
