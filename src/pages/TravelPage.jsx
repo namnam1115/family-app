@@ -34,6 +34,17 @@ function activityRow(activity) {
   }
 }
 
+/** 旅行から予定表へ書き出す内容。作成・更新・再登録で同じ形にそろえる */
+function scheduleEventFields(trip) {
+  return {
+    title: `✈ ${trip.title}`,
+    all_day: true,
+    start_date: trip.start_date,
+    end_date: trip.end_date,
+    memo: trip.memo || null,
+  }
+}
+
 function byItinerary(a, b) {
   return (a.day_index ?? 0) - (b.day_index ?? 0) || (a.order_index ?? 0) - (b.order_index ?? 0)
 }
@@ -120,21 +131,36 @@ export default function TravelPage() {
     setToast({ message, variant: 'error' })
   }
 
+  function insertScheduleEvent(payload) {
+    return supabase
+      .from('schedule_events')
+      .insert({ family_id: fid, ...scheduleEventFields(payload) })
+      .select('id')
+      .single()
+  }
+
+  /** 予定表から予定を消された旅行に、予定を作り直して紐付け直す */
+  async function relinkScheduleEvent(tripId, payload) {
+    const { data: event, error: eventErr } = await insertScheduleEvent(payload)
+    if (eventErr) return eventErr
+
+    const { error } = await supabase
+      .from('travel_trips')
+      .update({ schedule_event_id: event.id })
+      .eq('id', tripId)
+
+    if (error) {
+      // 紐付けられなかった予定は残さない
+      await supabase.from('schedule_events').delete().eq('id', event.id)
+      return error
+    }
+    return null
+  }
+
   async function createTrip(payload) {
     // 予定を先に作ってから旅行に紐付ける。逆順だと途中で失敗したときに
     // 予定のない旅行が残り、以後の編集が予定へ反映されなくなる
-    const { data: event, error: eventErr } = await supabase
-      .from('schedule_events')
-      .insert({
-        family_id: fid,
-        title: `✈ ${payload.title}`,
-        all_day: true,
-        start_date: payload.start_date,
-        end_date: payload.end_date,
-        memo: payload.memo || null,
-      })
-      .select('id')
-      .single()
+    const { data: event, error: eventErr } = await insertScheduleEvent(payload)
 
     if (eventErr) throw eventErr
 
@@ -160,16 +186,17 @@ export default function TravelPage() {
     if (trip?.schedule_event_id) {
       const { error: eventErr } = await supabase
         .from('schedule_events')
-        .update({
-          title: `✈ ${payload.title}`,
-          start_date: payload.start_date,
-          end_date: payload.end_date,
-          memo: payload.memo || null,
-        })
+        .update(scheduleEventFields(payload))
         .eq('id', trip.schedule_event_id)
       if (eventErr) {
         console.error('旅行の予定更新エラー:', eventErr)
         notifyFailure('予定表への反映に失敗しました。予定表側の日付をご確認ください。')
+      }
+    } else {
+      const relinkErr = await relinkScheduleEvent(tripId, payload)
+      if (relinkErr) {
+        console.error('旅行の予定再登録エラー:', relinkErr)
+        notifyFailure('予定表への再登録に失敗しました。通信環境を確認してください。')
       }
     }
 
@@ -182,7 +209,16 @@ export default function TravelPage() {
     // 予定から先に消す。旅行の削除に失敗しても、予定だけが取り残されない
     // （schedule_event_id は ON DELETE SET NULL で自動的に外れる）
     if (trip?.schedule_event_id) {
-      await supabase.from('schedule_events').delete().eq('id', trip.schedule_event_id)
+      const { error: eventErr } = await supabase
+        .from('schedule_events')
+        .delete()
+        .eq('id', trip.schedule_event_id)
+      if (eventErr) {
+        // 予定だけが予定表に取り残されるため、旅行の削除には進まない
+        console.error('旅行の予定削除エラー:', eventErr)
+        notifyFailure('予定表の予定を削除できなかったため、旅行を削除していません。通信環境を確認してください。')
+        return
+      }
     }
 
     const { error } = await supabase.from('travel_trips').delete().eq('id', tripId)
