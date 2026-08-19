@@ -1,0 +1,601 @@
+/* 旅行記録の画面部品（詳細モーダル・行程・準備リスト・各フォーム）で共有するスタイル */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem 1.5rem;
+}
+
+/* ── タブ ── */
+.tabs {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-full);
+}
+
+.tab {
+  flex: 1;
+  padding: 0.5rem 0.25rem;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabActive {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow);
+}
+
+.tabBadge {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.tabActive .tabBadge { color: var(--primary); }
+
+/* ── 概要 ── */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.85rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-lg);
+}
+
+.summaryDate {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.summaryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+
+.phaseBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.infoRow {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.55rem 0.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.infoRow:last-child { border-bottom: none; }
+
+.infoLabel {
+  flex-shrink: 0;
+  width: 5.5rem;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+}
+
+.infoValue {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── 費用 ── */
+.costCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-lg);
+}
+
+.costRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+.costValue {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.costOver { color: var(--danger); }
+
+.meter {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--grad-primary);
+  transition: width 0.25s ease;
+}
+
+.meterFillOver { background: var(--danger); }
+
+/* ── 行程 ── */
+.dayBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.5rem 0.75rem;
+  border-radius: var(--radius-lg);
+  transition: background 0.15s;
+}
+
+.dayBlockActive {
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+
+.dayHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.dayLabel {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.dayDate {
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+.dayCost {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+.itemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+
+.itemDragging {
+  opacity: 0.4;
+  box-shadow: var(--shadow-md);
+}
+
+.handle {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--ink-3);
+  font-size: 1rem;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.handle:active { cursor: grabbing; }
+
+.doneBtn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: transparent;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.doneBtn[aria-pressed='true'] {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--on-success);
+}
+
+.itemMain {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 0.1rem 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.itemTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.itemTime {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.itemTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.itemDone .itemTitle {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+.itemSub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.itemCost {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ドロップ位置の線。レイアウトを動かさないよう高さを持たせない */
+.dropLine {
+  height: 0;
+  margin: -1px 0;
+  border-top: 2px solid var(--primary);
+  border-radius: var(--radius-full);
+  list-style: none;
+}
+
+.dayEmpty {
+  padding: 0.5rem 0.6rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--ink-3);
+  font-size: 0.82rem;
+}
+
+.dayAddBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+/* ── 準備リスト ── */
+.prepHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-lg);
+}
+
+.prepGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.groupCount {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.prepItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.prepTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.prepDone .prepTitle {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+.assignee {
+  flex-shrink: 0;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.iconBtn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconBtn:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.segment {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.segmentBtn {
+  flex: 1;
+  padding: 0.45rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.segmentBtn[aria-pressed='true'] {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+}
+
+.inlineRow {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.inlineRow .input { flex: 1; min-width: 0; }
+
+/* ── フォーム部品 ── */
+.label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  margin-top: 0.25rem;
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.18s;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus { border-color: var(--primary); }
+
+.textarea { resize: vertical; }
+
+.fieldRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.fieldRow > * { flex: 1; min-width: 0; }
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.saveBtn {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.8rem;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--grad-primary);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s;
+}
+
+.saveBtn:hover:not(:disabled) { opacity: 0.88; }
+.saveBtn:disabled { opacity: 0.55; cursor: default; }
+
+.addBtn {
+  width: 100%;
+  padding: 0.6rem;
+  border: none;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.actionBtns {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.editBtn,
+.deleteBtn {
+  flex: 1;
+  padding: 0.65rem;
+  border: 1.5px solid;
+  border-radius: var(--radius-full);
+  background: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.editBtn {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.editBtn:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+
+.deleteBtn {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.deleteBtn:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+
+.inlineRow .addBtn {
+  width: auto;
+  flex: 0 0 auto;
+  padding-inline: 1.1rem;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}

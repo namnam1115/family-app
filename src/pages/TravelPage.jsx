@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BsHouseFill } from 'react-icons/bs'
-import { IconTravel, IconPin, IconMap } from '../lib/icons'
+import { IconTravel, IconMap } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,79 +9,116 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorNotice from '../components/ErrorNotice'
+import Toast from '../components/Toast'
 import JapanMap from '../components/JapanMap'
-import Modal from '../components/Modal'
+import TripDetailModal from '../components/travel/TripDetailModal'
+import TripFormModal from '../components/travel/TripFormModal'
+import ActivityFormModal from '../components/travel/ActivityFormModal'
+import { PHASES, PREFECTURES, shortDate, tripDates, tripPhase } from '../lib/travel'
 import styles from './TravelPage.module.css'
 
-const PREFECTURES = [
-  '北海道',
-  '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県',
-  '岐阜県', '静岡県', '愛知県', '三重県',
-  '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
-  '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-  '徳島県', '香川県', '愛媛県', '高知県',
-  '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県',
-  '沖縄県',
-]
-
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr + 'T00:00:00')
-  const y = d.getFullYear()
-  const m = d.getMonth() + 1
-  const day = d.getDate()
-  const dow = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
-  return `${y}年${m}月${day}日（${dow}）`
+/** upsert で送る列。取得した行をそのまま返すと不要な列まで書き戻すため明示する */
+function activityRow(activity) {
+  return {
+    id: activity.id,
+    trip_id: activity.trip_id,
+    family_id: activity.family_id,
+    day_index: activity.day_index ?? 0,
+    order_index: activity.order_index ?? 0,
+    start_time: activity.start_time ?? null,
+    title: activity.title,
+    place: activity.place ?? null,
+    cost: activity.cost ?? null,
+    memo: activity.memo ?? null,
+    done: !!activity.done,
+  }
 }
 
-function dateRange(start, end) {
-  if (start === end) return formatDate(start)
-  return `${formatDate(start)}〜${formatDate(end)}`
+function byItinerary(a, b) {
+  return (a.day_index ?? 0) - (b.day_index ?? 0) || (a.order_index ?? 0) - (b.order_index ?? 0)
 }
 
 export default function TravelPage() {
   const { familyMember } = useAuth()
   const navigate = useNavigate()
 
-  const [selectedTrip, setSelectedTrip] = useState(null)
+  const [selectedTripId, setSelectedTripId] = useState(null)
   const [showTripModal, setShowTripModal] = useState(false)
   const [editingTrip, setEditingTrip] = useState(null)
+  const [activityForm, setActivityForm] = useState(null) // { activity, defaultDay }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [prefectureFilter, setPrefectureFilter] = useState('all')
   const [showMap, setShowMap] = useState(true)
+  const [toast, setToast] = useState(null)
 
   const {
-    data: { trips, activitiesMap },
+    data: { trips, activitiesMap, prepMap },
     loading,
     error: loadError,
     refetch: fetchTrips,
     familyId: fid,
+    setData,
   } = useFamilyData(
     async familyId => {
       const trips = await unwrap(
         supabase.from('travel_trips').select('*').eq('family_id', familyId).order('start_date', { ascending: false })
       )
-      // 旅行ごとに問い合わせず、活動記録は 1 クエリでまとめて取得する
-      const activities = trips.length
-        ? await unwrap(
-            supabase.from('travel_activities').select('*')
-              .in('trip_id', trips.map(t => t.id)).order('order_index')
-          )
-        : []
-      const activitiesMap = Object.fromEntries(trips.map(t => [t.id, []]))
+      const tripIds = trips.map(t => t.id)
+      // 旅行ごとに問い合わせず、行程と準備リストは 1 クエリずつでまとめて取得する
+      const [activities, prepItems] = tripIds.length
+        ? await Promise.all([
+            unwrap(
+              supabase.from('travel_activities').select('*')
+                .in('trip_id', tripIds).order('day_index').order('order_index')
+            ),
+            unwrap(
+              supabase.from('travel_prep_items').select('*')
+                .in('trip_id', tripIds).order('order_index').order('created_at')
+            ),
+          ])
+        : [[], []]
+
+      const activitiesMap = Object.fromEntries(tripIds.map(id => [id, []]))
       for (const activity of activities) activitiesMap[activity.trip_id]?.push(activity)
-      return { trips, activitiesMap }
+      const prepMap = Object.fromEntries(tripIds.map(id => [id, []]))
+      for (const item of prepItems) prepMap[item.trip_id]?.push(item)
+      return { trips, activitiesMap, prepMap }
     },
-    ['travel_trips'],
-    { trips: [], activitiesMap: {} },
+    ['travel_trips', 'travel_activities', 'travel_prep_items'],
+    { trips: [], activitiesMap: {}, prepMap: {} },
   )
+
+  const selectedTrip = trips.find(t => t.id === selectedTripId) ?? null
 
   const visitedPrefectures = useMemo(
     () => new Set(trips.map(t => t.prefecture).filter(Boolean)),
     [trips]
   )
+
+  const sections = useMemo(() => {
+    const filtered = prefectureFilter === 'all'
+      ? trips
+      : trips.filter(t => t.prefecture === prefectureFilter)
+    // これからの旅行は出発が近い順、終わった旅行は新しい順に見たい
+    const planned = filtered.filter(t => tripPhase(t) !== 'past')
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    const past = filtered.filter(t => tripPhase(t) === 'past')
+    return [
+      { key: 'planned', title: 'これからの旅行', trips: planned },
+      { key: 'past', title: 'おもいで', trips: past },
+    ].filter(section => section.trips.length > 0)
+  }, [trips, prefectureFilter])
+
+  function patchList(key, tripId, updater) {
+    setData(prev => ({
+      ...prev,
+      [key]: { ...prev[key], [tripId]: updater(prev[key][tripId] ?? []) },
+    }))
+  }
+
+  function notifyFailure(message) {
+    setToast({ message, variant: 'error' })
+  }
 
   async function createTrip(payload) {
     // 予定を先に作ってから旅行に紐付ける。逆順だと途中で失敗したときに
@@ -101,14 +138,14 @@ export default function TravelPage() {
 
     if (eventErr) throw eventErr
 
-    const { error: err } = await supabase
+    const { error } = await supabase
       .from('travel_trips')
-      .insert({ ...payload, schedule_event_id: event.id })
+      .insert({ ...payload, family_id: fid, created_by: familyMember.name, schedule_event_id: event.id })
 
-    if (err) {
+    if (error) {
       // 旅行を作れなかった予定は残さない
       await supabase.from('schedule_events').delete().eq('id', event.id)
-      throw err
+      throw error
     }
 
     await fetchTrips()
@@ -117,15 +154,11 @@ export default function TravelPage() {
   async function updateTrip(tripId, payload) {
     const trip = trips.find(t => t.id === tripId)
 
-    const { error: updateErr } = await supabase
-      .from('travel_trips')
-      .update(payload)
-      .eq('id', tripId)
-
-    if (updateErr) throw updateErr
+    const { error } = await supabase.from('travel_trips').update(payload).eq('id', tripId)
+    if (error) throw error
 
     if (trip?.schedule_event_id) {
-      await supabase
+      const { error: eventErr } = await supabase
         .from('schedule_events')
         .update({
           title: `✈ ${payload.title}`,
@@ -134,6 +167,10 @@ export default function TravelPage() {
           memo: payload.memo || null,
         })
         .eq('id', trip.schedule_event_id)
+      if (eventErr) {
+        console.error('旅行の予定更新エラー:', eventErr)
+        notifyFailure('予定表への反映に失敗しました。予定表側の日付をご確認ください。')
+      }
     }
 
     await fetchTrips()
@@ -148,40 +185,139 @@ export default function TravelPage() {
       await supabase.from('schedule_events').delete().eq('id', trip.schedule_event_id)
     }
 
-    await supabase.from('travel_trips').delete().eq('id', tripId)
+    const { error } = await supabase.from('travel_trips').delete().eq('id', tripId)
+    if (error) {
+      console.error('旅行の削除エラー:', error)
+      notifyFailure('旅行を削除できませんでした。通信環境を確認してください。')
+      return
+    }
 
-    setSelectedTrip(null)
-    setDeleteConfirmId(null)
+    setSelectedTripId(null)
     await fetchTrips()
   }
 
-  async function addActivity(tripId, title, memo) {
-    const activities = activitiesMap[tripId] ?? []
-    const orderIndex = Math.max(0, ...activities.map(a => a.order_index), -1) + 1
+  async function saveActivity(payload) {
+    const tripId = activityForm?.activity?.trip_id ?? selectedTripId
+    if (!tripId) return
 
-    const { error } = await supabase.from('travel_activities').insert({
-      trip_id: tripId,
+    if (activityForm?.activity) {
+      const { error } = await supabase
+        .from('travel_activities')
+        .update(payload)
+        .eq('id', activityForm.activity.id)
+      if (error) throw error
+    } else {
+      const sameDay = (activitiesMap[tripId] ?? []).filter(a => a.day_index === payload.day_index)
+      const orderIndex = sameDay.reduce((max, a) => Math.max(max, a.order_index ?? 0), -1) + 1
+      const { error } = await supabase
+        .from('travel_activities')
+        .insert({ ...payload, trip_id: tripId, family_id: fid, order_index: orderIndex })
+      if (error) throw error
+    }
+
+    setActivityForm(null)
+    await fetchTrips()
+  }
+
+  async function deleteActivity(activity) {
+    setActivityForm(null)
+    patchList('activitiesMap', activity.trip_id, list => list.filter(a => a.id !== activity.id))
+
+    const { error } = await supabase.from('travel_activities').delete().eq('id', activity.id)
+    if (error) {
+      console.error('行程の削除エラー:', error)
+      notifyFailure('行程を削除できませんでした。通信環境を確認してください。')
+      await fetchTrips()
+    }
+  }
+
+  async function toggleActivityDone(activity) {
+    const done = !activity.done
+    patchList('activitiesMap', activity.trip_id, list =>
+      list.map(a => (a.id === activity.id ? { ...a, done } : a))
+    )
+
+    const { error } = await supabase.from('travel_activities').update({ done }).eq('id', activity.id)
+    if (error) {
+      console.error('行程の更新エラー:', error)
+      patchList('activitiesMap', activity.trip_id, list =>
+        list.map(a => (a.id === activity.id ? { ...a, done: !done } : a))
+      )
+      notifyFailure('チェックを保存できませんでした。通信環境を確認してください。')
+    }
+  }
+
+  async function reorderActivities(changed) {
+    const tripId = changed[0].trip_id
+    const previous = activitiesMap[tripId] ?? []
+    const changedById = new Map(changed.map(row => [row.id, row]))
+    patchList('activitiesMap', tripId, list =>
+      list.map(a => changedById.get(a.id) ?? a).sort(byItinerary)
+    )
+
+    const { error } = await supabase.from('travel_activities').upsert(changed.map(activityRow))
+    if (error) {
+      console.error('行程の並び替えエラー:', error)
+      patchList('activitiesMap', tripId, () => previous)
+      notifyFailure('並び替えを保存できませんでした。通信環境を確認してください。')
+    }
+  }
+
+  async function addPrepItem({ category, title, assignee }) {
+    if (!selectedTripId) return
+    const items = prepMap[selectedTripId] ?? []
+    const orderIndex = items.reduce((max, item) => Math.max(max, item.order_index ?? 0), -1) + 1
+
+    const { error } = await supabase.from('travel_prep_items').insert({
+      trip_id: selectedTripId,
       family_id: fid,
-      order_index: orderIndex,
+      category,
       title,
-      memo: memo || null,
+      assignee,
+      order_index: orderIndex,
     })
-
     if (error) throw error
     await fetchTrips()
   }
 
-  async function deleteActivity(id) {
-    await supabase.from('travel_activities').delete().eq('id', id)
-    await fetchTrips()
+  async function togglePrepItem(item) {
+    const done = !item.done
+    patchList('prepMap', item.trip_id, list =>
+      list.map(i => (i.id === item.id ? { ...i, done } : i))
+    )
+
+    const { error } = await supabase.from('travel_prep_items').update({ done }).eq('id', item.id)
+    if (error) {
+      console.error('準備項目の更新エラー:', error)
+      patchList('prepMap', item.trip_id, list =>
+        list.map(i => (i.id === item.id ? { ...i, done: !done } : i))
+      )
+      notifyFailure('チェックを保存できませんでした。通信環境を確認してください。')
+    }
+  }
+
+  async function deletePrepItem(item) {
+    patchList('prepMap', item.trip_id, list => list.filter(i => i.id !== item.id))
+
+    const { error } = await supabase.from('travel_prep_items').delete().eq('id', item.id)
+    if (error) {
+      console.error('準備項目の削除エラー:', error)
+      notifyFailure('削除できませんでした。通信環境を確認してください。')
+      await fetchTrips()
+    }
+  }
+
+  function openNewTrip() {
+    setEditingTrip(null)
+    setShowTripModal(true)
   }
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
-        <span className={styles.title}><IconTravel className={styles.titleIcon} /> 旅行記録</span>
-        <button className={styles.addBtn} onClick={() => { setEditingTrip(null); setShowTripModal(true) }}>＋ 新しい旅行</button>
+        <span className={styles.title}><IconTravel className={styles.titleIcon} /> 旅行計画・記録</span>
+        <button className={styles.addBtn} onClick={openNewTrip}>＋ 新しい旅行</button>
       </header>
 
       {trips.length > 0 && (
@@ -190,6 +326,7 @@ export default function TravelPage() {
             className={styles.prefectureFilter}
             value={prefectureFilter}
             onChange={e => setPrefectureFilter(e.target.value)}
+            aria-label="都道府県で絞り込む"
           >
             <option value="all">すべての都道府県</option>
             {PREFECTURES.map(pref => (
@@ -224,43 +361,61 @@ export default function TravelPage() {
         ) : trips.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}><IconTravel /></span>
-            <p>旅行記録がありません</p>
-            <button className={styles.emptyAddBtn} onClick={() => { setEditingTrip(null); setShowTripModal(true) }}>
-              最初の旅行を記録する
+            <p>旅行の計画・記録がありません</p>
+            <button className={styles.emptyAddBtn} onClick={openNewTrip}>
+              最初の旅行を計画する
             </button>
           </div>
-        ) : (() => {
-          const filtered = prefectureFilter === 'all'
-            ? trips
-            : trips.filter(t => t.prefecture === prefectureFilter)
-          return filtered.length === 0 ? (
-            <div className={styles.empty}>
-              <p>{prefectureFilter}の旅行記録がありません</p>
-            </div>
-          ) : (
-            <div className={styles.tripList}>
-              {filtered.map(trip => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  activityCount={activitiesMap[trip.id]?.length ?? 0}
-                  onClick={() => setSelectedTrip(trip)}
-                />
-              ))}
-            </div>
-          )
-        })()}
+        ) : sections.length === 0 ? (
+          <div className={styles.empty}>
+            <p>{prefectureFilter}の旅行がありません</p>
+          </div>
+        ) : (
+          sections.map(section => (
+            <section key={section.key} className={styles.section}>
+              <h2 className={styles.sectionTitle}>{section.title}</h2>
+              <div className={styles.tripList}>
+                {section.trips.map(trip => (
+                  <TripCard
+                    key={trip.id}
+                    trip={trip}
+                    activities={activitiesMap[trip.id] ?? []}
+                    prepItems={prepMap[trip.id] ?? []}
+                    onClick={() => setSelectedTripId(trip.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
       </main>
 
       {selectedTrip && (
         <TripDetailModal
           trip={selectedTrip}
-          activities={activitiesMap[selectedTrip.id] ?? []}
-          onAddActivity={(title, memo) => addActivity(selectedTrip.id, title, memo)}
-          onDeleteActivity={deleteActivity}
+          activities={(activitiesMap[selectedTrip.id] ?? []).slice().sort(byItinerary)}
+          prepItems={prepMap[selectedTrip.id] ?? []}
+          onAddActivity={day => setActivityForm({ activity: null, defaultDay: day })}
+          onEditActivity={activity => setActivityForm({ activity, defaultDay: activity.day_index ?? 0 })}
+          onToggleActivityDone={toggleActivityDone}
+          onReorderActivities={reorderActivities}
+          onAddPrep={addPrepItem}
+          onTogglePrep={togglePrepItem}
+          onDeletePrep={deletePrepItem}
           onEdit={() => { setEditingTrip(selectedTrip); setShowTripModal(true) }}
           onDelete={() => setDeleteConfirmId(selectedTrip.id)}
-          onClose={() => setSelectedTrip(null)}
+          onClose={() => setSelectedTripId(null)}
+        />
+      )}
+
+      {activityForm && selectedTrip && (
+        <ActivityFormModal
+          activity={activityForm.activity}
+          dayDates={tripDates(selectedTrip.start_date, selectedTrip.end_date)}
+          defaultDay={activityForm.defaultDay}
+          onSave={saveActivity}
+          onDelete={activityForm.activity ? () => deleteActivity(activityForm.activity) : undefined}
+          onClose={() => setActivityForm(null)}
         />
       )}
 
@@ -268,12 +423,9 @@ export default function TravelPage() {
         <TripFormModal
           trip={editingTrip}
           onClose={() => setShowTripModal(false)}
-          onSave={async (payload) => {
-            if (editingTrip) {
-              await updateTrip(editingTrip.id, payload)
-            } else {
-              await createTrip({ ...payload, family_id: fid, created_by: familyMember.name })
-            }
+          onSave={async payload => {
+            if (editingTrip) await updateTrip(editingTrip.id, payload)
+            else await createTrip(payload)
             setShowTripModal(false)
           }}
         />
@@ -282,187 +434,46 @@ export default function TravelPage() {
       <ConfirmDialog
         open={!!deleteConfirmId}
         title="旅行を削除しますか？"
-        message="この旅行と記録した活動がすべて削除されます。この操作は取り消せません。"
+        message="この旅行の準備リストと行程がすべて削除されます。この操作は取り消せません。"
         confirmLabel="削除する"
         onConfirm={() => { const id = deleteConfirmId; setDeleteConfirmId(null); deleteTrip(id) }}
         onCancel={() => setDeleteConfirmId(null)}
       />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       <BottomNav />
     </div>
   )
 }
 
-function TripCard({ trip, activityCount, onClick }) {
+function TripCard({ trip, activities, prepItems, onClick }) {
+  const phase = tripPhase(trip)
+  const donePrep = prepItems.filter(item => item.done).length
+  const doneActivities = activities.filter(a => a.done).length
+
   return (
-    <div className={styles.card} onClick={onClick}>
+    <div className={styles.card} onClick={onClick} role="button" tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+    >
       <div className={styles.cardHeader}>
-        <div className={styles.cardDate}>{trip.start_date} - {trip.end_date}</div>
+        <div className={styles.cardDate}>
+          {shortDate(trip.start_date)} 〜 {shortDate(trip.end_date)}
+        </div>
         {trip.prefecture && <span className={styles.prefBadge}>{trip.prefecture}</span>}
       </div>
       <div className={styles.cardTitle}>{trip.title}</div>
-      <div className={styles.cardMeta}>{activityCount}件の活動 ▶</div>
+      <div className={styles.cardMeta}>
+        <span className={styles.phaseChip} data-phase={phase}>{PHASES[phase].label}</span>
+        <span className={styles.metaChip}>行程 {doneActivities}/{activities.length}</span>
+        <span className={styles.metaChip}>準備 {donePrep}/{prepItems.length}</span>
+      </div>
     </div>
-  )
-}
-
-function TripDetailModal({ trip, activities, onAddActivity, onDeleteActivity, onEdit, onDelete, onClose }) {
-  const [newTitle, setNewTitle] = useState('')
-  const [newMemo, setNewMemo] = useState('')
-  const [error, setError] = useState('')
-
-  async function handleAddActivity() {
-    if (!newTitle.trim()) { setError('活動名を入力してください'); return }
-    await onAddActivity(newTitle.trim(), newMemo.trim())
-    setNewTitle('')
-    setNewMemo('')
-    setError('')
-  }
-
-  return (
-    <Modal open onClose={onClose} title={trip.title} variant="sheet">
-      <div className={styles.modalBody}>
-        <div className={styles.tripInfo}>
-          <div className={styles.dateRange}>{dateRange(trip.start_date, trip.end_date)}</div>
-          {trip.prefecture && <div className={styles.tripPrefecture}><IconPin /> {trip.prefecture}</div>}
-          <div className={styles.scheduleStatus}><IconTravel /> スケジュールに自動登録済み</div>
-        </div>
-
-        <div className={styles.activitiesSection}>
-          <h3 className={styles.sectionTitle}>活動記録</h3>
-          <div className={styles.activityList}>
-            {activities.map((activity, idx) => (
-              <div key={activity.id} className={styles.activityItem}>
-                <div className={styles.activityNum}>{idx + 1}.</div>
-                <div className={styles.activityContent}>
-                  <div className={styles.activityTitle}>{activity.title}</div>
-                  {activity.memo && <div className={styles.activityMemo}>{activity.memo}</div>}
-                </div>
-                <button className={styles.deleteActivityBtn} onClick={() => onDeleteActivity(activity.id)}>×</button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.addActivitySection}>
-          <input
-            type="text"
-            className={styles.activityInput}
-            placeholder="活動名（例：中華街）"
-            value={newTitle}
-            onChange={e => setNewTitle(e.target.value)}
-          />
-          <input
-            type="text"
-            className={styles.activityInput}
-            placeholder="コメント（例：肉まん食べた）"
-            value={newMemo}
-            onChange={e => setNewMemo(e.target.value)}
-          />
-          {error && <p className={styles.error}>{error}</p>}
-          <button className={styles.addActivityBtn} onClick={handleAddActivity}>＋ 活動を追加</button>
-        </div>
-
-        <div className={styles.actionBtns}>
-          <button className={styles.editBtn} onClick={onEdit}>編集</button>
-          <button className={styles.deleteBtn} onClick={onDelete}>削除</button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
-function TripFormModal({ trip, onClose, onSave }) {
-  const isEdit = !!trip
-  const [title, setTitle] = useState(trip?.title ?? '')
-  const [startDate, setStartDate] = useState(trip?.start_date ?? '')
-  const [endDate, setEndDate] = useState(trip?.end_date ?? '')
-  const [prefecture, setPrefecture] = useState(trip?.prefecture ?? '')
-  const [memo, setMemo] = useState(trip?.memo ?? '')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  async function handleSave() {
-    if (!title.trim()) { setError('旅行名を入力してください'); return }
-    if (!startDate) { setError('開始日を選択してください'); return }
-    if (!endDate) { setError('終了日を選択してください'); return }
-    if (new Date(endDate) < new Date(startDate)) { setError('終了日は開始日以降にしてください'); return }
-
-    setSaving(true)
-    try {
-      await onSave({
-        title: title.trim(),
-        start_date: startDate,
-        end_date: endDate,
-        prefecture: prefecture || null,
-        memo: memo.trim() || null,
-      })
-    } catch (err) {
-      setError('保存に失敗しました')
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={isEdit ? '旅行を編集' : '新しい旅行を追加'} variant="sheet">
-      <div className={styles.modalBody}>
-        <label className={styles.label}>旅行名 *</label>
-        <input
-          type="text"
-          className={styles.input}
-          placeholder="例：横浜旅行"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          autoFocus
-        />
-
-        <label className={styles.label}>開始日 *</label>
-        <input
-          type="date"
-          className={styles.input}
-          value={startDate}
-          onChange={e => setStartDate(e.target.value)}
-        />
-
-        <label className={styles.label}>終了日 *</label>
-        <input
-          type="date"
-          className={styles.input}
-          value={endDate}
-          onChange={e => setEndDate(e.target.value)}
-        />
-
-        <label className={styles.label}>旅行先（任意）</label>
-        <select
-          className={styles.input}
-          value={prefecture}
-          onChange={e => setPrefecture(e.target.value)}
-        >
-          <option value="">都道府県を選択</option>
-          {PREFECTURES.map(pref => (
-            <option key={pref} value={pref}>{pref}</option>
-          ))}
-        </select>
-
-        <label className={styles.label}>メモ（任意）</label>
-        <textarea
-          className={styles.textarea}
-          placeholder="旅行の概要や特記事項"
-          value={memo}
-          onChange={e => setMemo(e.target.value)}
-          rows="3"
-        />
-
-        {error && <p className={styles.error}>{error}</p>}
-
-        <button
-          className={styles.saveBtn}
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? '保存中…' : isEdit ? '更新する' : '追加する'}
-        </button>
-      </div>
-    </Modal>
   )
 }

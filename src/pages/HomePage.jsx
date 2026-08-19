@@ -137,8 +137,8 @@ export default function HomePage() {
     },
     {
       id: 'travels',
-      title: '旅行記録',
-      description: '旅の思い出と計画を記録。スケジュールと自動連携。',
+      title: '旅行計画・記録',
+      description: '持ち物・行程の準備から思い出の記録まで。スケジュールと自動連携。',
       icon: IconTravel,
       path: '/travels',
       available: true,

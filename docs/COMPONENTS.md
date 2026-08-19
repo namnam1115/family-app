@@ -27,6 +27,7 @@
 | `OfflineBanner` | オフライン時の上部バナー（アプリ全体で 1 つ） | `App.jsx` |
 | `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択 | TravelPage |
 | `schedule/*` | 予定表の画面部品（月 / 週 / アジェンダ・各モーダル） | SchedulePage |
+| `travel/*` | 旅行の画面部品（詳細モーダル・行程リスト・準備リスト・各フォーム） | TravelPage |
 | `places/PlaceDetailModal` | お出かけリストの場所詳細（読み取り専用）。地図 / Web検索 / 訪問記録 / 編集への導線 | PlacesPage |
 | `AddToShoppingListModal` | 他アプリから買い物リストへ品物を送る | PricePage / DishesPage |
 | `VideoEmbed` | 動画（YouTube / TikTok）のサムネイル表示と、その場での埋め込み再生。再生状態は親が持つ | DishesPage |
@@ -75,7 +76,8 @@ src/
 │   └── AuthContext.jsx  # 認証・家族状態（唯一のグローバル状態）
 ├── pages/               # ルーティング単位。Foo.jsx + Foo.module.css
 ├── components/          # 複数ページで使う共通コンポーネント
-│   └── schedule/        # 予定表の画面部品（+ Schedule.module.css）。SchedulePage 専用
+│   ├── schedule/        # 予定表の画面部品（+ Schedule.module.css）。SchedulePage 専用
+│   └── travel/          # 旅行の画面部品（+ Travel.module.css）。TravelPage 専用
 ├── hooks/               # （将来）useXxx カスタムフック。3 箇所目の重複ロジックから
 ├── lib/                 # 外部サービスクライアント（supabase, pushNotifications）
 └── utils/               # 純粋なユーティリティ（googleMaps）

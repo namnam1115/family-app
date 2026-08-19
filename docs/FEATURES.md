@@ -15,7 +15,7 @@
 | `/dishes` | DishesPage 食べたいおかず | 必要 | dish_categories, dishes |
 | `/schedule` | SchedulePage 予定表 | 必要 | schedule_events, schedule_event_history, schedule_event_comments, schedule_event_reactions |
 | `/inventory` | InventoryPage 在庫管理 | 必要 | inventory_items |
-| `/travels` | TravelPage 旅行記録 | 必要 | travel_trips, travel_activities |
+| `/travels` | TravelPage 旅行計画・記録 | 必要 | travel_trips, travel_activities, travel_prep_items |
 
 ## 機能概要
 
@@ -82,8 +82,14 @@
 ### 在庫管理（InventoryPage）
 - 日用品・食品の在庫。3 段階ステータス（ok / low / out）、賞味期限、カテゴリ・単位
 
-### 旅行記録（TravelPage）
-- 旅行（期間・都道府県・メモ）と、その中のアクティビティ（並び順付き）を記録
+### 旅行計画・記録（TravelPage）
+- 1 つの旅行を「計画（準備）→ 当日（実行）→ 記録」まで通して扱う。一覧は日程から自動判定した状態（計画中 / 旅行中 / おもいで）でグループ分けし、これからの旅行は出発が近い順に表示
+- 旅行の計画要素: 期間・都道府県・同行者・交通手段・宿泊先・予算・メモ。作成時に予定表へ自動登録（既存どおり）
+- 詳細モーダル（`travel/TripDetailModal`）は「概要 / 準備 / 行程」の 3 タブ
+  - 概要: 計画情報の一覧と、予算に対する行程費用の合計・残り（超過時は赤字表示）
+  - 準備: 持ち物 / やること のチェックリスト（担当者付き・進捗メーター）。`travel_prep_items`
+  - 行程: 日ごとに区切ったスケジュール（時刻・場所・費用・メモ）。当日はチェックで実行済みにできる
+- 行程の並び替え（`travel/ItineraryList`）: ハンドルのドラッグで日をまたいで移動でき、ドロップ位置は線で表示。長い行程では画面端で自動スクロール。ハンドルにフォーカスして ↑↓ キーでも移動できる（キーボード操作・スクリーンリーダー対応）
 - 日本地図（`JapanMap` コンポーネント）で、記録済みの都道府県をハイライト表示。地図上の都道府県タップで一覧を絞り込み（都道府県セレクトと相互連動）。地図データはビルド時に生成した静的 SVG パス（`src/data/japanPrefecturePaths.js`）で、外部の地図 API・従量課金サービスは使用しない
 
 ### 家族参加（JoinPage）

@@ -162,6 +162,19 @@
 }
 .emptyAddBtn:hover { opacity: 0.88; }
 
+/* ── Section ── */
+.section {
+  max-width: 600px;
+  margin: 0 auto 1.25rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
 /* ── Trip List ── */
 .tripList {
   display: flex;
@@ -219,284 +232,34 @@
 }
 
 .cardMeta {
-  font-size: 0.85rem;
-  color: var(--primary);
-  font-weight: 500;
-}
-
-/* ── Modal overlay ── */
-
-/* ── Modal ── */
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.92); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-/* ── Modal Body ── */
-.modalBody {
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 1rem 1.25rem 1.5rem;
-}
-
-.tripInfo {
-  display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 0.35rem;
-  padding: 0.75rem;
-  background: rgba(78, 154, 120,0.08);
-  border-radius: var(--radius);
 }
 
-.dateRange {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.tripPrefecture {
-  font-size: 0.85rem;
-  color: var(--success);
-  font-weight: 500;
-}
-
-.scheduleStatus {
-  font-size: 0.8rem;
-  color: var(--success);
-  font-weight: 500;
-}
-
-.sectionTitle {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--gray-400);
-  margin: 0.5rem 0 0.35rem;
-}
-
-/* ── Activities ── */
-.activitiesSection {
-  margin-top: 0.5rem;
-}
-
-.activityList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-.activityItem {
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-  padding: 0.5rem;
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-  border-radius: var(--radius);
-}
-
-.activityNum {
+.phaseChip,
+.metaChip {
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--primary);
-  min-width: 1.2rem;
+  white-space: nowrap;
 }
 
-.activityContent {
-  flex: 1;
-  min-width: 0;
-}
-
-.activityTitle {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.activityMemo {
-  font-size: 0.8rem;
-  color: var(--gray-400);
-  margin-top: 0.1rem;
-}
-
-.deleteActivityBtn {
-  background: none;
-  border: none;
-  color: var(--danger);
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 0.1rem 0.3rem;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ── Add Activity ── */
-.addActivitySection {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--gray-100);
-}
-
-.activityInput {
-  padding: 0.65rem 0.9rem;
-  border-radius: var(--radius);
-  border: 1.5px solid var(--gray-200);
-  background: var(--surface);
-  font-size: 0.9rem;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.18s;
-}
-.activityInput:focus { border-color: var(--primary); }
-
-.addActivityBtn {
-  background: var(--grad-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-full);
-  padding: 0.6rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.18s;
-}
-.addActivityBtn:hover { opacity: 0.88; }
-
-/* ── Form Elements ── */
-.label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--gray-400);
-  margin-top: 0.25rem;
-}
-
-.input,
-.textarea {
-  width: 100%;
-  padding: 0.65rem 0.9rem;
-  border-radius: var(--radius);
-  border: 1.5px solid var(--gray-200);
-  background: var(--surface);
-  font-size: 0.95rem;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.18s;
-  font-family: inherit;
-}
-.input:focus,
-.textarea:focus { border-color: var(--primary); }
-
-.textarea {
-  resize: vertical;
-}
-
-.error {
-  color: var(--danger);
-  font-size: 0.85rem;
-  margin: 0;
-}
-
-.saveBtn {
-  margin-top: 0.5rem;
-  background: var(--grad-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-full);
-  padding: 0.8rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.18s;
-  width: 100%;
-}
-.saveBtn:hover:not(:disabled) { opacity: 0.88; }
-.saveBtn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-/* ── Action Buttons ── */
-.actionBtns {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--gray-100);
-}
-
-.editBtn,
-.deleteBtn {
-  flex: 1;
-  padding: 0.65rem;
-  border-radius: var(--radius-full);
-  border: 1.5px solid;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: none;
-  transition: background 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.editBtn {
-  border-color: var(--primary);
+.phaseChip {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
   color: var(--primary);
 }
-.editBtn:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
 
-.deleteBtn {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-.deleteBtn:hover { background: rgba(193, 92, 84,0.08); }
-
-/* ── Confirm Dialog ── */
-.confirmDialog {
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem 1.5rem 1.25rem;
-  width: calc(100% - 2rem);
-  max-width: 320px;
-  margin: 0 auto 2rem;
-  animation: scaleIn 0.22s ease;
+.phaseChip[data-phase='ongoing'] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
 }
 
-@media (min-width: 480px) {
-  .confirmDialog { margin: 0; }
+.metaChip {
+  background: var(--surface-2);
+  color: var(--ink-2);
 }
-
-.confirmMsg {
-  font-size: 0.95rem;
-  color: var(--ink);
-  text-align: center;
-  margin: 0 0 1.25rem;
-}
-
-.confirmBtns {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.cancelBtn {
-  flex: 1;
-  padding: 0.7rem;
-  border-radius: var(--radius-full);
-  border: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--gray-100);
-  color: var(--gray-500);
-  transition: opacity 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.cancelBtn:hover { opacity: 0.8; }
 
 /* ヘッダータイトル横のアイコン */
 .titleIcon {
