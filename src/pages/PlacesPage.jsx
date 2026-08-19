@@ -21,6 +21,7 @@ import ErrorNotice from '../components/ErrorNotice'
 import Toast from '../components/Toast'
 import Modal from '../components/Modal'
 import PlaceDetailModal from '../components/places/PlaceDetailModal'
+import PlaceSearchInput from '../components/PlaceSearchInput'
 import styles from './PlacesPage.module.css'
 
 
@@ -730,31 +731,6 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
   const inputRef = useRef(null)
   const [locating, setLocating] = useState(false)
 
-  useEffect(() => {
-    let mounted = true
-    loadGoogleMapsScript().then(async () => {
-      if (!mounted || !inputRef.current) return
-      await window.google.maps.importLibrary('places')
-      const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
-        componentRestrictions: { country: 'jp' },
-        fields: ['formatted_address', 'geometry', 'name'],
-      })
-      ac.addListener('place_changed', () => {
-        if (!mounted) return
-        const place = ac.getPlace()
-        const loc = place.geometry?.location
-        if (loc) {
-          onCenterChange({
-            lat: loc.lat(),
-            lng: loc.lng(),
-            address: place.formatted_address || place.name || inputRef.current?.value || '',
-          })
-        }
-      })
-    }).catch(() => {})
-    return () => { mounted = false }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   function useCurrentLocation() {
     if (!navigator.geolocation) return
     setLocating(true)
@@ -779,13 +755,16 @@ function RadiusSearchPanel({ center, radiusKm, onCenterChange, onRadiusChange, m
       <div className={styles.radiusInputRow}>
         <div className={styles.radiusInputWrapper}>
           <span className={styles.radiusInputIcon}><IconPin /></span>
-          <input
-            ref={inputRef}
-            className={styles.radiusInput}
-            type="text"
+          <PlaceSearchInput
+            id="radius-center"
+            inputRef={inputRef}
+            inputClassName={styles.radiusInput}
             placeholder="起点となる住所・場所名を入力..."
-            autoComplete="off"
             defaultValue={center?.address === '現在地' ? '現在地' : (center?.address ?? '')}
+            onPick={({ name, address, lat, lng }) => {
+              if (lat == null || lng == null) return
+              onCenterChange({ lat, lng, address: address || name || inputRef.current?.value || '' })
+            }}
           />
           {center && (
             <button className={styles.searchClear} onClick={handleClear} aria-label="クリア">×</button>
@@ -1068,31 +1047,17 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
   const inputRef = useRef(null)
   const autoNameRef = useRef('')   // 直前に自動入力した場所名（手入力と区別するため）
 
-  useEffect(() => {
-    let mounted = true
-    loadGoogleMapsScript().then(async () => {
-      if (!mounted || !inputRef.current) return
-      await window.google.maps.importLibrary('places')
-      const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
-        componentRestrictions: { country: 'jp' },
-        fields: ['formatted_address', 'geometry', 'name'],
-      })
-      ac.addListener('place_changed', () => {
-        if (!mounted) return
-        const place = ac.getPlace()
-        setAddress(place.formatted_address || inputRef.current?.value || '')
-        setSelectedName(place.name || '')
-        const loc = place.geometry?.location
-        if (loc) { setLat(loc.lat()); setLng(loc.lng()) }
-        // 場所名が未入力、または直前の自動入力のままなら、選んだ場所名で自動補完
-        if (place.name) {
-          setName(prev => (!prev.trim() || prev === autoNameRef.current) ? place.name : prev)
-          autoNameRef.current = place.name
-        }
-      })
-    }).catch(() => {})
-    return () => { mounted = false }
-  }, [])
+  function handlePickPlace(place) {
+    setAddress(place.address || inputRef.current?.value || '')
+    setSelectedName(place.name || '')
+    setLat(place.lat)
+    setLng(place.lng)
+    // 場所名が未入力、または直前の自動入力のままなら、選んだ場所名で自動補完
+    if (place.name) {
+      setName(prev => (!prev.trim() || prev === autoNameRef.current) ? place.name : prev)
+      autoNameRef.current = place.name
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -1110,14 +1075,13 @@ function AddPlaceModal({ onSubmit, onClose, tagSuggestions }) {
       <form onSubmit={handleSubmit} className={styles.form}>
         <label className={styles.label}>
           場所を検索（マップ連携）
-          <input
-            ref={inputRef}
-            className={styles.input}
-            type="text"
-            defaultValue=""
+          <PlaceSearchInput
+            id="place-search"
+            inputRef={inputRef}
+            inputClassName={styles.input}
             placeholder="店名・施設名で検索（例: 海遊館）"
-            autoComplete="off"
             autoFocus
+            onPick={handlePickPlace}
           />
           <span className={styles.fieldHint}>検索して選ぶと、場所名・住所・地図が自動で入ります</span>
           {(selectedName || address) && (
@@ -1257,31 +1221,17 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
   const inputRef = useRef(null)
   const autoNameRef = useRef('')
 
-  useEffect(() => {
-    let mounted = true
-    loadGoogleMapsScript().then(async () => {
-      if (!mounted || !inputRef.current) return
-      await window.google.maps.importLibrary('places')
-      const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
-        componentRestrictions: { country: 'jp' },
-        fields: ['formatted_address', 'geometry', 'name'],
-      })
-      ac.addListener('place_changed', () => {
-        if (!mounted) return
-        const p = ac.getPlace()
-        setAddress(p.formatted_address || inputRef.current?.value || '')
-        setSelectedName(p.name || '')
-        const loc = p.geometry?.location
-        if (loc) { setLat(loc.lat()); setLng(loc.lng()) }
-        // 名前が空、または直前の自動入力のままのときだけ場所名を補完（手入力した名前は保持）
-        if (p.name) {
-          setName(prev => (!prev.trim() || prev === autoNameRef.current) ? p.name : prev)
-          autoNameRef.current = p.name
-        }
-      })
-    }).catch(() => {})
-    return () => { mounted = false }
-  }, [])
+  function handlePickPlace(picked) {
+    setAddress(picked.address || inputRef.current?.value || '')
+    setSelectedName(picked.name || '')
+    setLat(picked.lat)
+    setLng(picked.lng)
+    // 名前が空、または直前の自動入力のままのときだけ場所名を補完（手入力した名前は保持）
+    if (picked.name) {
+      setName(prev => (!prev.trim() || prev === autoNameRef.current) ? picked.name : prev)
+      autoNameRef.current = picked.name
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -1323,13 +1273,13 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
           </label>
           <label className={styles.label}>
             住所（任意）
-            <input
-              ref={inputRef}
-              className={styles.input}
-              type="text"
-              defaultValue={place.address ?? ''}
+            <PlaceSearchInput
+              id="place-edit-address"
+              inputRef={inputRef}
+              inputClassName={styles.input}
               placeholder="例: 大阪府大阪市港区海岸通..."
-              autoComplete="off"
+              defaultValue={place.address ?? ''}
+              onPick={handlePickPlace}
             />
             {(selectedName || address) && (
               <p className={styles.acSelected}>
