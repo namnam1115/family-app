@@ -3,6 +3,7 @@ import Modal from '../Modal'
 import ItineraryList from './ItineraryList'
 import PrepList from './PrepList'
 import { IconPin, IconTravel } from '../../lib/icons'
+import { MEMBER_COLORS } from '../../lib/schedule'
 import { PHASES, dateRange, daysUntil, formatYen, tripDates, tripPhase } from '../../lib/travel'
 import styles from './Travel.module.css'
 
@@ -20,6 +21,7 @@ export default function TripDetailModal({
   trip,
   activities,
   prepItems,
+  members,
   onAddActivity,
   onEditActivity,
   onToggleActivityDone,
@@ -42,6 +44,14 @@ export default function TripDetailModal({
   const phase = tripPhase(trip)
   const untilStart = daysUntil(trip.start_date)
   const doneActivities = activities.filter(a => a.done).length
+  // 家族を抜けたメンバーの ID は解決できないので表示から落ちる
+  const companionMembers = (trip.companion_member_ids ?? [])
+    .map(id => {
+      const index = members.findIndex(member => member.id === id)
+      return index < 0 ? null : { ...members[index], color: MEMBER_COLORS[index % MEMBER_COLORS.length] }
+    })
+    .filter(Boolean)
+  const hasCompanions = companionMembers.length > 0 || !!trip.companions
   const donePrep = prepItems.filter(item => item.done).length
 
   return (
@@ -86,7 +96,19 @@ export default function TripDetailModal({
             <div className={styles.infoList}>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>同行者</span>
-                <span className={styles.infoValue}>{trip.companions || '未設定'}</span>
+                <span className={styles.infoValue}>
+                  {hasCompanions ? (
+                    <span className={styles.memberTags}>
+                      {companionMembers.map(member => (
+                        <span key={member.id} className={styles.memberTag}>
+                          <span className={styles.memberDot} style={{ background: member.color }} />
+                          {member.name || 'メンバー'}
+                        </span>
+                      ))}
+                      {trip.companions && <span>{trip.companions}</span>}
+                    </span>
+                  ) : '未設定'}
+                </span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>交通手段</span>

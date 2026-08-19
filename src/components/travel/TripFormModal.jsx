@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Modal from '../Modal'
+import { MEMBER_COLORS } from '../../lib/schedule'
 import { PREFECTURES } from '../../lib/travel'
 import styles from './Travel.module.css'
 
@@ -9,10 +10,11 @@ import styles from './Travel.module.css'
  *
  * props:
  *   trip    : 編集対象（新規は null）
+ *   members : 家族メンバー（同行者の選択肢）
  *   onSave  : (payload) => Promise。失敗時は例外を投げること
  *   onClose : 閉じる
  */
-export default function TripFormModal({ trip, onSave, onClose }) {
+export default function TripFormModal({ trip, members = [], onSave, onClose }) {
   const isEdit = !!trip
   const [form, setForm] = useState({
     title: trip?.title ?? '',
@@ -20,6 +22,7 @@ export default function TripFormModal({ trip, onSave, onClose }) {
     end_date: trip?.end_date ?? '',
     prefecture: trip?.prefecture ?? '',
     companions: trip?.companions ?? '',
+    companion_member_ids: trip?.companion_member_ids ?? [],
     transport: trip?.transport ?? '',
     lodging: trip?.lodging ?? '',
     budget: trip?.budget != null ? String(trip.budget) : '',
@@ -30,6 +33,15 @@ export default function TripFormModal({ trip, onSave, onClose }) {
 
   function update(key, value) {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  function toggleMember(id) {
+    setForm(prev => ({
+      ...prev,
+      companion_member_ids: prev.companion_member_ids.includes(id)
+        ? prev.companion_member_ids.filter(memberId => memberId !== id)
+        : [...prev.companion_member_ids, id],
+    }))
   }
 
   async function handleSave() {
@@ -48,6 +60,7 @@ export default function TripFormModal({ trip, onSave, onClose }) {
         end_date: form.end_date,
         prefecture: form.prefecture || null,
         companions: form.companions.trim() || null,
+        companion_member_ids: form.companion_member_ids,
         transport: form.transport.trim() || null,
         lodging: form.lodging.trim() || null,
         budget: form.budget === '' ? null : Number(form.budget),
@@ -108,12 +121,39 @@ export default function TripFormModal({ trip, onSave, onClose }) {
           {PREFECTURES.map(pref => <option key={pref} value={pref}>{pref}</option>)}
         </select>
 
-        <label className={styles.label} htmlFor="trip-companions">同行者（任意）</label>
+        {members.length > 0 && (
+          <>
+            <span className={styles.label}>同行者（任意）</span>
+            <div className={styles.memberSelect}>
+              {members.map((member, index) => {
+                const color = MEMBER_COLORS[index % MEMBER_COLORS.length]
+                const active = form.companion_member_ids.includes(member.id)
+                return (
+                  <button
+                    key={member.id}
+                    type="button"
+                    className={`${styles.memberOption} ${active ? styles.memberOptionActive : ''}`}
+                    style={active ? { '--active-color': color } : undefined}
+                    aria-pressed={active}
+                    onClick={() => toggleMember(member.id)}
+                  >
+                    <span className={styles.memberDot} style={{ background: color }} />
+                    {member.name || 'メンバー'}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        <label className={styles.label} htmlFor="trip-companions">
+          {members.length > 0 ? '家族以外の同行者（任意）' : '同行者（任意）'}
+        </label>
         <input
           id="trip-companions"
           type="text"
           className={styles.input}
-          placeholder="例：家族4人 + 祖母"
+          placeholder="例：祖母・友人夫婦"
           value={form.companions}
           onChange={e => update('companions', e.target.value)}
         />

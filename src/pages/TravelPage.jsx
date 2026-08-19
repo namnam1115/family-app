@@ -63,7 +63,7 @@ export default function TravelPage() {
   const [toast, setToast] = useState(null)
 
   const {
-    data: { trips, activitiesMap, prepMap },
+    data: { trips, activitiesMap, prepMap, members },
     loading,
     error: loadError,
     refetch: fetchTrips,
@@ -71,9 +71,15 @@ export default function TravelPage() {
     setData,
   } = useFamilyData(
     async familyId => {
-      const trips = await unwrap(
-        supabase.from('travel_trips').select('*').eq('family_id', familyId).order('start_date', { ascending: false })
-      )
+      const [trips, members] = await Promise.all([
+        unwrap(
+          supabase.from('travel_trips').select('*').eq('family_id', familyId).order('start_date', { ascending: false })
+        ),
+        // 同行者の選択肢。家族を抜けたメンバーの ID は表示側で解決できず自然に落ちる
+        unwrap(
+          supabase.from('family_members').select('id, name').eq('family_id', familyId).order('joined_at')
+        ),
+      ])
       const tripIds = trips.map(t => t.id)
       // 旅行ごとに問い合わせず、行程と準備リストは 1 クエリずつでまとめて取得する
       const [activities, prepItems] = tripIds.length
@@ -93,10 +99,10 @@ export default function TravelPage() {
       for (const activity of activities) activitiesMap[activity.trip_id]?.push(activity)
       const prepMap = Object.fromEntries(tripIds.map(id => [id, []]))
       for (const item of prepItems) prepMap[item.trip_id]?.push(item)
-      return { trips, activitiesMap, prepMap }
+      return { trips, activitiesMap, prepMap, members }
     },
-    ['travel_trips', 'travel_activities', 'travel_prep_items'],
-    { trips: [], activitiesMap: {}, prepMap: {} },
+    ['travel_trips', 'travel_activities', 'travel_prep_items', 'family_members'],
+    { trips: [], activitiesMap: {}, prepMap: {}, members: [] },
   )
 
   const selectedTrip = trips.find(t => t.id === selectedTripId) ?? null
@@ -431,6 +437,7 @@ export default function TravelPage() {
           trip={selectedTrip}
           activities={(activitiesMap[selectedTrip.id] ?? []).slice().sort(byItinerary)}
           prepItems={prepMap[selectedTrip.id] ?? []}
+          members={members}
           onAddActivity={day => setActivityForm({ activity: null, defaultDay: day })}
           onEditActivity={activity => setActivityForm({ activity, defaultDay: activity.day_index ?? 0 })}
           onToggleActivityDone={toggleActivityDone}
@@ -458,6 +465,7 @@ export default function TravelPage() {
       {showTripModal && (
         <TripFormModal
           trip={editingTrip}
+          members={members}
           onClose={() => setShowTripModal(false)}
           onSave={async payload => {
             if (editingTrip) await updateTrip(editingTrip.id, payload)
