@@ -10,6 +10,34 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /**
+ * iOS ではキーボード表示・ピンチ時に「見えている領域（visual viewport）」だけがずれ、
+ * position: fixed のオーバーレイはレイアウトビューポート基準のままなので、
+ * モーダルが横や縦に揺れて見える。表示領域に合わせて位置と大きさを追従させる。
+ */
+function useVisualViewport(overlayRef, open) {
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!open || !viewport) return
+
+    function apply() {
+      const overlay = overlayRef.current
+      if (!overlay) return
+      overlay.style.width = `${viewport.width}px`
+      overlay.style.height = `${viewport.height}px`
+      overlay.style.transform = `translate(${viewport.offsetLeft}px, ${viewport.offsetTop}px)`
+    }
+
+    apply()
+    viewport.addEventListener('resize', apply)
+    viewport.addEventListener('scroll', apply)
+    return () => {
+      viewport.removeEventListener('resize', apply)
+      viewport.removeEventListener('scroll', apply)
+    }
+  }, [overlayRef, open])
+}
+
+/**
  * 全ページ共通のモーダル（モバイルはボトムシート、480px 以上で中央表示）。
  * Esc・背景タップで閉じる / 開いている間の背景スクロールロック /
  * フォーカストラップ・閉じた後のフォーカス復帰をここで一元的に担保する。
@@ -37,7 +65,10 @@ export default function Modal({
   children,
 }) {
   const panelRef = useRef(null)
+  const overlayRef = useRef(null)
   const titleId = useId()
+
+  useVisualViewport(overlayRef, open)
 
   // onClose は呼び出し側でインライン関数になりがちなので、
   // 依存に含めて毎レンダー登録し直さないよう ref 経由で参照する
@@ -98,6 +129,7 @@ export default function Modal({
 
   return createPortal(
     <div
+      ref={overlayRef}
       className={styles.overlay}
       onClick={e => { if (closeOnOverlay && e.target === e.currentTarget) onClose?.() }}
     >

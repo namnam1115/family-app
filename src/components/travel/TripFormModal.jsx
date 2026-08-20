@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Modal from '../Modal'
 import PlaceSearchInput from '../PlaceSearchInput'
 import { MEMBER_COLORS } from '../../lib/schedule'
-import { PREFECTURES } from '../../lib/travel'
+import { PREFECTURES, countExtraCompanions } from '../../lib/travel'
 import styles from './Travel.module.css'
 
 /**
@@ -29,13 +29,12 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
     lodging_address: trip?.lodging_address ?? '',
     lodging_lat: trip?.lodging_lat ?? null,
     lodging_lng: trip?.lodging_lng ?? null,
-    party_size: trip?.party_size != null ? String(trip.party_size) : '',
     budget: trip?.budget != null ? String(trip.budget) : '',
     memo: trip?.memo ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const memberCount = form.companion_member_ids.length
+  const headcount = form.companion_member_ids.length + countExtraCompanions(form.companions)
 
   function update(key, value) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -56,7 +55,6 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
     if (!form.end_date) { setError('終了日を選択してください'); return }
     if (form.end_date < form.start_date) { setError('終了日は開始日以降にしてください'); return }
     if (form.budget && !Number.isFinite(Number(form.budget))) { setError('予算は数値で入力してください'); return }
-    if (form.party_size && !(Number(form.party_size) > 0)) { setError('参加人数は1以上で入力してください'); return }
 
     setSaving(true)
     setError('')
@@ -73,7 +71,6 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
         lodging_address: form.lodging_address.trim() || null,
         lodging_lat: form.lodging_lat,
         lodging_lng: form.lodging_lng,
-        party_size: form.party_size === '' ? null : Number(form.party_size),
         budget: form.budget === '' ? null : Number(form.budget),
         memo: form.memo.trim() || null,
       })
@@ -158,16 +155,19 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
         )}
 
         <label className={styles.label} htmlFor="trip-companions">
-          {members.length > 0 ? '家族以外の同行者（任意）' : '同行者（任意）'}
+          {members.length > 0 ? '家族以外の同行者（任意・「、」区切り）' : '同行者（任意・「、」区切り）'}
         </label>
         <input
           id="trip-companions"
           type="text"
           className={styles.input}
-          placeholder="例：祖母・友人夫婦"
+          placeholder="例：祖母、友人"
           value={form.companions}
           onChange={e => update('companions', e.target.value)}
         />
+        {headcount > 0 && (
+          <p className={styles.hint}>参加人数 {headcount}人（1人あたりの予算・費用の計算に使います）</p>
+        )}
 
         <label className={styles.label} htmlFor="trip-transport">交通手段（任意）</label>
         <input
@@ -194,19 +194,6 @@ export default function TripFormModal({ trip, members = [], onSave, onClose }) {
           }}
         />
         {form.lodging_address && <p className={styles.hint}>{form.lodging_address}</p>}
-
-        <label className={styles.label} htmlFor="trip-party">参加人数（任意）</label>
-        <input
-          id="trip-party"
-          type="number"
-          inputMode="numeric"
-          min="1"
-          step="1"
-          className={styles.input}
-          placeholder={memberCount > 0 ? `未入力なら同行者の人数（${memberCount}人）` : '例：4'}
-          value={form.party_size}
-          onChange={e => update('party_size', e.target.value)}
-        />
 
         <label className={styles.label} htmlFor="trip-budget">予算（任意・円）</label>
         <input

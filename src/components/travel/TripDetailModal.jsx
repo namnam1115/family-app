@@ -4,7 +4,7 @@ import ItineraryList from './ItineraryList'
 import PrepList from './PrepList'
 import { IconPin, IconTravel } from '../../lib/icons'
 import { MEMBER_COLORS, mapsUrl } from '../../lib/schedule'
-import { PHASES, dateRange, daysUntil, formatYen, tripDates, tripPhase } from '../../lib/travel'
+import { PHASES, dateRange, daysUntil, formatYen, partySize, tripDates, tripPhase } from '../../lib/travel'
 import styles from './Travel.module.css'
 
 const TABS = [
@@ -52,8 +52,8 @@ export default function TripDetailModal({
     })
     .filter(Boolean)
   const hasCompanions = companionMembers.length > 0 || !!trip.companions
-  // 参加人数は手入力を優先し、未入力なら同行者に選んだメンバー数を使う
-  const partySize = trip.party_size ?? (trip.companion_member_ids?.length ?? 0)
+  // 参加人数は同行者（メンバー + 家族以外）から数える
+  const headcount = partySize(trip)
   const lodgingQuery = trip.lodging_lat != null && trip.lodging_lng != null
     ? `${trip.lodging_lat},${trip.lodging_lng}`
     : (trip.lodging_address || trip.lodging)
@@ -180,17 +180,17 @@ export default function TripDetailModal({
                   </div>
                 </>
               )}
-              {partySize > 0 && (
+              {headcount > 0 && (
                 <>
                   {budget > 0 && (
                     <div className={styles.costRow}>
-                      <span>1人あたり予算（{partySize}人）</span>
-                      <span className={styles.costValue}>{formatYen(budget / partySize)}</span>
+                      <span>1人あたり予算（{headcount}人）</span>
+                      <span className={styles.costValue}>{formatYen(budget / headcount)}</span>
                     </div>
                   )}
                   <div className={styles.costRow}>
-                    <span>1人あたり費用（{partySize}人）</span>
-                    <span className={styles.costValue}>{formatYen(spent / partySize)}</span>
+                    <span>1人あたり費用（{headcount}人）</span>
+                    <span className={styles.costValue}>{formatYen(spent / headcount)}</span>
                   </div>
                 </>
               )}
