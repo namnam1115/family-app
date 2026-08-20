@@ -92,6 +92,20 @@ export function daysUntil(dateStr) {
   return diff > 0 ? diff : null
 }
 
+/**
+ * 家族以外の同行者テキストから人数を数える。
+ * 「祖母、友人」のように区切って書かれた分をそれぞれ 1 人として扱う。
+ */
+export function countExtraCompanions(text) {
+  if (!text) return 0
+  return text.split(/[、,，・/／\n]+/).map(part => part.trim()).filter(Boolean).length
+}
+
+/** 参加人数。同行者に選んだ家族メンバー + 家族以外の同行者 */
+export function partySize(trip) {
+  return (trip.companion_member_ids?.length ?? 0) + countExtraCompanions(trip.companions)
+}
+
 export function formatYen(value) {
   const n = Number(value)
   if (value == null || value === '' || !Number.isFinite(n)) return ''
