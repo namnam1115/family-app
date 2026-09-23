@@ -34,6 +34,15 @@ export default defineConfig({
             purpose: 'any maskable',
           },
         ],
+        // ホーム画面アイコン長押しのメニュー（Android / デスクトップ Chrome 等。iOS は非対応）
+        shortcuts: [
+          {
+            name: '買い物リストにすばやく追加',
+            short_name: '買い物を追加',
+            url: '/shopping/quick',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],

@@ -11,6 +11,7 @@ import LoadingSpinner from './components/LoadingSpinner'
 // ホーム以外は初回表示に不要なため遅延読み込みする（SchedulePage / PlacesPage が特に大きい）
 // lazyWithReload はデプロイ直後の古いタブでチャンクが取れない場合に一度だけ再読み込みする
 const ShoppingPage = lazyWithReload(() => import('./pages/ShoppingPage'))
+const QuickAddPage = lazyWithReload(() => import('./pages/QuickAddPage'))
 const PricePage = lazyWithReload(() => import('./pages/PricePage'))
 const BudgetPage = lazyWithReload(() => import('./pages/BudgetPage'))
 const PlacesPage = lazyWithReload(() => import('./pages/PlacesPage'))
@@ -44,6 +45,16 @@ export default function App() {
                 <LazyRoute>
                   <ProtectedRoute>
                     <ShoppingPage />
+                  </ProtectedRoute>
+                </LazyRoute>
+              }
+            />
+            <Route
+              path="/shopping/quick"
+              element={
+                <LazyRoute>
+                  <ProtectedRoute>
+                    <QuickAddPage />
                   </ProtectedRoute>
                 </LazyRoute>
               }

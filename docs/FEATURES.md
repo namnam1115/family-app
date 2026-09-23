@@ -9,6 +9,7 @@
 | `/` | HomePage（アプリランチャー + 認証） | 不要（未ログイン時はログイン UI） | families, family_members |
 | `/join/:token` | JoinPage（招待トークンで家族参加） | 不要（参加時にログイン誘導） | family_invites, families, family_members |
 | `/shopping` | ShoppingPage 買い物リスト | 必要 | shopping_lists, shopping_items |
+| `/shopping/quick` | QuickAddPage 買い物リストにすばやく追加 | 必要 | shopping_lists, shopping_items |
 | `/price` | PricePage 価格比較 | 必要 | price_stores, price_items |
 | `/budget` | BudgetPage 家計 | 必要 | budget_categories, budget_entries |
 | `/places` | PlacesPage お出かけリスト | 必要 | wish_places |
@@ -29,6 +30,7 @@
 - 複数リストをタブで切替。お気に入りリストを先頭表示、未購入数バッジ
 - アイテムの追加 / チェック（購入日時記録）/ 重要フラグ / メモ / 追加者表示
 - 家族間リアルタイム同期、毎朝の未購入アイテム Push 通知（`NotificationSettings` で時刻設定）
+- すばやく追加（`/shopping/quick`、QuickAddPage）: ホーム画面アイコン長押しのショートカット（PWA manifest の `shortcuts`、Android / デスクトップ Chrome 等）から直接開き、入力欄にフォーカスしたまま Enter で連続追加。「、」区切りでまとめて追加、未購入の同名アイテムはスキップ、追加した品物は画面上で取り消し可。追加先リストは端末に記憶
 
 ### 価格比較（PricePage）
 - 店舗マスタ（並び順管理）× 商品ごとの価格表。最安値の把握が目的
