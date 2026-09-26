@@ -36,7 +36,7 @@ $$;
 | `shopping_lists` | 買い物リスト | family_id, name, created_by, is_favorite | ✅ |
 | `shopping_items` | 買い物アイテム | list_id, name, memo, added_by, checked, checked_at, important | ✅ |
 | `price_stores` | 価格比較の店舗マスタ | family_id, name, sort_order | |
-| `price_items` | 価格記録 | family_id, store_name, product_name, price numeric(10,2), note, icon, UNIQUE(family_id, store_name, product_name) | |
+| `price_items` | 価格記録 | family_id, store_name, product_name, price numeric(10,2), note, icon, category, quantity numeric(10,2) + unit（内容量。単価比較用、036）, updated_by, updated_at, UNIQUE(family_id, store_name, product_name) | |
 | `push_subscriptions` | Web Push 購読（デバイスごと） | user_id, family_id, endpoint, p256dh, auth, UNIQUE(user_id, endpoint) | |
 | `dish_categories` | 献立カテゴリ | family_id, name, sort_order | ✅ |
 | `dishes` | 食べたいおかず | family_id, name, category_id, url, image_url, added_by → family_members, cooked_at, rating (1-5), review | ✅ |
