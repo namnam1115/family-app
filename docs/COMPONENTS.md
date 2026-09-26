@@ -30,6 +30,7 @@
 | `travel/*` | 旅行の画面部品（詳細モーダル・行程リスト・準備リスト・各フォーム・地図パネル） | TravelPage |
 | `places/PlaceDetailModal` | お出かけリストの場所詳細（読み取り専用）。地図 / Web検索 / 訪問記録 / 編集への導線 | PlacesPage |
 | `places/PlacePhoto` | 場所の参考画像（Google の場所写真を名前・住所から取得）。一覧カードは画面に入ってから取得 | PlacesPage, PlaceDetailModal |
+| `price/*` | 価格比較の画面部品（比較シート・価格追加モーダル・店舗管理・商品アイコン/ピッカー・内容量入力）。計算は `lib/price.js` | PricePage |
 | `AddToShoppingListModal` | 他アプリから買い物リストへ品物を送る | PricePage / DishesPage |
 | `VideoEmbed` | 動画（YouTube / TikTok）のサムネイル表示と、その場での埋め込み再生。再生状態は親が持つ | DishesPage |
 | `PlaceSearchInput` | Google Places の場所検索入力欄（デバウンス・呼び出し上限つき。候補リストはポータル表示で呼び出し側のレイアウトを崩さない） | PlacesPage / 旅行の宿泊先 |
@@ -78,6 +79,7 @@ src/
 │   └── AuthContext.jsx  # 認証・家族状態（唯一のグローバル状態）
 ├── pages/               # ルーティング単位。Foo.jsx + Foo.module.css
 ├── components/          # 複数ページで使う共通コンポーネント
+│   ├── price/           # 価格比較の画面部品（+ Price.module.css）。PricePage 専用
 │   ├── schedule/        # 予定表の画面部品（+ Schedule.module.css）。SchedulePage 専用
 │   └── travel/          # 旅行の画面部品（+ Travel.module.css）。TravelPage 専用
 ├── hooks/               # （将来）useXxx カスタムフック。3 箇所目の重複ロジックから
