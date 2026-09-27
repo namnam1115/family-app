@@ -19,6 +19,7 @@ const DishesPage = lazyWithReload(() => import('./pages/DishesPage'))
 const SchedulePage = lazyWithReload(() => import('./pages/SchedulePage'))
 const InventoryPage = lazyWithReload(() => import('./pages/InventoryPage'))
 const TravelPage = lazyWithReload(() => import('./pages/TravelPage'))
+const LoansPage = lazyWithReload(() => import('./pages/LoansPage'))
 const JoinPage = lazyWithReload(() => import('./pages/JoinPage'))
 
 /** 遅延ページを ErrorBoundary + Suspense で包む（チャンク取得失敗も拾う） */
@@ -125,6 +126,16 @@ export default function App() {
                 <LazyRoute>
                   <ProtectedRoute>
                     <TravelPage />
+                  </ProtectedRoute>
+                </LazyRoute>
+              }
+            />
+            <Route
+              path="/loans"
+              element={
+                <LazyRoute>
+                  <ProtectedRoute>
+                    <LoansPage />
                   </ProtectedRoute>
                 </LazyRoute>
               }

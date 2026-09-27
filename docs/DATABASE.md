@@ -23,6 +23,7 @@ $$;
   - `create_family_invite()` — 招待トークン発行（有効な招待があれば使い回す。期限 7 日）
   - `get_family_invite(p_token)` — 招待トークンから家族名を引く（参加前の確認用）
   - `join_family_with_invite(p_token, p_member_name)` — 招待トークンで参加
+- `loans` / `loan_repayments` の WITH CHECK は、参照先（貸した人・借りた人のメンバー / 返済先の貸し借り）が自分の家族のものかも確かめる（037）。外部キーの検査は RLS を通らないため、family_id の一致だけでは他家族の行を参照できてしまう
 - `families` の SELECT は `id = get_my_family_id()`。**認証済み全員に開放してはいけない**（全家族を列挙できてしまい、招待リンクの推測困難性が意味をなくす）
 
 ## テーブル一覧
@@ -54,6 +55,8 @@ $$;
 | `travel_trips` | 旅行（計画・記録） | family_id, title, start_date, end_date, prefecture, memo, schedule_event_id, companions（家族以外の同行者。「、」区切りで人数も数える）, companion_member_ids uuid[]（同行する家族メンバー）, transport, lodging, lodging_address, lodging_lat, lodging_lng, budget | ✅ |
 | `travel_activities` | 旅行の行程 | trip_id, family_id, day_index（何日目・0始まり）, order_index, start_time ('HH:MM' text), title, place, cost, memo, done | ✅ |
 | `travel_prep_items` | 旅行の準備リスト | trip_id, family_id, category (packing/todo), title, assignee, order_index, done | ✅ |
+| `loans` | 家族間の貸し借り | family_id, lender_id / borrower_id → family_members（ON DELETE SET NULL・同一人物不可）, amount numeric(12,0) > 0, borrowed_on, memo, created_by, updated_at | ✅ |
+| `loan_repayments` | 貸し借りの返済（分割可） | loan_id → loans（CASCADE）, family_id, amount numeric(12,0) > 0, repaid_on, memo, created_by | ✅ |
 | `wish_places` | お出かけしたい場所 | family_id, name, url, lat, lng, tags text[], added_by → family_members ほか（⚠️ 下記参照） | ✅（コード上購読） |
 | `budget_categories` | 家計カテゴリ | family_id, name, sort_order（⚠️ 下記参照） | ✅（コード上購読） |
 | `budget_entries` | 家計エントリ | family_id, category_id, member_id ほか（⚠️ 下記参照） | ✅（コード上購読） |
