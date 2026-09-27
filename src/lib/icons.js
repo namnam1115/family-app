@@ -18,9 +18,11 @@ export {
   BsEggFried as IconDishes,
   BsAirplane as IconTravel,
   BsJournalText as IconMemo,
+  BsCashCoin as IconLoan,
 
   // ── 操作・UI ─────────────────────────────────
   BsPlusLg as IconAdd,
+  BsArrowDownUp as IconSwap,
   BsDashLg as IconMinus,
   BsArrowCounterclockwise as IconReset,
   BsSearch as IconSearch,

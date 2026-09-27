@@ -28,6 +28,7 @@
 | `JapanMap` | 日本地図（都道府県 SVG）。訪問済み都道府県のハイライトとタップ選択、ピンチ / ホイール / ボタンでの拡大縮小とドラッグ移動。`onZoomedChange` で拡大状態を外へ伝える | TravelPage |
 | `schedule/*` | 予定表の画面部品（月 / 週 / アジェンダ・各モーダル） | SchedulePage |
 | `travel/*` | 旅行の画面部品（詳細モーダル・行程リスト・準備リスト・各フォーム・地図パネル） | TravelPage |
+| `loans/*` | 貸し借りの画面部品（カード・貸し借りフォーム・返済フォーム・メンバー選択）。計算は `lib/loans.js` | LoansPage |
 | `places/PlaceDetailModal` | お出かけリストの場所詳細（読み取り専用）。地図 / Web検索 / 訪問記録 / 編集への導線 | PlacesPage |
 | `places/PlacePhoto` | 場所の参考画像（Google の場所写真を名前・住所から取得）。一覧カードは画面に入ってから取得 | PlacesPage, PlaceDetailModal |
 | `price/*` | 価格比較の画面部品（比較シート・価格追加モーダル・店舗管理・商品アイコン/ピッカー・内容量入力）。計算は `lib/price.js` | PricePage |
@@ -79,6 +80,7 @@ src/
 │   └── AuthContext.jsx  # 認証・家族状態（唯一のグローバル状態）
 ├── pages/               # ルーティング単位。Foo.jsx + Foo.module.css
 ├── components/          # 複数ページで使う共通コンポーネント
+│   ├── loans/           # 貸し借りの画面部品（+ Loans.module.css）。LoansPage 専用
 │   ├── price/           # 価格比較の画面部品（+ Price.module.css）。PricePage 専用
 │   ├── schedule/        # 予定表の画面部品（+ Schedule.module.css）。SchedulePage 専用
 │   └── travel/          # 旅行の画面部品（+ Travel.module.css）。TravelPage 専用

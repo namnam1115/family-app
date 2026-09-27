@@ -10,7 +10,7 @@ import BottomNav from '../components/BottomNav'
 import GlobalSearch from '../components/GlobalSearch'
 import {
   IconHome, IconShopping, IconPrice, IconPlaces, IconDishes,
-  IconBudget, IconSchedule, IconInventory, IconTravel, IconMemo, IconSearch,
+  IconBudget, IconSchedule, IconInventory, IconTravel, IconLoan, IconMemo, IconSearch,
 } from '../lib/icons'
 import styles from './HomePage.module.css'
 
@@ -141,6 +141,14 @@ export default function HomePage() {
       description: '持ち物・行程の準備から思い出の記録まで。スケジュールと自動連携。',
       icon: IconTravel,
       path: '/travels',
+      available: true,
+    },
+    {
+      id: 'loans',
+      title: '貸し借り',
+      description: '家族間のお金の貸し借りを記録。返済の進み具合と残額がひと目でわかる。',
+      icon: IconLoan,
+      path: '/loans',
       available: true,
     },
     {
