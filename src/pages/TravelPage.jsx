@@ -14,7 +14,7 @@ import MapPanel from '../components/travel/MapPanel'
 import TripDetailModal from '../components/travel/TripDetailModal'
 import TripFormModal from '../components/travel/TripFormModal'
 import ActivityFormModal from '../components/travel/ActivityFormModal'
-import { PHASES, PREFECTURES, buildPlaceIndex, daysUntil, shortDate, todayStr, tripDates, tripPhase } from '../lib/travel'
+import { PHASES, PREFECTURES, buildPlaceIndex, todayStr, daysUntil, shortDate, tripDates, tripPhase } from '../lib/travel'
 import styles from './TravelPage.module.css'
 
 /** upsert で送る列。取得した行をそのまま返すと不要な列まで書き戻すため明示する */
@@ -59,7 +59,9 @@ export default function TravelPage() {
   const [activityForm, setActivityForm] = useState(null) // { activity, defaultDay }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [prefectureFilter, setPrefectureFilter] = useState('all')
-  const [showMap, setShowMap] = useState(true)
+  const [showMap, setShowMap] = useState(false)
+  const [search, setSearch] = useState('')
+  const [phaseFilter, setPhaseFilter] = useState('all')
   const [toast, setToast] = useState(null)
 
   const {
@@ -122,9 +124,12 @@ export default function TravelPage() {
   )
 
   const sections = useMemo(() => {
-    const filtered = prefectureFilter === 'all'
-      ? trips
-      : trips.filter(t => t.prefecture === prefectureFilter)
+    const query = search.trim().normalize('NFKC').toLocaleLowerCase('ja')
+    const filtered = trips.filter(t =>
+      (prefectureFilter === 'all' || t.prefecture === prefectureFilter) &&
+      (!query || [t.title, t.prefecture, t.lodging].filter(Boolean).join(' ').normalize('NFKC').toLocaleLowerCase('ja').includes(query)) &&
+      (phaseFilter === 'all' || (phaseFilter === 'past' ? tripPhase(t) === 'past' : tripPhase(t) !== 'past'))
+    )
     // これからの旅行は出発が近い順、終わった旅行は新しい順に見たい
     const planned = filtered.filter(t => tripPhase(t) !== 'past')
       .sort((a, b) => a.start_date.localeCompare(b.start_date))
@@ -133,7 +138,15 @@ export default function TravelPage() {
       { key: 'planned', title: 'これからの旅行', trips: planned },
       { key: 'past', title: 'おもいで', trips: past },
     ].filter(section => section.trips.length > 0)
-  }, [trips, prefectureFilter])
+  }, [trips, prefectureFilter, search, phaseFilter])
+
+  const plannedCount = trips.filter(t => tripPhase(t) !== 'past').length
+  const hasFilters = search.trim() || prefectureFilter !== 'all' || phaseFilter !== 'all'
+  function resetFilters() {
+    setSearch('')
+    setPrefectureFilter('all')
+    setPhaseFilter('all')
+  }
 
   function patchList(key, tripId, updater) {
     setData(prev => ({
@@ -395,12 +408,20 @@ export default function TravelPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => navigate('/')} aria-label="ホームへ戻る"><BsHouseFill /></button>
-        <span className={styles.title}><IconTravel className={styles.titleIcon} /> 旅行計画・記録</span>
+        <h1 className={styles.title}><IconTravel className={styles.titleIcon} /> 旅行計画・記録</h1>
         <button className={styles.addBtn} onClick={openNewTrip}>＋ 新しい旅行</button>
       </header>
 
+      <main className={styles.main}>
       {trips.length > 0 && (
-        <div className={styles.filterBar}>
+        <div className={styles.tools}>
+          <div className={styles.phaseFilters} role="group" aria-label="旅行の期間">
+            {[['all', 'すべて', trips.length], ['planned', 'これから', plannedCount], ['past', 'おもいで', trips.length - plannedCount]].map(([key, label, count]) => (
+              <button key={key} className={styles.phaseFilter} aria-pressed={phaseFilter === key} onClick={() => setPhaseFilter(key)}>{label}<span>{count}</span></button>
+            ))}
+          </div>
+          <input type="search" className={styles.searchInput} aria-label="旅行を検索" placeholder="旅行名・行き先・宿泊先で検索" value={search} onChange={e => setSearch(e.target.value)} />
+          <div className={styles.filterBar}>
           <select
             className={styles.prefectureFilter}
             value={prefectureFilter}
@@ -415,24 +436,28 @@ export default function TravelPage() {
           <button
             className={styles.mapToggleBtn}
             onClick={() => setShowMap(v => !v)}
-            aria-pressed={showMap}
+            aria-expanded={showMap}
+            aria-controls="travel-map"
           >
             <IconMap /> {showMap ? '地図を隠す' : '地図で見る'}
           </button>
+          </div>
+          {hasFilters && <button className={styles.resetBtn} onClick={resetFilters}>絞り込みを解除</button>}
         </div>
       )}
 
       {trips.length > 0 && (
-        <MapPanel
-          visited={visitedPrefectures}
-          selected={prefectureFilter === 'all' ? null : prefectureFilter}
-          onSelect={pref => setPrefectureFilter(pref ?? 'all')}
-          open={showMap}
-          onOpenChange={setShowMap}
-        />
+        <div id="travel-map" className={styles.mapSection} data-open={showMap}>
+          <MapPanel
+            visited={visitedPrefectures}
+            selected={prefectureFilter === 'all' ? null : prefectureFilter}
+            onSelect={pref => setPrefectureFilter(pref ?? 'all')}
+            open={showMap}
+            onOpenChange={setShowMap}
+          />
+        </div>
       )}
 
-      <main className={styles.main}>
         {loading ? (
           <LoadingSpinner inline />
         ) : loadError ? (
@@ -447,12 +472,13 @@ export default function TravelPage() {
           </div>
         ) : sections.length === 0 ? (
           <div className={styles.empty}>
-            <p>{prefectureFilter}の旅行がありません</p>
+            <p>条件に合う旅行がありません</p>
+            <button className={styles.emptyAddBtn} onClick={resetFilters}>すべての旅行を表示</button>
           </div>
         ) : (
           sections.map(section => (
             <section key={section.key} className={styles.section}>
-              <h2 className={styles.sectionTitle}>{section.title}</h2>
+              <h2 className={styles.sectionTitle}>{section.title}<span>{section.trips.length}件</span></h2>
               <div className={styles.tripList}>
                 {section.trips.map(trip => (
                   <TripCard
@@ -471,6 +497,7 @@ export default function TravelPage() {
 
       {selectedTrip && (
         <TripDetailModal
+          key={selectedTrip.id}
           trip={selectedTrip}
           activities={(activitiesMap[selectedTrip.id] ?? []).slice().sort(byItinerary)}
           prepItems={prepMap[selectedTrip.id] ?? []}
@@ -542,33 +569,33 @@ function TripCard({ trip, activities, prepItems, onClick }) {
   const phase = tripPhase(trip)
   const donePrep = prepItems.filter(item => item.done).length
   const doneActivities = activities.filter(a => a.done).length
+  const until = daysUntil(trip.start_date)
   const dayDates = tripDates(trip.start_date, trip.end_date)
   const currentDay = dayDates.indexOf(todayStr()) + 1
-  const untilStart = daysUntil(trip.start_date)
-  // 出発前は残り日数、旅行中は何日目か、終わった旅行は日数を出す
-  const countdown = untilStart != null
-    ? `あと${untilStart}日`
-    : currentDay > 0
-      ? `${currentDay}日目 / ${dayDates.length}日`
-      : `${dayDates.length}日間`
+  const progress = prepItems.length ? Math.round(donePrep / prepItems.length * 100) : 0
 
   return (
-    <div className={styles.card} onClick={onClick} role="button" tabIndex={0}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
-    >
+    <button type="button" className={styles.card} onClick={onClick}>
       <div className={styles.cardHeader}>
         <div className={styles.cardDate}>
-          {shortDate(trip.start_date)} 〜 {shortDate(trip.end_date)}
+          {trip.start_date.slice(0, 4)}年 {shortDate(trip.start_date)} 〜 {shortDate(trip.end_date)}
         </div>
         {trip.prefecture && <span className={styles.prefBadge}>{trip.prefecture}</span>}
       </div>
       <div className={styles.cardTitle}>{trip.title}</div>
+      {trip.lodging && <p className={styles.cardLodging}>宿泊 · {trip.lodging}</p>}
       <div className={styles.cardMeta}>
         <span className={styles.phaseChip} data-phase={phase}>{PHASES[phase].label}</span>
-        <span className={styles.countdownChip}>{countdown}</span>
         <span className={styles.metaChip}>行程 {doneActivities}/{activities.length}</span>
-        <span className={styles.metaChip}>準備 {donePrep}/{prepItems.length}</span>
+        <span className={styles.metaChip}>{until != null ? `出発まであと${until}日` : currentDay > 0 ? `${currentDay}日目 / ${dayDates.length}日` : `${dayDates.length}日間`}</span>
       </div>
-    </div>
+      {phase !== 'past' && (
+        <div className={styles.cardProgress}>
+          <div><span>{prepItems.length ? `準備 ${donePrep} / ${prepItems.length}` : '持ち物・やることを追加しましょう'}</span><span>{prepItems.length ? (donePrep === prepItems.length ? '準備完了' : `あと${prepItems.length - donePrep}件`) : '準備する →'}</span></div>
+          {prepItems.length > 0 && <div className={styles.progressTrack}><div style={{ width: `${progress}%` }} /></div>}
+        </div>
+      )}
+      {phase === 'past' && <div className={styles.cardFooter}>旅の記録を振り返る <span>→</span></div>}
+    </button>
   )
 }

@@ -808,3 +808,30 @@
   font-weight: 400;
   color: var(--ink-3);
 }
+
+/* ── 値札の撮影読み取り ── */
+.scanArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.scanBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border: 1.5px dashed var(--primary);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  transition: all 0.18s ease;
+}
+
+.scanBtn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.scanBtn:disabled { opacity: 0.6; }

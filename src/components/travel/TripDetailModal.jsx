@@ -86,33 +86,47 @@ export default function TripDetailModal({
         </div>
 
         <div className={styles.tabBar} ref={tabBarRef}>
-          <div className={styles.tabs} role="tablist">
-            {TABS.map(item => (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                id={`${tabId}-${item.key}`}
-                aria-selected={tab === item.key}
-                aria-controls={`${tabId}-panel`}
-                className={`${styles.tab} ${tab === item.key ? styles.tabActive : ''}`}
-                onClick={() => setTab(item.key)}
-              >
-                {item.label}
-                {item.key === 'prep' && prepItems.length > 0 && (
-                  <span className={styles.tabBadge}>{donePrep}/{prepItems.length}</span>
-                )}
-                {item.key === 'plan' && activities.length > 0 && (
-                  <span className={styles.tabBadge}>{doneActivities}/{activities.length}</span>
-                )}
-              </button>
-            ))}
-          </div>
+        <div className={styles.tabs} role="tablist" aria-label="旅行の詳細">
+          {TABS.map(item => (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              id={`${tabId}-${item.key}`}
+              aria-selected={tab === item.key}
+              tabIndex={tab === item.key ? 0 : -1}
+              onKeyDown={e => {
+                const index = TABS.findIndex(t => t.key === item.key)
+                const next = e.key === 'ArrowRight' ? (index + 1) % TABS.length : e.key === 'ArrowLeft' ? (index + TABS.length - 1) % TABS.length : e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : null
+                if (next == null) return
+                e.preventDefault()
+                setTab(TABS[next].key)
+                document.getElementById(`${tabId}-${TABS[next].key}`)?.focus()
+              }}
+              aria-controls={`${tabId}-panel`}
+              className={`${styles.tab} ${tab === item.key ? styles.tabActive : ''}`}
+              onClick={() => setTab(item.key)}
+            >
+              {item.label}
+              {item.key === 'prep' && prepItems.length > 0 && (
+                <span className={styles.tabBadge}>{donePrep}/{prepItems.length}</span>
+              )}
+              {item.key === 'plan' && activities.length > 0 && (
+                <span className={styles.tabBadge}>{doneActivities}/{activities.length}</span>
+              )}
+            </button>
+          ))}
         </div>
 
-        <div id={`${tabId}-panel`} role="tabpanel" aria-labelledby={`${tabId}-${tab}`} className={styles.panel}>
+        </div>
+
+        <div id={`${tabId}-panel`} role="tabpanel" aria-labelledby={`${tabId}-${tab}`} className={styles.panel} tabIndex={0}>
         {tab === 'overview' && (
           <>
+            <div className={styles.quickActions}>
+              <button type="button" onClick={() => setTab('prep')}><span>持ち物・やること</span><strong>{prepItems.length ? `あと${prepItems.length - donePrep}件` : '準備を始める'} →</strong></button>
+              <button type="button" onClick={() => setTab('plan')}><span>毎日のスケジュール</span><strong>行程を見る →</strong></button>
+            </div>
             <div className={styles.infoList}>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>同行者</span>
@@ -214,8 +228,8 @@ export default function TripDetailModal({
             <p className={styles.hint}>{PHASES[phase].hint}</p>
 
             <div className={styles.actionBtns}>
-              <button className={styles.editBtn} onClick={onEdit}>編集</button>
-              <button className={styles.deleteBtn} onClick={onDelete}>削除</button>
+              <button className={styles.editBtn} onClick={onEdit}>旅行の情報を編集</button>
+              <button className={styles.deleteBtn} onClick={onDelete}>旅行を削除</button>
             </div>
           </>
         )}

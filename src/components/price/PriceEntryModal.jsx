@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import { IconGrocery, IconDaily, IconBox } from '../../lib/icons'
-import { formatPrice, formatQuantity, formatUpdatedAt, previewUnitPrice } from '../../lib/price'
+import { UNITS, formatPrice, formatQuantity, formatUpdatedAt, previewUnitPrice } from '../../lib/price'
 import Modal from '../Modal'
 import { Icon, IconPicker } from './PriceIcon'
 import UnitFields from './UnitFields'
+import PriceTagScanButton from './PriceTagScanButton'
 import styles from './Price.module.css'
 
 export const PRICE_CATEGORIES = [
@@ -25,6 +26,10 @@ function loadLastStore(stores) {
 
 function saveLastStore(store) {
   try { localStorage.setItem(LAST_STORE_KEY, store) } catch { /* 記憶できなくても入力は続けられる */ }
+}
+
+function scanNote(taxIncluded, isSale) {
+  return [taxIncluded ? '税込' : '税抜', isSale && '特売'].filter(Boolean).join('・')
 }
 
 /**
@@ -52,6 +57,8 @@ export default function PriceEntryModal({
   const [error, setError] = useState('')
   const [savedMessage, setSavedMessage] = useState('')
   const [showIconPicker, setShowIconPicker] = useState(false)
+  // 値札に税込・税抜の両方があったときだけ持ち、どちらで登録するか選べるようにする
+  const [scannedPrices, setScannedPrices] = useState(null)
   const productRef = useRef()
   const formRef = useRef()
   const continueRef = useRef(false)
@@ -60,8 +67,7 @@ export default function PriceEntryModal({
   const existingStores = stores.filter(s => existingRows[s])
   const currentRow = existingRows[storeName]
 
-  function handleProductChange(e) {
-    const val = e.target.value
+  function applyProductName(val) {
     setProductName(val)
     const key = val.trim()
     if (productCategory[key]) setCategory(productCategory[key])
@@ -69,6 +75,26 @@ export default function PriceEntryModal({
     // 同じ商品は同じ単位で比べることが多いので、登録済みの単位を引き継ぐ
     const knownUnit = Object.values(rowsByProduct[key] ?? {}).map(r => r.unit).find(Boolean)
     if (knownUnit && quantity === '') setUnit(knownUnit)
+  }
+
+  function handleScanResult(r) {
+    if (r.productName && !productName.trim()) applyProductName(r.productName)
+    const scannedPrice = r.priceTaxIncluded ?? r.priceTaxExcluded
+    if (scannedPrice != null) {
+      setPrice(String(scannedPrice))
+      setNote(scanNote(r.priceTaxIncluded != null, r.isSale))
+    }
+    if (r.quantity != null && UNITS.some(u => u.value === r.unit)) {
+      setQuantity(String(r.quantity))
+      setUnit(r.unit)
+    }
+    setScannedPrices(r.priceTaxIncluded != null && r.priceTaxExcluded != null ? r : null)
+    setSavedMessage('値札を読み取りました。内容を確認してから保存してください')
+  }
+
+  function selectScannedPrice(taxIncluded) {
+    setPrice(String(taxIncluded ? scannedPrices.priceTaxIncluded : scannedPrices.priceTaxExcluded))
+    setNote(scanNote(taxIncluded, scannedPrices.isSale))
   }
 
   function selectStore(store) {
@@ -83,6 +109,7 @@ export default function PriceEntryModal({
     setNote('')
     setIcon(null)
     setCategory('food')
+    setScannedPrices(null)
     setSavedMessage(`「${savedName}」を保存しました。続けて入力できます`)
     productRef.current?.focus()
   }
@@ -127,6 +154,8 @@ export default function PriceEntryModal({
           </div>
         </div>
 
+        <PriceTagScanButton productNames={productNames} onResult={handleScanResult} />
+
         <label className={styles.label}>
           商品名
           <input
@@ -134,7 +163,7 @@ export default function PriceEntryModal({
             className={styles.input}
             list="product-list"
             value={productName}
-            onChange={handleProductChange}
+            onChange={e => applyProductName(e.target.value)}
             placeholder="例: 牛乳"
             maxLength={100}
             required
@@ -181,6 +210,24 @@ export default function PriceEntryModal({
             required
           />
         </label>
+        {scannedPrices && (
+          <div className={styles.categoryBtns} role="radiogroup" aria-label="税込・税抜">
+            {[true, false].map(taxIncluded => {
+              const value = taxIncluded ? scannedPrices.priceTaxIncluded : scannedPrices.priceTaxExcluded
+              const active = Number(price) === value
+              return (
+                <button
+                  key={String(taxIncluded)}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  className={`${styles.categoryBtn} ${active ? styles.categoryBtnActive : ''}`}
+                  onClick={() => selectScannedPrice(taxIncluded)}
+                >{taxIncluded ? '税込' : '税抜'} ¥{formatPrice(value)}</button>
+              )
+            })}
+          </div>
+        )}
 
         <div className={styles.label}>
           内容量（任意・サイズ違いを単価で比較）

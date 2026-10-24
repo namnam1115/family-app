@@ -11,7 +11,7 @@
 | `VITE_VAPID_PUBLIC_KEY` | Web Push 公開鍵（`src/lib/pushNotifications.js`） |
 | `VITE_GOOGLE_MAPS_API_KEY` | Google Maps JS API（`src/utils/googleMaps.js`。お出かけリストの地図・住所検索、旅行の宿泊先検索）。未設定でも各入力欄は通常のテキスト入力として動く。呼び出し制限は下記「Places Autocomplete の使い方」を参照 |
 
-Edge Functions 側（Supabase ダッシュボードで設定）: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` / `SUPABASE_SERVICE_ROLE_KEY`。
+Edge Functions 側（Supabase ダッシュボードで設定）: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` / `SUPABASE_SERVICE_ROLE_KEY` / `ANTHROPIC_API_KEY`（値札読み取り `read-price-tag`。任意で `PRICE_TAG_MODEL` でモデルを上書き、既定 `claude-haiku-5-5`）。
 
 ## クエリの標準パターン
 
@@ -89,6 +89,7 @@ useEffect(() => {
 | 関数 | 呼び出し元 | 役割 |
 |---|---|---|
 | `fetch-og-image` | クライアント（`supabase.functions.invoke('fetch-og-image', { body: { url } })`、DishesPage） | URL から OG 画像を取得し `dish-thumbnails` バケットへ永続保存（期限付き URL 対策）。http/https のみ許可する URL バリデーションあり |
+| `read-price-tag` | クライアント（`PriceTagScanButton`、価格比較の価格追加モーダル） | 値札の写真（クライアントで長辺 1600px の JPEG に縮小した base64）を Claude で読み取り、商品名・税込/税抜価格・内容量・特売表示を JSON で返す。ログイン中のユーザーのみ（`auth.getUser()` で確認）。画像は保存しない |
 | `send-shopping-notifications` | スケジュール実行（cron） | `family_settings.notification_hour`（JST）に一致する家族へ、未チェックの買い物アイテムを Web Push 通知。service_role で RLS をバイパス |
 | `send-schedule-reminders` | スケジュール実行（cron） | リマインダー指定のある予定を JST の暦日で展開し、通知時刻に達した回を Web Push。二重送信は `schedule_reminder_log` で防止。オカレンス計算は `occurrences.ts` に分離 |
 | `notify-schedule-change` | クライアント（SchedulePage） | 予定の追加・更新・コメント・日程調整を家族へ即時 Push（本人の端末と通知 OFF のユーザーは除外） |

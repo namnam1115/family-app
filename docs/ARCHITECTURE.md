@@ -18,7 +18,7 @@ graph TB
         DB["PostgreSQL\n(全テーブル RLS 有効)"]
         Realtime["Supabase Realtime\n(WebSocket)"]
         Storage["Storage\n(dish-thumbnails)"]
-        Edge["Edge Functions\nfetch-og-image\nsend-shopping-notifications"]
+        Edge["Edge Functions\nfetch-og-image\nread-price-tag\nsend-shopping-notifications"]
     end
 
     subgraph External["外部サービス"]
