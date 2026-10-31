@@ -31,6 +31,7 @@
 | `loans/*` | 貸し借りの画面部品（カード・貸し借りフォーム・返済フォーム・メンバー選択）。計算は `lib/loans.js` | LoansPage |
 | `places/PlaceDetailModal` | お出かけリストの場所詳細（読み取り専用）。地図 / Web検索 / 訪問記録 / 編集への導線 | PlacesPage |
 | `places/PlacePhoto` | 場所の参考画像（Google の場所写真を名前・住所から取得）。一覧カードは画面に入ってから取得 | PlacesPage, PlaceDetailModal |
+| `places/MapPlaceSearch` | お出かけリスト地図ビューの地点検索。地名・現在地を起点に地図を移動し、半径内に記録した場所を近い順に表示 | PlacesPage |
 | `price/*` | 価格比較の画面部品（比較シート・価格追加モーダル・店舗管理・商品アイコン/ピッカー・内容量入力）。計算は `lib/price.js` | PricePage |
 | `AddToShoppingListModal` | 他アプリから買い物リストへ品物を送る | PricePage / DishesPage |
 | `VideoEmbed` | 動画（YouTube / TikTok）のサムネイル表示と、その場での埋め込み再生。再生状態は親が持つ | DishesPage |

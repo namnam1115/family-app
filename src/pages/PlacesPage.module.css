@@ -657,6 +657,24 @@
   white-space: nowrap;
 }
 
+.mapPopupDetailBtn {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--primary-light);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--primary-dark);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mapPopupDetailBtn:hover {
+  background: var(--grad-primary-soft);
+}
+
 /* ── 地図の空状態 ── */
 .mapEmpty {
   display: flex;
