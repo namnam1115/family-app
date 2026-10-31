@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase'
 import { useFamilyData, unwrap } from '../hooks/useFamilyData'
 import { useAuth } from '../contexts/AuthContext'
 import { loadGoogleMapsScript } from '../utils/googleMaps'
+import { haversineKm } from '../utils/geo'
 import ConfirmDialog from '../components/ConfirmDialog'
 import BottomNav from '../components/BottomNav'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -22,6 +23,7 @@ import Toast from '../components/Toast'
 import Modal from '../components/Modal'
 import PlaceDetailModal from '../components/places/PlaceDetailModal'
 import PlacePhoto from '../components/places/PlacePhoto'
+import MapPlaceSearch from '../components/places/MapPlaceSearch'
 import PlaceSearchInput from '../components/PlaceSearchInput'
 import styles from './PlacesPage.module.css'
 
@@ -115,16 +117,6 @@ const MAP_PIN_SVG =
   '<svg viewBox="0 0 16 16" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/></svg>'
 const MAP_PIN_VISITED_SVG =
   '<svg viewBox="0 0 16 16" width="1em" height="1em" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>'
-
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 export default function PlacesPage() {
   const { familyMember } = useAuth()
@@ -487,7 +479,7 @@ export default function PlacesPage() {
 
       <main className={`${styles.main} ${view === 'map' ? styles.mainMap : ''}`}>
         {view === 'map' ? (
-          <MapView places={filtered} />
+          <MapView places={filtered} onOpenDetail={setDetailTarget} />
         ) : loading ? (
           <LoadingSpinner inline />
         ) : loadError ? (
@@ -1327,15 +1319,34 @@ function EditPlaceModal({ place, onSubmit, onDelete, onClose, tagSuggestions }) 
 }
 
 // ── 地図ビュー ────────────────────────────────────────────
-function MapView({ places }) {
+function MapView({ places, onOpenDetail }) {
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const AdvancedMarkerElementRef = useRef(null)
   const markersRef = useRef([])
+  const searchActiveRef = useRef(false)
   const [selectedPlace, setSelectedPlace] = useState(null)
   const [mapReady, setMapReady] = useState(false)
 
   const placesWithCoords = places.filter(p => p.lat != null && p.lng != null)
+
+  function fitToPlaces() {
+    const map = mapInstanceRef.current
+    if (!map || placesWithCoords.length === 0) return
+    if (placesWithCoords.length === 1) {
+      map.setCenter({ lat: placesWithCoords[0].lat, lng: placesWithCoords[0].lng })
+      map.setZoom(14)
+    } else {
+      const bounds = new window.google.maps.LatLngBounds()
+      placesWithCoords.forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }))
+      map.fitBounds(bounds, { top: 60, right: 20, bottom: 80, left: 20 })
+    }
+  }
+
+  function handleSearchCenterChange(center) {
+    searchActiveRef.current = center != null
+    if (!center) fitToPlaces()
+  }
 
   // マップ初期化（マウント時1回のみ・API呼び出しは1回）
   useEffect(() => {
@@ -1393,15 +1404,8 @@ function MapView({ places }) {
       markersRef.current.push(marker)
     })
 
-    // 全ピンが収まるようにフィット
-    if (placesWithCoords.length === 1) {
-      map.setCenter({ lat: placesWithCoords[0].lat, lng: placesWithCoords[0].lng })
-      map.setZoom(14)
-    } else {
-      const bounds = new window.google.maps.LatLngBounds()
-      placesWithCoords.forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }))
-      map.fitBounds(bounds, { top: 60, right: 20, bottom: 80, left: 20 })
-    }
+    // 地点検索中はユーザーが見ている範囲を保つ（Realtime 更新で全体表示に戻さない）
+    if (!searchActiveRef.current) fitToPlaces()
   }, [placesWithCoords.length, places, mapReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (placesWithCoords.length === 0) {
@@ -1417,15 +1421,25 @@ function MapView({ places }) {
   return (
     <div className={styles.mapContainer}>
       <div ref={mapRef} className={styles.mapEl} />
+      <MapPlaceSearch
+        map={mapReady ? mapInstanceRef.current : null}
+        places={placesWithCoords}
+        onCenterChange={handleSearchCenterChange}
+        onSelectPlace={setSelectedPlace}
+      />
       {selectedPlace && (
-        <MapPopup place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+        <MapPopup
+          place={selectedPlace}
+          onClose={() => setSelectedPlace(null)}
+          onOpenDetail={() => onOpenDetail(selectedPlace)}
+        />
       )}
     </div>
   )
 }
 
 // ── 地図ピンタップ時のポップアップ ────────────────────────
-function MapPopup({ place, onClose }) {
+function MapPopup({ place, onClose, onOpenDetail }) {
   const cat = CATEGORIES[place.category] ?? CATEGORIES.other
   const isVisited = place.status === 'visited'
   return (
@@ -1448,6 +1462,9 @@ function MapPopup({ place, onClose }) {
         }
       </div>
       {place.memo && <p className={styles.mapPopupMemo}>{place.memo}</p>}
+      <button type="button" className={styles.mapPopupDetailBtn} onClick={onOpenDetail}>
+        詳細を見る
+      </button>
     </div>
   )
 }
